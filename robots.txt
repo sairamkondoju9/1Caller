@@ -1,0 +1,10 @@
+# Sarvam Voice AI Robots.txt
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Disallow: /api/
+Disallow: /admin*
+Disallow: /adminsairamsecreatelink
+
+Sitemap: https://sarvam-eta-rose.vercel.app/sitemap.xml

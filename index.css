@@ -1,0 +1,307 @@
+@import "./outpero.css";
+@import "tailwindcss";
+
+/* ==============================================================================
+   OFFICIAL SARVAM AI TYPOGRAPHY (MATTER & SEASON MIX)
+   ============================================================================== */
+@font-face {
+  font-family: 'Matter';
+  src: url('/fonts/MatterUprights-VF.woff2') format('woff2-variations'),
+       url('/fonts/MatterUprights-VF.woff2') format('woff2');
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Matter Mono';
+  src: url('/fonts/MatterMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Matter Mono';
+  src: url('/fonts/MatterMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Season Mix';
+  src: url('/fonts/SeasonMixVFUprights.woff2') format('woff2-variations'),
+       url('/fonts/SeasonMixVFUprights.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Matter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-matter: 'Matter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: 'Matter Mono', ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: 'Season Mix', 'Matter', serif;
+  --font-season-mix: 'Season Mix', 'Matter', serif;
+
+  /* Sarvam AI Official Color Palette */
+  --color-page: #ffffff;
+  --color-canvas: #fafafa;
+  --color-paper: #ffffff;
+  --color-line: rgba(15, 14, 23, 0.08);
+  --color-line-2: rgba(15, 14, 23, 0.05);
+
+  --color-tx: #0f0e17;
+  --color-tx-secondary: #3a3f5c;
+  --color-tx-tertiary: #6c6b7e;
+  --color-ink: #0f0e17;
+  --color-ink-2: #3a3f5c;
+  --color-muted: #6c6b7e;
+  --color-faint: #9392a5;
+
+  /* Sarvam AI Signature Saffron/Orange Palette */
+  --color-brand-50: #f6f7fb;
+  --color-brand-100: #f0f2f8;
+  --color-brand-200: #e2e4ed;
+  --color-brand-300: #cbd0df;
+  --color-brand-400: #3a3f5c;
+  --color-brand-500: #2d2b38;
+  --color-brand-600: #0f0e17;
+  --color-brand-700: #1f1e28;
+  --color-brand-800: #c2410c;
+  --color-brand-900: #a5460f;
+  --color-brand-950: #682906;
+  --color-stage: #0f0e1a;
+
+  /* Sarvam AI Indic Sovereign Green */
+  --color-ok: #16a34a;
+  --color-ok-soft: #f0fdf4;
+  --color-warn: #ea580c;
+  --color-info: #2684fc;
+}
+
+/* Force Global Typography to match Sarvam AI */
+html {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #ffffff;
+  background-image: 
+    radial-gradient(1200px circle at 50% -120px, rgba(15, 14, 23, 0.02) 0%, rgba(22, 163, 74, 0.03) 40%, transparent 80%),
+    radial-gradient(900px circle at 90% 280px, rgba(15, 14, 23, 0.015) 0%, transparent 60%),
+    radial-gradient(700px circle at 10% 400px, rgba(15, 14, 23, 0.01) 0%, transparent 50%);
+  background-attachment: scroll;
+  color: #09090b;
+  font-family: 'Matter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  margin: 0;
+  padding: 0;
+  letter-spacing: -0.015em;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Headings use Sarvam AI's Season Mix */
+h1, h2, h3, .font-season-mix, .font-display, .t-display {
+  font-family: 'Season Mix', 'Matter', Georgia, serif !important;
+  letter-spacing: -0.025em;
+  color: #0f0e17;
+}
+
+.font-matter, .font-sans, p, input, select, textarea, button, a {
+  font-family: 'Matter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-mono, .font-matter-semi-mono, code, kbd, pre {
+  font-family: 'Matter Mono', ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+/* ==============================================================================
+   APPLE HIG LIQUID GLASS UI (TRANSLUCENCY, INSET HIGHLIGHTS, BLUR)
+   ============================================================================== */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    0 8px 32px 0 rgba(31, 38, 135, 0.05),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-glass:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(243, 136, 88, 0.35);
+  box-shadow: 
+    0 4px 24px -2px rgba(15, 14, 23, 0.05),
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+}
+
+.apple-glass-card {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 2px 8px 0 rgba(15, 14, 23, 0.02),
+    0 12px 32px -4px rgba(15, 14, 23, 0.05),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 22px;
+}
+
+.apple-glass-stage {
+  background: radial-gradient(130% 140% at 0% 0%, #1e1b4b 0%, #0f0e26 50%, #070712 100%);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 24px 64px -16px rgba(7, 7, 18, 0.7),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 60px 0 rgba(243, 136, 88, 0.14);
+  border-radius: 24px;
+}
+
+.apple-glass-input {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 14, 23, 0.09);
+  box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  border-radius: 12px;
+  color: #0f0e17;
+  transition: all 0.15s ease;
+}
+
+.apple-glass-input:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #0f0e17;
+  box-shadow: 0 0 0 3px rgba(15, 14, 23, 0.06);
+  outline: none;
+}
+
+/* Sarvam AI Button Styles */
+.sarvam-btn-primary {
+  background: linear-gradient(180deg, #2d2b38 0%, #0f0e17 100%);
+  border: 1px solid #1f1e28;
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 6px 18px -4px rgba(15, 14, 23, 0.25),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sarvam-btn-primary:hover {
+  background: linear-gradient(180deg, #3a3f5c 0%, #1f1e28 100%);
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 10px 24px -4px rgba(15, 14, 23, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.sarvam-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px 0 rgba(15, 14, 23, 0.15);
+}
+
+.sarvam-pill-orange {
+  background: rgba(15, 14, 23, 0.02);
+  border: 1px solid rgba(15, 14, 23, 0.12);
+  color: #1f1e28;
+  font-family: 'Matter Mono', monospace;
+  letter-spacing: 0.02em;
+}
+
+.sarvam-pill-green {
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  color: #15803d;
+  font-family: 'Matter Mono', monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Backward-compatible premium-card aliases */
+.premium-card {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 
+    0 2px 8px 0 rgba(15, 14, 23, 0.02),
+    0 12px 32px -4px rgba(15, 14, 23, 0.05),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-card:hover {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(243, 136, 88, 0.35);
+  box-shadow: 
+    0 4px 24px -2px rgba(15, 14, 23, 0.05),
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+}
+
+.premium-btn-primary {
+  background: linear-gradient(180deg, #2d2b38 0%, #0f0e17 100%);
+  border: 1px solid #1f1e28;
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 6px 18px -4px rgba(15, 14, 23, 0.25),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-btn-primary:hover {
+  background: linear-gradient(180deg, #3a3f5c 0%, #1f1e28 100%);
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.06),
+    0 10px 24px -4px rgba(15, 14, 23, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.premium-stage-card {
+  background: radial-gradient(130% 140% at 0% 0%, #1e1b4b 0%, #0f0e26 50%, #070712 100%);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 
+    0 24px 64px -16px rgba(7, 7, 18, 0.7),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
+    inset 0 0 60px 0 rgba(243, 136, 88, 0.14);
+  border-radius: 24px;
+}
+
+/* Custom Outpero Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4dc;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0ac;
+}

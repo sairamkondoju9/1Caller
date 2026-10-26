@@ -1,0 +1,13 @@
+docker-compose.yml
+data/
+.git
+.env
+.env.*
+!.env.example
+.agent/
+.gemini/
+.opencode/
+node_modules/
+client/node_modules/
+client/dist/
+scratch/

@@ -1,0 +1,21 @@
+{
+  "name": "Sarvam Voice AI | Autonomous Multilingual Telephony",
+  "short_name": "Sarvam",
+  "description": "Deploy multilingual Autonomous Voice AI Employees in Telugu, Hindi, Tamil, and English with sub-420ms latency on the Sarvam Telephony Network.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0a17",
+  "theme_color": "#0c0a17",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

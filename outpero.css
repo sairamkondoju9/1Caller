@@ -1,0 +1,143 @@
+/* ==============================================================================
+   OUTPERO LUXURY DESIGN SYSTEM COMPONENTS
+   Clean, high-performance UI primitives matching official Outpero design.
+   ============================================================================== */
+
+.wrap {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+@media (min-width: 768px) {
+  .wrap {
+    padding-inline: 32px;
+  }
+}
+
+.t-display {
+  letter-spacing: -0.045em;
+  font-size: clamp(2.3rem, 6.2vw, 4.75rem);
+  font-weight: 600;
+  line-height: 1.02;
+}
+
+.t-subdisplay {
+  letter-spacing: -0.035em;
+  font-size: clamp(1.45rem, 3.1vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.t-h2 {
+  letter-spacing: -0.035em;
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  font-weight: 600;
+  line-height: 1.06;
+}
+
+.t-h2-md {
+  letter-spacing: -0.03em;
+  font-size: clamp(1.75rem, 2.6vw, 2.375rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.t-h3 {
+  letter-spacing: -0.015em;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.t-lead {
+  letter-spacing: -0.01em;
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  line-height: 1.55;
+}
+
+.t-eyebrow {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.grid-bg {
+  background-color: var(--color-canvas, #f0f2f8);
+}
+
+.scroll-none {
+  scrollbar-width: none;
+}
+.scroll-none::-webkit-scrollbar {
+  display: none;
+}
+
+.btn {
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+}
+.btn:hover {
+  translate: 0 -1px;
+}
+.btn svg.lucide-arrow-right {
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.btn:hover svg.lucide-arrow-right {
+  transform: translate(3px);
+}
+
+.btn-fill:after {
+  content: "";
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  position: absolute;
+  inset: 0;
+  transform: translate(-120%);
+}
+.btn-fill:hover:after {
+  transition: transform 0.7s;
+  transform: translate(120%);
+}
+
+.nav-link {
+  position: relative;
+}
+.nav-link:after {
+  content: "";
+  background: var(--color-brand-500, #2d2b38);
+  border-radius: 2px;
+  height: 2px;
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+  position: absolute;
+  bottom: 4px;
+  left: 12px;
+  right: 12px;
+  transform: scaleX(0);
+}
+.nav-link:hover:after,
+.nav-link[aria-expanded="true"]:after {
+  transform: scaleX(1);
+}
+
+.lift {
+  transition: translate 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
+}
+.lift:hover {
+  box-shadow: 0 1px 2px rgba(20, 16, 40, 0.05), 0 24px 56px -24px rgba(40, 22, 90, 0.15);
+  translate: 0 -4px;
+}
+
+.magnet {
+  transition: translate 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s, box-shadow 0.2s !important;
+}
+
+.tilt {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
