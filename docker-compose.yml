@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  voice-engine:
+    build: .
+    container_name: sarvam-voice-engine
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - JWT_SECRET=sarvam_production_secret_key_849203810293
+      # To use postgres, uncomment below and set DATABASE_URL:
+      # - DATABASE_URL=postgresql://sarvam_user:sarvam_pass@postgres:5432/sarvam_db
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sarvam-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sarvam_user
+      POSTGRES_PASSWORD: sarvam_pass
+      POSTGRES_DB: sarvam_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sarvam_user -d sarvam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
