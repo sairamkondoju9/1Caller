@@ -13,6 +13,14 @@ function cleanList(value, maxItems = 8) {
     .slice(0, maxItems);
 }
 
+function cleanPlanSteps(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 6).map(step => ({
+    title: cleanText(step?.title, 80),
+    detail: cleanText(step?.detail, 240)
+  })).filter(step => step.title && step.detail);
+}
+
 export function normalizeEmployeeScriptRequest(input = {}) {
   const prompt = cleanText(input.prompt);
   const businessName = cleanText(input.businessName, 160);
@@ -31,7 +39,8 @@ export function normalizeEmployeeScriptRequest(input = {}) {
     offerings: cleanList(input.offerings),
     priceRange: cleanText(input.priceRange, 160),
     nextActions: cleanList(input.nextActions, 5),
-    objectionHandling: cleanText(input.objectionHandling, 500)
+    objectionHandling: cleanText(input.objectionHandling, 500),
+    planSteps: cleanPlanSteps(input.planSteps)
   };
 }
 
@@ -46,6 +55,7 @@ export function buildEmployeeScriptPrompt(request) {
     confirmedPriceRange: request.priceRange || 'Not provided',
     allowedNextActions: request.nextActions,
     objectionHandling: request.objectionHandling || 'Not provided',
+    AIReviewedCallPlan: request.planSteps,
     responseLanguage: request.language
   };
 

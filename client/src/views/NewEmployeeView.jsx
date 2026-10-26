@@ -115,6 +115,9 @@ export default function NewEmployeeView({
   const [supportPolicies, setSupportPolicies] = useState(initialData?.supportPolicies || '');
   const [supportIssues, setSupportIssues] = useState(initialData?.supportIssues || '');
   const [employeeGenerationError, setEmployeeGenerationError] = useState('');
+  const [employeeSetupAnalysis, setEmployeeSetupAnalysis] = useState(null);
+  const [aiPlanSteps, setAiPlanSteps] = useState([]);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isGeneratingEmployee, setIsGeneratingEmployee] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(initialData?.industry || null);
   const [otherCategoryText, setOtherCategoryText] = useState('');
@@ -230,14 +233,50 @@ export default function NewEmployeeView({
     if (brief.trim().length < 10) throw new Error('Describe the business and employee requirements in at least 10 characters.');
 
     const industry = categoryOverride !== undefined ? categoryOverride : selectedCategory;
+    const language = lang || ({
+      Telugu: 'te',
+      Hindi: 'hi',
+      Tamil: 'ta',
+      Kannada: 'kn',
+      Malayalam: 'ml',
+      Marathi: 'mr',
+      English: 'en'
+    })[(employeeLanguage || 'English').split(' + ')[0].replace(' (Indian & Global)', '')] || 'en';
+    const response = await fetch('/api/employees/build-stage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({
+        stage: 'analyze',
+        purpose: employeePurpose,
+        prompt: brief,
+        language,
+        industry: industry || '',
+        policies: supportPolicies,
+        commonIssues: supportIssues.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean)
+      })
+    });
+    const analysis = await response.json();
+    if (!response.ok) throw new Error(analysis.error || 'AI could not analyze your employee brief.');
+    if (
+      analysis.stage !== 'analyze' ||
+      !Array.isArray(analysis.offerings) ||
+      !Array.isArray(analysis.nextActions) ||
+      !Array.isArray(analysis.questions) ||
+      analysis.questions.length !== 3
+    ) {
+      throw new Error('AI returned incomplete setup guidance. Please try again.');
+    }
+
+    setEmployeeSetupAnalysis(analysis);
+    setEmployeeRole(analysis.role);
     setQuickQuestions([
       { step: 1, id: 'business_name', title: 'What is your business name?', subtitle: 'Use the name customers know.', defaultValue: '', type: 'text' },
-      { step: 2, id: 'price_range', title: 'What price or budget details may the employee share?', subtitle: 'Leave blank if the employee should not quote prices.', defaultValue: '', type: 'text' },
-      { step: 3, id: 'categories', title: 'Which products, services, or issues should the employee handle?', subtitle: 'Select or enter only details your business confirms.', options: ['Products', 'Services', 'Appointments', 'Support requests', 'Other'], defaultSelected: [], type: 'chips' },
-      { step: 4, id: 'next_action', title: 'What should the caller do next?', subtitle: 'Choose an action the business can actually support.', options: ['Request a callback', 'Schedule an appointment', 'Visit the business', 'Other'], defaultSelected: [], type: 'pills' }
+      { step: 2, id: 'price_range', title: analysis.questions[0], subtitle: 'Confirm only details the business can share.', defaultValue: '', type: 'text' },
+      { step: 3, id: 'categories', title: analysis.questions[1], subtitle: 'AI suggestions are editable; choose only what your business offers.', options: analysis.offerings, defaultSelected: [], type: 'chips' },
+      { step: 4, id: 'next_action', title: analysis.questions[2], subtitle: 'Choose an action your business can actually support.', options: [...analysis.nextActions, 'Other'], defaultSelected: [], type: 'pills' }
     ]);
-    setActionOptions(['Request a callback', 'Schedule an appointment', 'Visit the business', 'Other']);
-    setJewelleryOptions(['Products', 'Services', 'Appointments', 'Support requests', 'Other']);
+    setActionOptions([...analysis.nextActions, 'Other']);
+    setJewelleryOptions(analysis.offerings);
     setPriceRange('');
     setSelectedJewelleryTypes([]);
     setQ2Selection('');
@@ -245,7 +284,8 @@ export default function NewEmployeeView({
     setScriptSteps([]);
     setOpeningGreeting('');
     setAiSmallContext('');
-    return { industry, language: lang || 'en' };
+    setAiPlanSteps([]);
+    return { industry: analysis.industry || industry, language };
   };
   useEffect(() => {
     if (initialData) {
@@ -316,7 +356,10 @@ export default function NewEmployeeView({
           setStep2Mode('analyzing');
           prepareEmployeeSetup(initialData.prompt, initialData.language ? (initialData.language.toLowerCase().startsWith('te') ? 'te' : 'en') : 'te')
             .then(() => setStep2Mode('quick-details'))
-            .catch(() => setStep2Mode('brief'));
+            .catch((error) => {
+              setEmployeeGenerationError(error.message || 'AI could not analyze your employee brief. Please try again.');
+              setStep2Mode('brief');
+            });
         }
       }
       if (initialData.language) {
@@ -327,12 +370,7 @@ export default function NewEmployeeView({
   }, [initialData]);
 
   const handleProceedToQuickDetails = async () => {
-    if (employeePurpose === 'support') {
-      setEmployeeGenerationError('');
-      setQuestionIdx(0);
-      setStep2Mode('quick-details');
-      return;
-    }
+    if (step2Mode === 'analyzing') return;
     setStep2Mode('analyzing');
     const effectiveInd = selectedCategory === 'Other' && customCategoryText.trim()
       ? customCategoryText.trim()
@@ -342,7 +380,8 @@ export default function NewEmployeeView({
       await prepareEmployeeSetup(promptText, undefined, effectiveInd);
       setStep2Mode('quick-details');
       setQuestionIdx(0);
-    } catch {
+    } catch (error) {
+      setEmployeeGenerationError(error.message || 'AI could not analyze your employee brief. Please try again.');
       setStep2Mode('brief');
     }
   };
@@ -705,12 +744,76 @@ export default function NewEmployeeView({
     }
   };
 
-  const handleNextQuestion = () => {
+  const generateEmployeePlan = async () => {
+    const languageCode = ({
+      Telugu: 'te',
+      Hindi: 'hi',
+      Tamil: 'ta',
+      Kannada: 'kn',
+      Malayalam: 'ml',
+      Marathi: 'mr',
+      English: 'en'
+    })[(employeeLanguage || 'English').split(' + ')[0].replace(' (Indian & Global)', '')] || 'en';
+    const response = await fetch('/api/employees/build-stage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({
+        stage: 'plan',
+        purpose: employeePurpose,
+        prompt: promptText,
+        language: languageCode,
+        industry: selectedCategory === 'Other' && customCategoryText.trim()
+          ? customCategoryText.trim()
+          : (employeeSetupAnalysis?.industry || selectedCategory || ''),
+        businessName,
+        employeeName,
+        role: employeeRole,
+        offerings: employeePurpose === 'support'
+          ? supportIssues.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean)
+          : effectiveSalesCategories(),
+        priceRange,
+        nextActions: [q2Selection === 'Other' ? otherNextActionText : q2Selection].filter(Boolean),
+        objectionHandling: q4Selection === 'Other' ? otherActionText : q4Selection,
+        policies: supportPolicies,
+        commonIssues: supportIssues.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean)
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'AI could not create your employee call plan.');
+    if (result.stage !== 'plan' || !Array.isArray(result.steps) || result.steps.length !== 6) {
+      throw new Error('AI returned an incomplete call plan. Please retry.');
+    }
+    setAiPlanSteps(result.steps);
+    return result.steps;
+  };
+
+  const handleNextQuestion = async () => {
+    if (isGeneratingPlan) return;
     const totalQ = 4;
     if (questionIdx < totalQ - 1) {
       setQuestionIdx(questionIdx + 1);
-    } else {
-      setStep2Mode('planning');
+      setEmployeeGenerationError('');
+      return;
+    }
+    if (businessName.trim().length < 2) {
+      setEmployeeGenerationError('Enter your business name to continue.');
+      return;
+    }
+    if (employeePurpose === 'support' && !supportIssues.trim()) {
+      setEmployeeGenerationError('List at least one customer issue so AI can prepare a safe support plan.');
+      return;
+    }
+
+    setEmployeeGenerationError('');
+    setAiPlanSteps([]);
+    setStep2Mode('planning');
+    setIsGeneratingPlan(true);
+    try {
+      await generateEmployeePlan();
+    } catch (error) {
+      setEmployeeGenerationError(error.message || 'AI could not create your employee call plan. Please retry.');
+    } finally {
+      setIsGeneratingPlan(false);
     }
   };
 
@@ -722,57 +825,7 @@ export default function NewEmployeeView({
     }
   };
 
-  const planPreviewSteps = employeePurpose === 'support'
-    ? [
-      {
-        title: `Greet the caller on behalf of ${businessName || 'your business'}`,
-        detail: 'Introduce the support role and ask how you can help.'
-      },
-      {
-        title: 'Identify the customer issue',
-        detail: supportIssues.trim()
-          ? `Handle only the issue types you listed: ${supportIssues.trim()}`
-          : 'Ask what the caller needs help with before offering guidance.'
-      },
-      {
-        title: 'Clarify without requesting sensitive information',
-        detail: 'Ask one relevant question at a time. Never request passwords, OTPs, or full payment details.'
-      },
-      {
-        title: 'Use confirmed policies only',
-        detail: supportPolicies.trim()
-          ? `Use only these approved notes: ${supportPolicies.trim()}`
-          : 'No policy answers were supplied. Acknowledge uncertainty and offer human follow-up.'
-      },
-      {
-        title: 'Offer a safe next step',
-        detail: `Offer only the selected action: ${q2Selection || 'escalate to a human'}. Do not claim the action is completed.`
-      },
-      {
-        title: 'Summarize and close or escalate',
-        detail: 'Confirm what was discussed; escalate urgent, sensitive, or unresolved issues without promising an unapproved timeline.'
-      }
-    ]
-    : [
-      {
-        title: `Introduce ${employeeName || 'the employee'} from ${businessName || 'your business'}`,
-        detail: 'Use the business and employee details provided in this setup.'
-      },
-      {
-        title: 'Understand the caller’s need',
-        detail: promptText.trim() || 'Ask the caller what they are interested in.'
-      },
-      {
-        title: 'Respond using confirmed business information',
-        detail: 'Do not invent prices, offers, availability, guarantees, or actions. Clarify or offer follow-up when details are missing.'
-      },
-      {
-        title: 'Offer a clear next step',
-        detail: `Ask permission before offering: ${q2Selection || 'a relevant follow-up'}.`
-      }
-    ];
-
-  const generateSalesEmployeeScript = async () => {
+  const generateSalesEmployeeScript = async (planSteps) => {
     const languageCode = ({ Telugu: 'te', Hindi: 'hi', Tamil: 'ta', Kannada: 'kn', Malayalam: 'ml', Marathi: 'mr', English: 'en' })[
       (employeeLanguage || 'English').split(' + ')[0].replace(' (Indian & Global)', '')
     ] || 'en';
@@ -791,7 +844,8 @@ export default function NewEmployeeView({
         offerings: effectiveSalesCategories(),
         priceRange,
         nextActions: [q2Selection === 'Other' ? otherNextActionText : q2Selection].filter(Boolean),
-        objectionHandling: q4Selection === 'Other' ? otherActionText : q4Selection
+        objectionHandling: q4Selection === 'Other' ? otherActionText : q4Selection,
+        planSteps
       })
     });
     const result = await response.json();
@@ -808,7 +862,21 @@ export default function NewEmployeeView({
   ];
 
   const handleCompleteBuildToCall = async (startTestCall = false, deployAfterSave = false) => {
-    if (isGeneratingEmployee) return;
+    if (isGeneratingEmployee || isGeneratingPlan) return;
+    let finalPlanSteps = aiPlanSteps;
+    if (!initialData?.id && !finalPlanSteps.length) {
+      setEmployeeGenerationError('');
+      setIsGeneratingPlan(true);
+      try {
+        finalPlanSteps = await generateEmployeePlan();
+      } catch (error) {
+        setEmployeeGenerationError(error.message || 'AI could not create your employee call plan. Please retry.');
+        setStep2Mode('planning');
+        return;
+      } finally {
+        setIsGeneratingPlan(false);
+      }
+    }
     const effectiveCategories = employeePurpose === 'support'
       ? supportIssues.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean)
       : [
@@ -851,7 +919,8 @@ export default function NewEmployeeView({
             policies: supportPolicies,
             commonIssues: supportIssues.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean),
             nextActions: [q2Selection === 'Other' ? otherNextActionText : q2Selection].filter(Boolean),
-            selectedFacts: effectiveCategories
+            selectedFacts: effectiveCategories,
+            planSteps: finalPlanSteps
           })
         });
         const result = await response.json();
@@ -879,7 +948,7 @@ export default function NewEmployeeView({
       setEmployeeGenerationError('');
       setIsGeneratingEmployee(true);
       try {
-        const result = await generateSalesEmployeeScript();
+        const result = await generateSalesEmployeeScript(finalPlanSteps);
         finalScriptSteps = result.call_steps;
         finalOpeningGreeting = result.opening_greeting;
         finalEmployeeName = result.employee_name || employeeName || 'AI Employee';
@@ -913,17 +982,22 @@ export default function NewEmployeeView({
         ? 'Customer Support'
         : (selectedCategory === 'Other' && customCategoryText.trim()
           ? customCategoryText.trim()
-          : (selectedCategory || finalEmployeeRole || 'General Business')),
+          : (employeeSetupAnalysis?.industry || selectedCategory || finalEmployeeRole || 'General Business')),
       opening_greeting: finalOpeningGreeting || openingGreeting || finalScriptSteps[0]?.body || `Hello, this is ${finalEmployeeName} from ${finalBusinessName}.`,
-      prompt_text: employeePurpose === 'support'
-        ? [
-          promptText,
-          `Business name: ${finalBusinessName}`,
-          `Customer support policies and approved answers: ${supportPolicies || 'Not provided; do not assume.'}`,
-          `Common customer issues: ${supportIssues || 'Not provided.'}`,
-          `Allowed next actions: ${effectiveNextAction || 'Human follow-up only.'}`
-        ].join('\n')
-        : (promptText || businessName),
+      prompt_text: [
+        employeePurpose === 'support'
+          ? [
+            promptText,
+            `Business name: ${finalBusinessName}`,
+            `Customer support policies and approved answers: ${supportPolicies || 'Not provided; do not assume.'}`,
+            `Common customer issues: ${supportIssues || 'Not provided.'}`,
+            `Allowed next actions: ${effectiveNextAction || 'Human follow-up only.'}`
+          ].join('\n')
+          : (promptText || businessName),
+        finalPlanSteps.length
+          ? `AI-reviewed call plan:\n${finalPlanSteps.map((step, index) => `${index + 1}. ${step.title}: ${step.detail}`).join('\n')}`
+          : ''
+      ].filter(Boolean).join('\n\n'),
       purpose: employeePurpose,
       supportPolicies,
       supportIssues,
@@ -1754,7 +1828,7 @@ export default function NewEmployeeView({
                       <div className="w-5 h-5 rounded-full border-2 border-amber-300 bg-amber-400/20 flex items-center justify-center animate-spin">
                         <Loader2 className="w-3 h-3 text-amber-300" />
                       </div>
-                      <span>Preparing your employee details...</span>
+                      <span>AI analyzing your business brief...</span>
                     </div>
 
                     <div className="flex items-center gap-2.5 text-white/40">
@@ -1801,10 +1875,10 @@ export default function NewEmployeeView({
                   </div>
                   <div className="space-y-1.5 max-w-md">
                     <h2 className="text-[24px] sm:text-[28px] font-bold text-white tracking-tight font-display">
-                      Preparing your employee details...
+                      AI is analyzing your employee brief...
                     </h2>
                     <p className="text-[14px] text-white/60 leading-relaxed">
-                      Confirm a few details; AI personalization runs once when you generate the employee.
+                      AI is identifying the role, business topics, and setup questions for this employee.
                     </p>
                   </div>
                 </div>
@@ -1917,6 +1991,14 @@ export default function NewEmployeeView({
                       {employeeGenerationError}
                     </div>
                   )}
+                  {employeeSetupAnalysis?.summary && (
+                    <div className="my-4 rounded-xl border border-[#a78bfa]/30 bg-[#7a50dc]/10 p-3 text-sm text-white/80">
+                      <span className="font-semibold text-[#c4b5fd]">AI business analysis:</span> {employeeSetupAnalysis.summary}
+                      <div className="mt-1 text-xs text-white/60">
+                        Suggested role: {employeeSetupAnalysis.role} · Industry: {employeeSetupAnalysis.industry}
+                      </div>
+                    </div>
+                  )}
                   {isGeneratingEmployee && (
                     <div role="status" className="my-4 text-sm text-amber-200">
                       Generating and validating your employee script with an available AI provider…
@@ -1992,13 +2074,31 @@ export default function NewEmployeeView({
                       </p>
 
                       {employeePurpose === 'support' && (
-                        <textarea
-                          rows={4}
-                          value={supportIssues}
-                          onChange={(event) => setSupportIssues(event.target.value)}
-                          placeholder="Order tracking, damaged or missing item, refund question, payment failure, account access"
-                          className="w-full p-4 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/30 text-[15px] focus:outline-hidden focus:border-[#a78bfa] resize-y"
-                        />
+                        <div className="space-y-3">
+                          <textarea
+                            rows={4}
+                            value={supportIssues}
+                            onChange={(event) => setSupportIssues(event.target.value)}
+                            placeholder="Order tracking, damaged or missing item, refund question, payment failure, account access"
+                            className="w-full p-4 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/30 text-[15px] focus:outline-hidden focus:border-[#a78bfa] resize-y"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            {(employeeSetupAnalysis?.offerings || []).map(issue => (
+                              <button
+                                key={issue}
+                                type="button"
+                                onClick={() => setSupportIssues(current => {
+                                  const issues = current.split(/[\n,;]+/).map(item => item.trim()).filter(Boolean);
+                                  if (issues.some(item => item.toLocaleLowerCase() === issue.toLocaleLowerCase())) return current;
+                                  return [...issues, issue].join('\n');
+                                })}
+                                className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/75 hover:border-[#a78bfa] hover:text-white"
+                              >
+                                + {issue}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {employeePurpose !== 'support' && (
                       <div>
@@ -2142,15 +2242,16 @@ export default function NewEmployeeView({
                     <div className="flex items-center gap-4">
                       <button
                         type="button"
+                        disabled={isGeneratingPlan || isGeneratingEmployee}
                         onClick={handleNextQuestion}
-                        className="text-white/60 hover:text-white transition-colors cursor-pointer text-[13px] font-medium"
+                        className="text-white/60 hover:text-white transition-colors cursor-pointer text-[13px] font-medium disabled:opacity-50"
                       >
                         Skip
                       </button>
 
                       <button
                         type="button"
-                        disabled={isGeneratingEmployee}
+                        disabled={isGeneratingEmployee || isGeneratingPlan}
                         onClick={() => handleCompleteBuildToCall(false)}
                         className="text-amber-300/80 hover:text-amber-300 transition-colors cursor-pointer text-[13px] font-semibold hidden sm:inline disabled:opacity-50"
                       >
@@ -2159,8 +2260,9 @@ export default function NewEmployeeView({
 
                       <button
                         type="button"
+                        disabled={isGeneratingPlan || isGeneratingEmployee}
                         onClick={handleNextQuestion}
-                        className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                       >
                         <span>{questionIdx === 3 ? 'Next: Plan Call' : 'Next'}</span>
                         <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -2248,7 +2350,7 @@ export default function NewEmployeeView({
                       PLANNING THE CALL, STEP BY STEP &bull; STAGE 3 OF 4
                     </span>
                     <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-300/30 text-amber-200 font-mono">
-                      {employeePurpose === 'support' ? 'BRIEF READY · SCRIPT NOT GENERATED' : 'OUTLINE PREVIEW · SCRIPT NOT GENERATED'}
+                      {isGeneratingPlan ? 'AI IS CREATING YOUR CALL PLAN' : aiPlanSteps.length ? 'AI CALL PLAN · REVIEW BEFORE SCRIPT GENERATION' : 'AI PLAN NEEDS RETRY'}
                     </span>
                   </div>
 
@@ -2260,8 +2362,8 @@ export default function NewEmployeeView({
                     </h2>
                     <p className="text-[13.5px] text-white/60 leading-relaxed">
                       {employeePurpose === 'support'
-                        ? `This is a planning outline based on your answers for ${businessName || 'your business'}, not the generated employee script. Generate the support script to review its actual wording.`
-                        : `This is a planning outline based on the details you supplied for ${businessName || 'your business'}, not a generated script.`}
+                        ? `AI drafted this plan from your confirmed support issues and policies for ${businessName || 'your business'}. Review it before generating the support employee.`
+                        : `AI drafted this plan from your brief and confirmed business details for ${businessName || 'your business'}. Review it before generating the employee.`}
                     </p>
                   </div>
 
@@ -2271,9 +2373,15 @@ export default function NewEmployeeView({
                     </div>
                   )}
 
-                  {/* Planning outline; the provider-generated script appears in the employee editor. */}
+                  {isGeneratingPlan && (
+                    <div role="status" className="rounded-xl border border-[#a78bfa]/30 bg-[#7a50dc]/10 p-4 text-sm text-white/80">
+                      <Loader2 className="mr-2 inline h-4 w-4 animate-spin text-amber-300" />
+                      AI is preparing a business-specific six-step call plan…
+                    </div>
+                  )}
+                  {/* AI supplies the business-specific plan; the final script is generated in the next step. */}
                   <div className="space-y-3">
-                    {planPreviewSteps.map((st, index) => (
+                    {aiPlanSteps.map((st, index) => (
                       <div
                         key={`${index}-${st.title}`}
                         className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#a78bfa]/50 transition-all flex items-start gap-3"
@@ -2288,6 +2396,25 @@ export default function NewEmployeeView({
                       </div>
                     ))}
                   </div>
+                  {employeeGenerationError && !isGeneratingPlan && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setEmployeeGenerationError('');
+                        setIsGeneratingPlan(true);
+                        try {
+                          await generateEmployeePlan();
+                        } catch (error) {
+                          setEmployeeGenerationError(error.message || 'AI could not create your employee call plan. Please retry.');
+                        } finally {
+                          setIsGeneratingPlan(false);
+                        }
+                      }}
+                      className="rounded-xl border border-[#a78bfa]/40 px-4 py-2 text-sm font-semibold text-[#c4b5fd] hover:bg-white/10"
+                    >
+                      Retry AI call plan
+                    </button>
+                  )}
 
                   {/* Navigation Buttons */}
                   <div className="flex items-center justify-between pt-6 border-t border-white/10">
@@ -2305,7 +2432,7 @@ export default function NewEmployeeView({
 
                     <button
                       type="button"
-                      disabled={isGeneratingEmployee}
+                      disabled={isGeneratingEmployee || isGeneratingPlan || !aiPlanSteps.length}
                       onClick={() => handleCompleteBuildToCall(false)}
                       className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                     >

@@ -79,6 +79,19 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   assert.equal(noScriptProviderResponse.status, 503);
   assert.match((await noScriptProviderResponse.json()).error, /No AI provider is configured/);
 
+  const noBuildProviderResponse = await fetch(`${baseUrl}/api/employees/build-stage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+    body: JSON.stringify({
+      stage: 'analyze',
+      prompt: 'Answer calls for our clinic and help callers request appointments.',
+      language: 'en',
+      purpose: 'sales'
+    })
+  });
+  assert.equal(noBuildProviderResponse.status, 503);
+  assert.match((await noBuildProviderResponse.json()).error, /No AI provider is configured/);
+
   const [{ groqClient }, { mistralClient }] = await Promise.all([
     import('./groqClient.js'),
     import('./mistralClient.js')
@@ -88,8 +101,44 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   const originalGroqGeneration = groqClient.generateEmployeeScript;
   const originalMistralGeneration = mistralClient.generateEmployeeScript;
   const originalGroqSupportGeneration = groqClient.generateSupportScript;
+  const originalGroqBuildStageGeneration = groqClient.generateEmployeeBuildStage;
+  const originalMistralBuildStageGeneration = mistralClient.generateEmployeeBuildStage;
   process.env.GROQ_API_KEY = 'mock-groq-key';
   process.env.MISTRAL_API_KEY = 'mock-mistral-key';
+  let failGroqAnalysis = false;
+  const mockPlanSteps = [
+    { title: 'Welcome callers', detail: 'Introduce Priya from Acme Clinic.' },
+    { title: 'Understand appointment needs', detail: 'Ask what appointment the caller wants.' },
+    { title: 'Clarify relevant details', detail: 'Ask one question at a time.' },
+    { title: 'Share confirmed information', detail: 'Only share facts supplied by the clinic.' },
+    { title: 'Offer callback', detail: 'Ask permission before offering a callback.' },
+    { title: 'Summarize and close', detail: 'Recap the request and thank the caller.' }
+  ];
+  groqClient.generateEmployeeBuildStage = async request => request.stage === 'analyze' && failGroqAnalysis
+    ? {}
+    : request.stage === 'analyze'
+    ? {
+      industry: 'Healthcare',
+      role: 'Patient Coordinator',
+      summary: 'This appears to be a clinic appointment workflow.',
+      offerings: ['Appointment requests', 'Clinic information', 'Callback requests'],
+      nextActions: ['Request a callback', 'Ask for human follow-up'],
+      objectionOptions: ['Acknowledge the concern', 'Offer human follow-up'],
+      questions: ['What price details may be shared?', 'Which services should be covered?', 'What should callers do next?']
+    }
+    : { steps: mockPlanSteps };
+  mistralClient.generateEmployeeBuildStage = async request => {
+    assert.equal(request.stage, 'analyze');
+    return {
+      industry: 'Healthcare',
+      role: 'Patient Coordinator',
+      summary: 'This appears to be a clinic appointment workflow.',
+      offerings: ['Appointment requests', 'Clinic information', 'Callback requests'],
+      nextActions: ['Request a callback', 'Ask for human follow-up'],
+      objectionOptions: ['Acknowledge the concern', 'Offer human follow-up'],
+      questions: ['What price details may be shared?', 'Which services should be covered?', 'What should callers do next?']
+    };
+  };
   groqClient.generateEmployeeScript = async () => ({
     openingLine: 'Hello there.',
     enquiryPrompts: ['Question one?', 'Question two?', 'Question three?']
@@ -106,6 +155,76 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
     };
   };
   try {
+    const buildAnalysisResponse = await fetch(`${baseUrl}/api/employees/build-stage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        stage: 'analyze',
+        purpose: 'sales',
+        prompt: 'Answer clinic calls and help callers request appointments.',
+        language: 'en'
+      })
+    });
+    const buildAnalysis = await buildAnalysisResponse.json();
+    assert.equal(buildAnalysisResponse.status, 200);
+    assert.equal(buildAnalysis.stage, 'analyze');
+    assert.equal(buildAnalysis.role, 'Patient Coordinator');
+    assert.match(buildAnalysis.source, /Groq/);
+
+    const buildPlanResponse = await fetch(`${baseUrl}/api/employees/build-stage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        stage: 'plan',
+        purpose: 'sales',
+        prompt: 'Answer clinic calls and help callers request appointments.',
+        language: 'en',
+        businessName: 'Acme Clinic',
+        role: 'Patient Coordinator',
+        offerings: ['Appointment requests'],
+        nextActions: ['Request a callback']
+      })
+    });
+    const buildPlan = await buildPlanResponse.json();
+    assert.equal(buildPlanResponse.status, 200);
+    assert.equal(buildPlan.stage, 'plan');
+    assert.equal(buildPlan.steps.length, 6);
+    assert.match(buildPlan.source, /Groq/);
+
+    failGroqAnalysis = true;
+    const failoverAnalysisResponse = await fetch(`${baseUrl}/api/employees/build-stage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        stage: 'analyze',
+        purpose: 'sales',
+        prompt: 'Answer clinic calls and help callers request appointments.',
+        language: 'en'
+      })
+    });
+    const failoverAnalysis = await failoverAnalysisResponse.json();
+    assert.equal(failoverAnalysisResponse.status, 200);
+    assert.match(failoverAnalysis.source, /Mistral/);
+    failGroqAnalysis = false;
+
+    const supportPlanResponse = await fetch(`${baseUrl}/api/employees/build-stage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        stage: 'plan',
+        purpose: 'support',
+        prompt: 'Help customers with delivery and payment issues.',
+        language: 'en',
+        businessName: 'Acme Store',
+        commonIssues: ['Delivery delay', 'Payment issue'],
+        policies: 'Escalate refund decisions to a human.'
+      })
+    });
+    const supportPlan = await supportPlanResponse.json();
+    assert.equal(supportPlanResponse.status, 200);
+    assert.equal(supportPlan.stage, 'plan');
+    assert.equal(supportPlan.steps.length, 6);
+
     const generatedSalesResponse = await fetch(`${baseUrl}/api/employees/generate-script`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
@@ -202,6 +321,8 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   } finally {
     groqClient.generateEmployeeScript = originalGroqGeneration;
     groqClient.generateSupportScript = originalGroqSupportGeneration;
+    groqClient.generateEmployeeBuildStage = originalGroqBuildStageGeneration;
+    mistralClient.generateEmployeeBuildStage = originalMistralBuildStageGeneration;
     mistralClient.generateEmployeeScript = originalMistralGeneration;
     process.env.GROQ_API_KEY = originalGroqKey;
     process.env.MISTRAL_API_KEY = originalMistralKey;

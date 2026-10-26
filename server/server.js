@@ -777,6 +777,19 @@ app.post('/api/employees/generate-support-script', authenticateToken, async (req
   }
 });
 
+app.post('/api/employees/build-stage', authenticateToken, async (req, res) => {
+  try {
+    const result = await llmManager.generateEmployeeBuildStage(req.body);
+    res.json(result);
+  } catch (error) {
+    const message = error.message || 'Employee setup guidance could not be generated.';
+    const invalidInput = /supported employee-building stage|at least 10 characters|supported employee language|business name before creating the call plan|customer issue before creating the support plan/.test(message);
+    const missingProvider = message.startsWith('No AI provider is configured.');
+    console.error('[Employee Build Stage Error]:', message);
+    res.status(invalidInput ? 400 : missingProvider ? 503 : 502).json({ error: message });
+  }
+});
+
 app.post('/api/employees/generate-script', authenticateToken, async (req, res) => {
   try {
     const result = await llmManager.generateEmployeeScript(req.body);

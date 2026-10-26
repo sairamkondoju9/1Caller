@@ -13,6 +13,11 @@ import {
   normalizeEmployeeScriptRequest,
   normalizeGeneratedEmployeeScript
 } from './employeeScript.js';
+import {
+  buildEmployeeBuildStagePrompt,
+  normalizeEmployeeBuildStageRequest,
+  normalizeEmployeeBuildStageResult
+} from './employeeBuild.js';
 
 const validRequest = {
   prompt: 'Help customers resolve delivery and payment issues with empathy.',
@@ -42,13 +47,17 @@ test('support request requires a real brief, business name, supported language, 
 });
 
 test('support generation prompt preserves client facts and guardrails against invented policies', () => {
-  const request = normalizeSupportRequest(validRequest);
+  const request = normalizeSupportRequest({
+    ...validRequest,
+    planSteps: [{ title: 'Clarify the issue', detail: 'Ask what happened and listen carefully.' }]
+  });
   const prompt = buildSupportGenerationPrompt(request);
   assert.match(prompt, /Acme Store/);
   assert.match(prompt, /Escalate refund decisions to a human support agent/);
   assert.match(prompt, /Delivery delay/);
   assert.match(prompt, /Never invent order status/);
   assert.match(prompt, /do not write a script or steps/i);
+  assert.match(prompt, /Clarify the issue/);
 });
 
 test('support personalization validation rejects incomplete or malformed provider output', () => {
@@ -151,6 +160,11 @@ test('employee prompt requests only compact personalization and fixed flow is va
   assert.match(prompt, /Never invent products, prices, discounts, policies/);
   assert.match(prompt, /do not write a script or steps/i);
   assert.match(prompt, /Acme Clinic/);
+  const planRequest = normalizeEmployeeScriptRequest({
+    ...employeeRequest,
+    planSteps: [{ title: 'Welcome callers', detail: 'Introduce the employee using the confirmed name.' }]
+  });
+  assert.match(buildEmployeeScriptPrompt(planRequest), /Welcome callers/);
   assert.throws(() => normalizeGeneratedEmployeeScript({}, request), /incomplete employee personalization/);
   assert.throws(() => normalizeGeneratedEmployeeScript({
     ...validEmployeeResult,
@@ -160,6 +174,101 @@ test('employee prompt requests only compact personalization and fixed flow is va
     ...validEmployeeResult,
     openingLine: 'Hello, how can I help?'
   }, request), /did not use your business name/);
+});
+
+const employeePlanSteps = [
+  { title: 'Welcome callers', detail: 'Introduce the employee and business using the confirmed name.' },
+  { title: 'Understand appointment needs', detail: 'Ask which appointment the caller wants to request.' },
+  { title: 'Clarify relevant details', detail: 'Ask one question at a time about the requested appointment.' },
+  { title: 'Share confirmed information', detail: 'Only share clinic details supplied by the business.' },
+  { title: 'Offer callback', detail: 'Ask permission before offering the confirmed callback option.' },
+  { title: 'Summarize and close', detail: 'Recap the request and thank the caller.' }
+];
+
+test('employee build stages validate AI analysis and business-specific plan output', () => {
+  const base = {
+    prompt: employeeRequest.prompt,
+    language: 'en',
+    purpose: 'sales'
+  };
+  const analysisRequest = normalizeEmployeeBuildStageRequest({ ...base, stage: 'analyze' });
+  const analysis = {
+    industry: 'Healthcare',
+    role: 'Patient Coordinator',
+    summary: 'This appears to be a clinic appointment support workflow.',
+    offerings: ['Appointment requests', 'Clinic information', 'Callback requests'],
+    nextActions: ['Request a callback', 'Ask the clinic team to follow up'],
+    objectionOptions: ['Acknowledge the concern', 'Offer human follow-up'],
+    questions: ['What price details may be shared?', 'Which services should be covered?', 'What should the caller do next?']
+  };
+  const normalizedAnalysis = normalizeEmployeeBuildStageResult(analysis, analysisRequest);
+  assert.equal(normalizedAnalysis.role, 'Patient Coordinator');
+  assert.equal(normalizedAnalysis.offerings.length, 3);
+  assert.throws(() => normalizeEmployeeBuildStageResult({ ...analysis, questions: [] }, analysisRequest), /incomplete setup guidance/);
+  assert.match(buildEmployeeBuildStagePrompt(analysisRequest), /Do not generate a call script/);
+
+  const planRequest = normalizeEmployeeBuildStageRequest({
+    ...base,
+    stage: 'plan',
+    businessName: 'Acme Clinic',
+    offerings: ['Appointment requests'],
+    nextActions: ['Request a callback']
+  });
+  const normalizedPlan = normalizeEmployeeBuildStageResult({ steps: employeePlanSteps }, planRequest);
+  assert.equal(normalizedPlan.steps.length, 6);
+  assert.throws(() => normalizeEmployeeBuildStageResult({ steps: employeePlanSteps.slice(0, 4) }, planRequest), /incomplete call plan/);
+  assert.throws(() => normalizeEmployeeBuildStageResult({ steps: [...employeePlanSteps, employeePlanSteps[0]] }, planRequest), /incomplete call plan/);
+  assert.throws(() => normalizeEmployeeBuildStageResult({ ...analysis, questions: [...analysis.questions, 'Unexpected fourth question'] }, analysisRequest), /incomplete setup guidance/);
+  assert.throws(() => normalizeEmployeeBuildStageRequest({ ...base, stage: 'plan' }), /business name/);
+  assert.match(buildEmployeeBuildStagePrompt(planRequest), /Never invent products, prices/);
+});
+
+test('all provider clients parse compact employee build-stage JSON', async () => {
+  const analysisResponse = {
+    industry: 'Healthcare',
+    role: 'Patient Coordinator',
+    summary: 'This appears to be a clinic appointment workflow.',
+    offerings: ['Appointment requests', 'Clinic information', 'Callback requests'],
+    nextActions: ['Request a callback', 'Ask for human follow-up'],
+    objectionOptions: ['Acknowledge concerns', 'Offer human follow-up'],
+    questions: ['What details may be shared?', 'Which services are offered?', 'What should callers do next?']
+  };
+  const request = normalizeEmployeeBuildStageRequest({
+    stage: 'analyze',
+    prompt: employeeRequest.prompt,
+    purpose: 'sales',
+    language: 'en'
+  });
+  const responseJson = JSON.stringify(analysisResponse);
+  const groq = new GroqClient('test-key');
+  groq._callGroqChat = async ({ messages, maxTokens }) => {
+    assert.match(messages[1].content, /Do not generate a call script/);
+    assert.equal(maxTokens, 480);
+    return { content: responseJson, modelUsed: 'groq-stage-test' };
+  };
+  const mistral = new MistralClient('test-key');
+  mistral._callMistralChat = async ({ messages }) => {
+    assert.match(messages[1].content, /Not selected yet/);
+    return { content: responseJson, modelUsed: 'mistral-stage-test' };
+  };
+  const gemini = new GeminiClient('test-key');
+  gemini._generateContent = async ({ userPrompt, maxOutputTokens }) => {
+    assert.match(userPrompt, /Answer calls for our clinic/);
+    assert.equal(maxOutputTokens, 480);
+    return { text: responseJson, modelUsed: 'gemini-stage-test' };
+  };
+
+  const [groqResult, mistralResult, geminiResult] = await Promise.all([
+    groq.generateEmployeeBuildStage(request),
+    mistral.generateEmployeeBuildStage(request),
+    gemini.generateEmployeeBuildStage(request)
+  ]);
+  assert.equal(groqResult.modelUsed, 'groq-stage-test');
+  assert.equal(mistralResult.modelUsed, 'mistral-stage-test');
+  assert.equal(geminiResult.modelUsed, 'gemini-stage-test');
+  assert.equal(groqResult.questions.length, 3);
+  assert.equal(mistralResult.questions.length, 3);
+  assert.equal(geminiResult.questions.length, 3);
 });
 
 test('employee script normalization keeps the client business name and creates editable steps', () => {

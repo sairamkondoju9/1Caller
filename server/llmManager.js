@@ -27,6 +27,10 @@ import {
   normalizeEmployeeScriptRequest,
   normalizeGeneratedEmployeeScript
 } from './employeeScript.js';
+import {
+  normalizeEmployeeBuildStageRequest,
+  normalizeEmployeeBuildStageResult
+} from './employeeBuild.js';
 
 let groqCooldownUntil = 0;
 let mistralCooldownUntil = 0;
@@ -263,6 +267,60 @@ export class LLMManager {
 
     const detail = failures.length ? failures.join(' ') : 'All configured AI providers are temporarily cooling down.';
     throw new Error(`Could not generate a validated employee script. ${detail}`);
+  }
+
+  async generateEmployeeBuildStage(input) {
+    const request = normalizeEmployeeBuildStageRequest(input);
+    const providers = [
+      { name: 'Groq', env: 'GROQ_API_KEY', client: groqClient, key: 'groq', cooldown: () => groqCooldownUntil },
+      { name: 'Mistral', env: 'MISTRAL_API_KEY', client: mistralClient, key: 'mistral', cooldown: () => mistralCooldownUntil },
+      { name: 'Gemini', env: 'GEMINI_API_KEY', client: geminiClient, key: 'gemini', cooldown: () => geminiCooldownUntil }
+    ];
+    const configured = providers.filter(provider => Boolean(process.env[provider.env]?.trim()));
+    if (configured.length === 0) {
+      throw new Error('No AI provider is configured. Set a Groq, Mistral, or Gemini API key in the server environment.');
+    }
+
+    const failures = [];
+    for (const provider of configured) {
+      if (Date.now() < provider.cooldown()) {
+        failures.push(`${provider.name} is temporarily cooling down.`);
+        continue;
+      }
+      const startedAt = Date.now();
+      let timeoutHandle;
+      try {
+        const timeout = new Promise((_, reject) => {
+          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} employee setup ${request.stage} timed out.`)), 12000);
+        });
+        const result = await Promise.race([
+          provider.client.generateEmployeeBuildStage(request),
+          timeout
+        ]);
+        if (!result) throw new Error(`${provider.name} did not return usable employee setup guidance.`);
+        const normalized = normalizeEmployeeBuildStageResult(result, request);
+        recordLLMCall({
+          provider: provider.key,
+          model: result.modelUsed || provider.name,
+          latencyMs: Date.now() - startedAt,
+          status: 'success'
+        });
+        return { ...normalized, stage: request.stage, source: `${provider.name} (${result.modelUsed || 'configured model'})` };
+      } catch (error) {
+        console.warn(`[LLMManager] ${provider.name} employee setup ${request.stage} failed:`, error.message);
+        failures.push(`${provider.name}: ${error.message}`);
+        if (/timed out|429|rate.?limit/i.test(error.message)) {
+          if (provider.key === 'groq') groqCooldownUntil = Date.now() + 60000;
+          if (provider.key === 'mistral') mistralCooldownUntil = Date.now() + 60000;
+          if (provider.key === 'gemini') geminiCooldownUntil = Date.now() + 60000;
+        }
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
+    }
+
+    const detail = failures.length ? failures.join(' ') : 'All configured AI providers are temporarily cooling down.';
+    throw new Error(`Could not create validated employee setup guidance. ${detail}`);
   }
 
   async swaraChatCopilot({ currentScript, userInstruction }) {

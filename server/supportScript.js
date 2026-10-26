@@ -25,6 +25,14 @@ function cleanList(value) {
     .slice(0, 12);
 }
 
+function cleanPlanSteps(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 6).map(step => ({
+    title: cleanText(step?.title, 80),
+    detail: cleanText(step?.detail, 240)
+  })).filter(step => step.title && step.detail);
+}
+
 export function normalizeSupportRequest(input = {}) {
   try {
     const prompt = cleanText(input.prompt);
@@ -56,7 +64,8 @@ export function normalizeSupportRequest(input = {}) {
       policies: cleanText(input.policies),
       commonIssues,
       nextActions: cleanList(input.nextActions),
-      selectedFacts: cleanList(input.selectedFacts)
+      selectedFacts: cleanList(input.selectedFacts),
+      planSteps: cleanPlanSteps(input.planSteps)
     };
   } catch (error) {
     throw new SupportInputError(error.message);
@@ -73,6 +82,7 @@ export function buildSupportGenerationPrompt(input) {
     customerIssueTypes: input.commonIssues,
     allowedNextActions: input.nextActions,
     clientSelections: input.selectedFacts,
+    AIReviewedCallPlan: input.planSteps,
     responseLanguage: input.language
   };
 
