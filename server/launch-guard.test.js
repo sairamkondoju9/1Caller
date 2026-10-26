@@ -65,7 +65,7 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
     })
   });
   assert.equal(noProviderResponse.status, 503);
-  assert.match((await noProviderResponse.json()).error, /requires a Groq, Mistral, or Gemini API key/);
+  assert.match((await noProviderResponse.json()).error, /requires a Groq, Cerebras, Mistral, or Gemini API key/);
 
   const noScriptProviderResponse = await fetch(`${baseUrl}/api/employees/generate-script`, {
     method: 'POST',

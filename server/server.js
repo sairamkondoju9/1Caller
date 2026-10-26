@@ -192,7 +192,7 @@ app.get('/api/health', async (req, res) => {
     }
   }
 
-  const aiGeneration = [process.env.GROQ_API_KEY, process.env.GEMINI_API_KEY, process.env.MISTRAL_API_KEY]
+  const aiGeneration = [process.env.GROQ_API_KEY, process.env.GEMINI_API_KEY, process.env.MISTRAL_API_KEY, process.env.CEREBRAS_API_KEY]
     .some(Boolean) ? 'configured' : 'not_configured';
   const voiceGateway = process.env.VOICE_WS_URL
     ? 'configured'
@@ -758,7 +758,7 @@ app.post('/api/employees/parse-prompt', authenticateToken, async (req, res) => {
     console.error('[Employee Profile Test Error]:', message);
     res.status(invalidInput ? 400 : missingProvider ? 503 : 502).json({
       error: missingProvider
-        ? 'Employee generation requires a Groq, Mistral, or Gemini API key configured on the server.'
+        ? 'Employee generation requires a Groq, Cerebras, Mistral, or Gemini API key configured on the server.'
         : message
     });
   }

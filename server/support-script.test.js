@@ -8,6 +8,7 @@ import {
 import { GroqClient } from './groqClient.js';
 import { GeminiClient } from './geminiClient.js';
 import { MistralClient } from './mistralClient.js';
+import { CerebrasClient } from './cerebrasClient.js';
 import {
   buildEmployeeScriptPrompt,
   normalizeEmployeeScriptRequest,
@@ -257,18 +258,26 @@ test('all provider clients parse compact employee build-stage JSON', async () =>
     assert.equal(maxOutputTokens, 480);
     return { text: responseJson, modelUsed: 'gemini-stage-test' };
   };
+  const cerebras = new CerebrasClient('test-key');
+  cerebras._callChat = async ({ messages }) => {
+    assert.match(messages[1].content, /Do not generate a call script/);
+    return { content: responseJson };
+  };
 
-  const [groqResult, mistralResult, geminiResult] = await Promise.all([
+  const [groqResult, mistralResult, geminiResult, cerebrasResult] = await Promise.all([
     groq.generateEmployeeBuildStage(request),
     mistral.generateEmployeeBuildStage(request),
-    gemini.generateEmployeeBuildStage(request)
+    gemini.generateEmployeeBuildStage(request),
+    cerebras.generateEmployeeBuildStage(request)
   ]);
   assert.equal(groqResult.modelUsed, 'groq-stage-test');
   assert.equal(mistralResult.modelUsed, 'mistral-stage-test');
   assert.equal(geminiResult.modelUsed, 'gemini-stage-test');
+  assert.equal(cerebrasResult.modelUsed, 'llama3.3-70b');
   assert.equal(groqResult.questions.length, 3);
   assert.equal(mistralResult.questions.length, 3);
   assert.equal(geminiResult.questions.length, 3);
+  assert.equal(cerebrasResult.questions.length, 3);
 });
 
 test('employee script normalization keeps the client business name and creates editable steps', () => {
@@ -286,7 +295,7 @@ test('employee script normalization keeps the client business name and creates e
   assert.doesNotMatch(generated.call_steps[2].body, /businessSummary/i);
 });
 
-test('Groq, Gemini, and Mistral employee clients use compact output budgets', async () => {
+test('Groq, Gemini, Mistral, and Cerebras employee clients use compact output budgets', async () => {
   const request = normalizeEmployeeScriptRequest(employeeRequest);
   const responseJson = JSON.stringify(validEmployeeResult);
   const groq = new GroqClient('test-key');
@@ -307,11 +316,31 @@ test('Groq, Gemini, and Mistral employee clients use compact output budgets', as
     assert.equal(maxTokens, 420);
     return { content: responseJson, modelUsed: 'mistral-test' };
   };
+  const cerebras = new CerebrasClient('test-key');
+  cerebras._callChat = async ({ messages, maxTokens }) => {
+    assert.match(messages[1].content, /Never invent products, prices/);
+    assert.equal(maxTokens, 420);
+    return { content: responseJson };
+  };
   const results = await Promise.all([
     groq.generateEmployeeScript(request),
     gemini.generateEmployeeScript(request),
-    mistral.generateEmployeeScript(request)
+    mistral.generateEmployeeScript(request),
+    cerebras.generateEmployeeScript(request)
   ]);
-  assert.deepEqual(results.map(result => result.modelUsed), ['groq-test', 'gemini-test', 'mistral-test']);
+  assert.deepEqual(results.map(result => result.modelUsed), ['groq-test', 'gemini-test', 'mistral-test', 'llama3.3-70b']);
   assert.equal(results.every(result => Array.isArray(result.enquiryPrompts)), true);
+});
+
+test('Cerebras support generation uses the shared support contract', async () => {
+  const request = normalizeSupportRequest(validRequest);
+  const cerebras = new CerebrasClient('test-key');
+  cerebras._callChat = async ({ messages, maxTokens }) => {
+    assert.match(messages[1].content, /Never invent order status/);
+    assert.equal(maxTokens, 480);
+    return { content: JSON.stringify(validProviderResult) };
+  };
+  const result = await cerebras.generateSupportScript(request);
+  assert.equal(result.modelUsed, 'llama3.3-70b');
+  assert.equal(result.issueQuestions.length, 3);
 });

@@ -299,52 +299,52 @@ export default function NewEmployeeView({
       } else if (initialData.call_steps && Array.isArray(initialData.call_steps) && initialData.call_steps.length > 0 && typeof initialData.call_steps[0] === 'object') {
         setScriptSteps(initialData.call_steps);
       } else {
-        const empName = initialData.name || 'Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â±ÂÃ Â°Â®Ã Â°Â¿';
-        const bizName = initialData.business || 'Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â';
+                const empName = initialData.name || 'లక్ష్మి';
+        const bizName = initialData.business || 'సాయిరామ్';
         const isTe = !initialData.language || initialData.language.toLowerCase().includes('telugu') || initialData.language.toLowerCase().startsWith('te');
-        const offeringsNoun = initialData.industry === 'Car & bike dealership' ? 'Ã Â°â€¢Ã Â°Â¾Ã Â°Â°Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°Â¾ Ã Â°Å¸Ã Â±â€ Ã Â°Â¸Ã Â±ÂÃ Â°Å¸Ã Â±Â Ã Â°Â¡Ã Â±ÂÃ Â°Â°Ã Â±Ë†Ã Â°ÂµÃ Â±Â' : (initialData.industry === 'Hospital & clinic' ? 'Ã Â°Â¡Ã Â°Â¾Ã Â°â€¢Ã Â±ÂÃ Â°Å¸Ã Â°Â°Ã Â±Â Ã Â°â€¢Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â°Â²Ã Â±ÂÃ Â°Å¸Ã Â±â€¡Ã Â°Â·Ã Â°Â¨Ã Â±Â Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°Â¾ Ã Â°â€¦Ã Â°ÂªÃ Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°â€šÃ Â°Å¸Ã Â±ÂÃ¢â‚¬Å’Ã Â°Â®Ã Â±â€ Ã Â°â€šÃ Â°Å¸Ã Â±Â' : 'Ã Â°Â¸Ã Â°Â°Ã Â±ÂÃ Â°ÂµÃ Â±â‚¬Ã Â°Â¸Ã Â±â€ Ã Â°Â¸Ã Â±Â Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°Â¾ Ã Â°â€¢Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â°Â²Ã Â±ÂÃ Â°Å¸Ã Â±â€¡Ã Â°Â·Ã Â°Â¨Ã Â±Â');
-        const priceStr = initialData.industry === 'Car & bike dealership' ? '6.5 Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â² Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Å¡Ã Â°Â¿ 28 Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â²Ã Â±Â' : (initialData.industry === 'Hospital & clinic' ? '500' : '5222');
+        const offeringsNoun = initialData.industry === 'Car & bike dealership' ? 'కార్స్ లేదా టెస్ట్ డ్రైవ్' : (initialData.industry === 'Hospital & clinic' ? 'డాక్టర్ కన్సల్టేషన్ లేదా అపాయింట్‌మెంట్' : 'సర్వీసెస్ లేదా కన్సల్టేషన్');
+        const priceStr = initialData.industry === 'Car & bike dealership' ? '6.5 లక్షల నుంచి 28 లక్షలు' : (initialData.industry === 'Hospital & clinic' ? '500' : '5222');
         const steps = [
           {
             id: 1,
             title: '1. Orient & Context',
             badge: 'START',
             body: isTe
-              ? `Once they've confirmed their identity, introduce yourself as '${empName}' from '${bizName}', and remind them they enquired about our ${offeringsNoun}. Mention you'll help with info or next steps. Keep it brief and friendly Ã¢â‚¬â€ for example you might say: 'Ã Â°Â¨Ã Â±â€¡Ã Â°Â¨Ã Â±Â ${empName}, ${bizName} Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Â¡Ã Â°Â¿ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°Â°Ã Â±Â Ã Â°Â®Ã Â°Â¾ ${offeringsNoun} Ã Â°â€”Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ enquiry Ã Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â°Â¾Ã Â°Â°Ã Â±Â Ã Â°â€¢Ã Â°Â¦Ã Â°Â¾, Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂÃ Â°Â¦Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°â€¢Ã Â±ÂÃ Â°Â²Ã Â°Â¾Ã Â°Â°Ã Â°Â¿Ã Â°Å¸Ã Â±â‚¬ Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾ Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°Â¾ Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â¤Ã Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°â€¢Ã Â±â€¹Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾?'`
+              ? `Once they've confirmed their identity, introduce yourself as '${empName}' from '${bizName}', and remind them they enquired about our ${offeringsNoun}. Mention you'll help with info or next steps. Keep it brief and friendly — for example you might say: 'నేను ${empName}, ${bizName} నుండి అండి. మీరు మా ${offeringsNoun} గురించి enquiry చేసారు కదా, మీకు ఏదైనా క్లారిటీ కావాలా లేదా డీటెయిల్స్ తెలుసుకోవాలా?'`
               : `Once they've confirmed their identity, introduce yourself as '${empName}' from '${bizName}', and remind them they enquired about our ${offeringsNoun}. Mention you'll help with info or next steps. Keep it brief and friendly.`
           },
           {
             id: 2,
             title: '2. Qualify Need',
             body: isTe
-              ? `Find out what specific ${offeringsNoun} they are interested in, and if they have any particular requirement or question. Ask ONE thing at a time, wait for their answer, and respond naturally before the next question. For example: 'Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°Â ${offeringsNoun} Ã Â°â€”Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°Â¤Ã Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°â€¢Ã Â±â€¹Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â°Â¿ Ã Â°â€°Ã Â°â€šÃ Â°Â¦Ã Â°Â¿ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿?'`
+              ? `Find out what specific ${offeringsNoun} they are interested in, and if they have any particular requirement or question. Ask ONE thing at a time, wait for their answer, and respond naturally before the next question. For example: 'మీకు ఏ ${offeringsNoun} గురించి తెలుసుకోవాలని ఉంది అండి?'`
               : `Find out what specific ${offeringsNoun} they are interested in, and if they have any particular requirement or question. Ask ONE thing at a time, wait for their answer, and respond naturally before the next question.`
           },
           {
             id: 3,
             title: '3. Share Info & Answer Questions',
             body: isTe
-              ? `Based on their interest, briefly explain how our ${offeringsNoun} work and mention the price (${priceStr}) if they ask or if it's relevant. Answer any questions they have. Mention you'll arrange a callback for more in-depth help. For example: 'Ã Â°Â®Ã Â°Â¾ ${offeringsNoun} Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Å¡Ã Â±â€ Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°ÂªÃ Â±ÂÃ Â°Â°Ã Â±Ë†Ã Â°Â¸Ã Â±Â Ã Â°ÂÃ Â°Â¤Ã Â±â€¡ ${priceStr}. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¹ Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ callback arrange Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â.'`
+              ? `Based on their interest, briefly explain how our ${offeringsNoun} work and mention the price (${priceStr}) if they ask or if it's relevant. Answer any questions they have. Mention you'll arrange a callback for more in-depth help. For example: 'మా ${offeringsNoun} డీటెయిల్స్ చెప్పొచ్చు అండి, ప్రైస్ అయితే ${priceStr}. ఇంకో డీటెయిల్స్ కావాలంటే callback arrange చేయొచ్చు.'`
               : `Based on their interest, briefly explain how our ${offeringsNoun} work and mention the price (${priceStr}) if they ask or if it's relevant. Answer any questions they have. Mention you'll arrange a callback for more in-depth help.`
           },
           {
             id: 4,
             title: '4. Book Callback / Capture Next Step',
             body: isTe
-              ? `Offer to arrange a callback from our team for more details or to help them proceed. Confirm their preferred callback time and thank them warmly. For example: 'Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂµÃ Â±â‚¬Ã Â°Â²Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨ Ã Â°Å¸Ã Â±Ë†Ã Â°Â®Ã Â±Â Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â®Ã Â°Â¾ Ã Â°Å¸Ã Â±â‚¬Ã Â°Â®Ã Â±Â Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°â€¢Ã Â°Â¾Ã Â°Â²Ã Â±Â arrange Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â. Ã Â°Â¸Ã Â°Â°Ã Â±â€¡Ã Â°Â¨Ã Â°Â¾?'`
+              ? `Offer to arrange a callback from our team for more details or to help them proceed. Confirm their preferred callback time and thank them warmly. For example: 'మీకు వీలున్న టైమ్ ఎప్పుడు అండి, మా టీమ్ నుంచి కాల్ arrange చేయొచ్చు. సరేనా?'`
               : `Offer to arrange a callback from our team for more details or to help them proceed. Confirm their preferred callback time and thank them warmly.`
           },
           {
             id: 5,
             title: '5. Close',
             body: isTe
-              ? `Wrap up warmly, confirming the next step and letting them know they can reach out if they have more questions. For example: 'Ã Â°Â¸Ã Â°Â°Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â®Ã Â°Â¾ Ã Â°Å¸Ã Â±â‚¬Ã Â°Â®Ã Â±Â Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°Â²Ã Â±Â Ã Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â°Â¾Ã Â°Â°Ã Â±Â. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¹ Ã Â°Â¡Ã Â±Å’Ã Â°Å¸Ã Â±Â Ã Â°â€°Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ anytime Ã Â°â€¦Ã Â°Â¡Ã Â°â€”Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â. Ã Â°Â¥Ã Â°Â¾Ã Â°â€šÃ Â°â€¢Ã Â±ÂÃ Â°Â¯Ã Â±â€š!'`
+              ? `Wrap up warmly, confirming the next step and letting them know they can reach out if they have more questions. For example: 'సరే అండి, మా టీమ్ మీకు కాల్ చేస్తారు. ఇంకో డౌట్ ఉంటే anytime అడగొచ్చు. థాంక్యూ!'`
               : `Wrap up warmly, confirming the next step and letting them know they can reach out if they have more questions.`
           },
           {
             id: 6,
             title: '6. FAQs',
-            body: `Common questions callers ask, and how to answer them. Add one per line as "Q: Ã¢â‚¬Â¦ A: Ã¢â‚¬Â¦".\nAnswer ONLY from what's written here; if a question isn't listed, use your don't-know response.\n\ne.g.\nQ: What are your timings?  A: We're open 9am to 6pm, Monday to Saturday.\nQ: Do you offer home delivery?  A: Yes, free within the city.`
+            body: `Common questions callers ask, and how to answer them. Add one per line as "Q: … A: …".\nAnswer ONLY from what's written here; if a question isn't listed, use your don't-know response.\n\ne.g.\nQ: What are your timings?  A: We're open 9am to 6pm, Monday to Saturday.\nQ: Do you offer home delivery?  A: Yes, free within the city.`
           }
         ];
         setScriptSteps(steps);
@@ -490,7 +490,7 @@ export default function NewEmployeeView({
       contact: '+918919112039',
       badge: 'TEST CALL',
       duration: '1:30',
-      cost: 'Ã¢â€šÂ¹10.20',
+      cost: '₹10.20',
       outcome: 'Qualified',
       sentiment: 'Neutral',
       jewelleryType: 'gold',
@@ -503,11 +503,11 @@ export default function NewEmployeeView({
       contact: '+918919112039',
       badge: 'TEST CALL',
       duration: '0:04',
-      cost: 'Ã¢â€šÂ¹3.40',
+      cost: '₹3.40',
       outcome: 'Voicemail',
       sentiment: 'Neutral',
-      jewelleryType: 'Ã¢â‚¬â€',
-      sendWhatsapp: 'Ã¢â‚¬â€',
+      jewelleryType: '—',
+      sendWhatsapp: '—',
       time: 'Today 4:43 pm',
       summary: 'Reached voicemail/an answering machine. Call terminated.'
     },
@@ -516,11 +516,11 @@ export default function NewEmployeeView({
       contact: 'Jagan',
       badge: 'Web call',
       duration: '0:00',
-      cost: 'Ã¢â€šÂ¹0.00',
+      cost: '₹0.00',
       outcome: 'Callback',
       sentiment: 'Neutral',
-      jewelleryType: 'Ã¢â‚¬â€',
-      sendWhatsapp: 'Ã¢â‚¬â€',
+      jewelleryType: '—',
+      sendWhatsapp: '—',
       time: 'Today 5:00 pm',
       summary: 'No summary'
     }
@@ -542,54 +542,54 @@ export default function NewEmployeeView({
   });
 
   // Real Telugu Conversation Turns (1:28 recording)
-  const realCallTurns = [
-    { time: 0, speaker: 'Jagan', text: 'Ã Â°Â¹Ã Â°Â²Ã Â±â€¹ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â Ã Â°Â¤Ã Â±â€¹ Ã Â°Â®Ã Â°Â¾Ã Â°Å¸Ã Â±ÂÃ Â°Â²Ã Â°Â¾Ã Â°Â¡Ã Â±ÂÃ Â°Â¤Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¨Ã Â°Â¾?' },
-    { time: 4, speaker: 'Sairam', text: 'Ã Â°â€¦Ã Â°ÂµÃ Â±ÂÃ Â°Â¨Ã Â°ÂµÃ Â±ÂÃ Â°Â¨Ã Â±Â.' },
-    { time: 6, speaker: 'Jagan', text: 'Ã Â°Â¨Ã Â°Â®Ã Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â¨Ã Â±â€¡Ã Â°Â¨Ã Â±Â Ã Â°Å“Ã Â°â€”Ã Â°Â¨Ã Â±Â Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â°Â°Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Å“Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â²Ã Â±â€ Ã Â°Â²Ã Â°â€”Ã Â±â€šÃ Â°Â¡ Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Â¡Ã Â°Â¿ Ã Â°Â®Ã Â°Â¾Ã Â°Å¸Ã Â±ÂÃ Â°Â²Ã Â°Â¾Ã Â°Â¡Ã Â±ÂÃ Â°Â¤Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¨Ã Â±Â. Ã Â°Â®Ã Â±â‚¬Ã Â°Â°Ã Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â°Â°Ã Â±â‚¬ Ã Â°â€”Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°Å½Ã Â°â€šÃ Â°â€¢Ã Â±ÂÃ Â°ÂµÃ Â±Ë†Ã Â°Â°Ã Â±â‚¬ Ã Â°Å¡Ã Â±â€¡Ã Â°Â¶Ã Â°Â¾Ã Â°Â°Ã Â±Â Ã Â°â€¢Ã Â°Â¦Ã Â°Â¾? Ã Â°Â®Ã Â°Â¾ Ã Â°Â·Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°Â²Ã Â±â€¹ Ã Â°â€¡Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°â€¢Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°Â¸Ã Â±ÂÃ Â°Â®Ã Â°Â¸Ã Â±Â Ã Â°â€ Ã Â°Â«Ã Â°Â°Ã Â±Â Ã Â°Â¨Ã Â°Â¡Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â±â€¹Ã Â°â€šÃ Â°Â¦Ã Â°Â¿. Ã Â°â€”Ã Â±â€¹Ã Â°Â²Ã Â±ÂÃ Â°Â¡Ã Â±Â, Ã Â°Â¸Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°ÂµÃ Â°Â°Ã Â±Â, Ã Â°Â¡Ã Â±Ë†Ã Â°Â®Ã Â°â€šÃ Â°Â¡Ã Â±Â Ã Â°â€¦Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¿Ã Â°â€šÃ Â°Å¸Ã Â°Â¿Ã Â°ÂªÃ Â±Ë† Ã Â°Å“Ã Â±â‚¬Ã Â°Å½Ã Â°Â¸Ã Â±ÂÃ Â°Å¸Ã Â±â‚¬, Ã Â°Â®Ã Â±â€¡Ã Â°â€¢Ã Â°Â¿Ã Â°â€šÃ Â°â€”Ã Â±Â Ã Â°â€ºÃ Â°Â¾Ã Â°Â°Ã Â±ÂÃ Â°Å“Ã Â±â€ Ã Â°Â¸Ã Â±Â Ã Â°ÂÃ Â°Â®Ã Â±â‚¬ Ã Â°Â²Ã Â±â€¡Ã Â°ÂµÃ Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°Â Ã Â°Å¸Ã Â±Ë†Ã Â°ÂªÃ Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â°Â°Ã Â±â‚¬Ã Â°Â²Ã Â±â€¹ Ã Â°â€¡Ã Â°â€šÃ Â°Å¸Ã Â±ÂÃ Â°Â°Ã Â±â€ Ã Â°Â¸Ã Â±ÂÃ Â°Å¸Ã Â±Â Ã Â°â€°Ã Â°â€šÃ Â°Â¦Ã Â°Â¿?' },
-    { time: 25, speaker: 'Sairam', text: 'Ã Â°â€”Ã Â±â€¹Ã Â°Â²Ã Â±ÂÃ Â°Â¡Ã Â±Â.' },
-    { time: 27, speaker: 'Jagan', text: 'Ã Â°â€œÃ Â°â€¢Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°â€”Ã Â±â€¹Ã Â°Â²Ã Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â°Â°Ã Â±â‚¬Ã Â°Â²Ã Â±â€¹ Ã Â°â€¦Ã Â°Â¯Ã Â°Â¿Ã Â°Â¤Ã Â±â€¡ Ã Â°Å¡Ã Â°Â¾Ã Â°Â²Ã Â°Â¾ Ã Â°Â®Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°â€¢Ã Â°Â²Ã Â±â€ Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€°Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±â€¡Ã Â°Â®Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°ÂªÃ Â°Â°Ã Â±ÂÃ Â°Å¸Ã Â°Â¿Ã Â°â€¢Ã Â±ÂÃ Â°Â¯Ã Â±ÂÃ Â°Â²Ã Â°Â°Ã Â±Â Ã Â°Â¬Ã Â°Â¡Ã Â±ÂÃ Â°Å“Ã Â±â€ Ã Â°Å¸Ã Â±Â Ã Â°â€°Ã Â°â€šÃ Â°Â¦Ã Â°Â¾ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿? Ã Â°â€¦Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ 5,000 Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Å¡Ã Â°Â¿ 15 Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â² Ã Â°ÂµÃ Â°Â°Ã Â°â€¢Ã Â±Â Ã Â°Â®Ã Â°Â¨ Ã Â°Â¦Ã Â°â€”Ã Â±ÂÃ Â°â€”Ã Â°Â° Ã Â°â€ Ã Â°ÂªÃ Â±ÂÃ Â°Â·Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€°Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿.' },
-    { time: 39, speaker: 'Sairam', text: 'Ã Â°Â¸Ã Â°Â°Ã Â±â€¡.' },
-    { time: 41, speaker: 'Jagan', text: 'Ã Â°Â¸Ã Â°Â°Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°â€¦Ã Â°Â°Ã Â±ÂÃ Â°Â¥Ã Â°Â®Ã Â±Ë†Ã Â°â€šÃ Â°Â¦Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°â€”Ã Â±â€¹Ã Â°Â²Ã Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â°Â°Ã Â±â‚¬Ã Â°Â²Ã Â±â€¹ Ã Â°ÂÃ Â°ÂµÃ Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°ÂªÃ Â°Â°Ã Â±ÂÃ Â°Å¸Ã Â°Â¿Ã Â°â€¢Ã Â±ÂÃ Â°Â¯Ã Â±ÂÃ Â°Â²Ã Â°Â°Ã Â±Â Ã Â°Â¡Ã Â°Â¿Ã Â°Å“Ã Â±Ë†Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Å¡Ã Â±â€šÃ Â°Â¡Ã Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â°Â¿ Ã Â°â€°Ã Â°â€šÃ Â°Â¦Ã Â°Â¾? Ã Â°Â²Ã Â±â€¡Ã Â°â€¢ Ã Â°â€¢Ã Â°Â²Ã Â±â€ Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¦Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â±â‚¬ Ã Â°â€™Ã Â°â€¢Ã Â°Â¸Ã Â°Â¾Ã Â°Â°Ã Â°Â¿ Ã Â°Å¡Ã Â±â€šÃ Â°Â¡Ã Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â±ÂÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Å¸Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â°Ã Â°Â¾?' },
-    { time: 50, speaker: 'Sairam', text: 'Ã Â°â€¢Ã Â°Â²Ã Â±â€ Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¦Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â±â‚¬ Ã Â°â€™Ã Â°â€¢Ã Â°Â¸Ã Â°Â¾Ã Â°Â°Ã Â°Â¿ Ã Â°Å¡Ã Â±â€šÃ Â°Â¡Ã Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â±ÂÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Å¸Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¨Ã Â±Â.' },
-    { time: 53, speaker: 'Jagan', text: 'Ã Â°Â¤Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Â¡Ã Â°Â¾ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°â€¢Ã Â°Â²Ã Â±â€ Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â°Â¨Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¦Ã Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â±â‚¬ Ã Â°Å¡Ã Â°Â¾Ã Â°Â²Ã Â°Â¾ Ã Â°Â¬Ã Â°Â¾Ã Â°â€”Ã Â±ÂÃ Â°â€šÃ Â°Å¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°Â°Ã Â±Å Ã Â°â€¢Ã Â°Â¸Ã Â°Â¾Ã Â°Â°Ã Â°Â¿ Ã Â°Â®Ã Â°Â¾ Ã Â°Â·Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°â€¢Ã Â°Â¿ Ã Â°ÂµÃ Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â°Â¿ Ã Â°Å¡Ã Â±â€šÃ Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â±â€¡ Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°Â¨Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â°Â¿Ã Â°Â¨Ã Â°ÂµÃ Â°Â¿ Ã Â°Â¸Ã Â±â€ Ã Â°Â²Ã Â±â€ Ã Â°â€¢Ã Â±ÂÃ Â°Å¸Ã Â±Â Ã Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â±ÂÃ Â°â€¢Ã Â±â€¹Ã Â°ÂµÃ Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â. Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂµÃ Â±â‚¬Ã Â°Â²Ã Â±Ë†Ã Â°Â¤Ã Â±â€¡ Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°Â°Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â±ÂÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Å¸Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â°Ã Â±Â? Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ Ã Â°Â²Ã Â±Å Ã Â°â€¢Ã Â±â€¡Ã Â°Â·Ã Â°Â¨Ã Â±Â Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°ÂµÃ Â°Â¾Ã Â°Å¸Ã Â±ÂÃ Â°Â¸Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°Â²Ã Â±â€¹ Ã Â°ÂªÃ Â°â€šÃ Â°ÂªÃ Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â®Ã Â°â€šÃ Â°Å¸Ã Â°Â¾Ã Â°Â°Ã Â°Â¾?' },
-    { time: 64, speaker: 'Sairam', text: 'Ã Â°â€  Ã Â°ÂªÃ Â°â€šÃ Â°ÂªÃ Â°â€šÃ Â°Â¡Ã Â°Â¿.' },
-    { time: 66, speaker: 'Jagan', text: 'Ã Â°Â¤Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Â¡Ã Â°Â¾ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â²Ã Â±Å Ã Â°â€¢Ã Â±â€¡Ã Â°Â·Ã Â°Â¨Ã Â±Â Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂµÃ Â°Â¾Ã Â°Å¸Ã Â±ÂÃ Â°Â¸Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°Â²Ã Â±â€¹ Ã Â°ÂªÃ Â°â€šÃ Â°ÂªÃ Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â°Â¾Ã Â°Â¨Ã Â±Â. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¡Ã Â°Â®Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿? Ã Â°Â²Ã Â±â€¡Ã Â°â€¢ Ã Â°Â·Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°â€¢Ã Â°Â¿ Ã Â°ÂµÃ Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±â€¡Ã Â°Å¸Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°ÂÃ Â°Â®Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°Â¹Ã Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°ÂªÃ Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾?' },
-    { time: 74, speaker: 'Sairam', text: 'Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â±Â Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â±Â.' },
-    { time: 76, speaker: 'Jagan', text: 'Ã Â°Â¸Ã Â°Â°Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿ Ã Â°Â¥Ã Â°Â¾Ã Â°â€šÃ Â°â€¢Ã Â±ÂÃ Â°Â¸Ã Â±Â. Ã Â°Â²Ã Â±Å Ã Â°â€¢Ã Â±â€¡Ã Â°Â·Ã Â°Â¨Ã Â±Â Ã Â°ÂªÃ Â°â€šÃ Â°ÂªÃ Â°Â¿Ã Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¨Ã Â±Â. Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°ÂµÃ Â±â‚¬Ã Â°Â²Ã Â±Ë†Ã Â°Â¤Ã Â±â€¡ Ã Â°â€¦Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°Â·Ã Â°Â¾Ã Â°ÂªÃ Â±Â Ã Â°â€¢Ã Â°Â¿ Ã Â°Â°Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°â€¢Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°Â¸Ã Â±ÂÃ Â°Â®Ã Â°Â¸Ã Â±Â Ã Â°â€ Ã Â°Â«Ã Â°Â°Ã Â±Â Ã Â°Â®Ã Â°Â¿Ã Â°Â¸Ã Â±Â Ã Â°â€¦Ã Â°ÂµÃ Â±ÂÃ Â°ÂµÃ Â°â€¢Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¡Ã Â°Â®Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°Â¡Ã Â±Å’Ã Â°Å¸Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€°Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°â€¢Ã Â°Â¾Ã Â°Â²Ã Â±Â Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°Â¹Ã Â±ÂÃ Â°Â¯Ã Â°Â¾Ã Â°ÂªÃ Â±â‚¬ Ã Â°â€¢Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°Â¸Ã Â±ÂÃ Â°Â®Ã Â°Â¸Ã Â±Â!' }
+    const realCallTurns = [
+    { time: 0, speaker: 'Jagan', text: 'హలో అండి, సాయిరామ్ తో మాట్లాడుతున్నానా?' },
+    { time: 4, speaker: 'Sairam', text: 'అవునవును.' },
+    { time: 6, speaker: 'Jagan', text: 'నమస్తే అండి, నేను జగన్ సాయిరామ్ జ్యువెలర్స్ జిల్లెలగూడ నుండి మాట్లాడుతున్నాను. మీరు జ్యువెలరీ గురించి ఎంక్వైరీ చేశారు కదా? మా షాప్ లో ఇప్పుడు క్రిస్మస్ ఆఫర్ నడుస్తోంది. గోల్డ్, సిల్వర్, డైమండ్ అన్నింటిపై జీఎస్టీ, మేకింగ్ ఛార్జెస్ ఏమీ లేవండి. మీకు ఏ టైప్ జ్యువెలరీలో ఇంట్రెస్ట్ ఉంది?' },
+    { time: 25, speaker: 'Sairam', text: 'గోల్డ్.' },
+    { time: 27, speaker: 'Jagan', text: 'ఓకే అండి, గోల్డ్ జ్యువెలరీలో అయితే చాలా మంచి కలెక్షన్స్ ఉన్నాయి. మీకేమైనా పర్టిక్యులర్ బడ్జెట్ ఉందా అండి? అంటే 5,000 నుంచి 15 లక్షల వరకు మన దగ్గర ఆప్షన్స్ ఉన్నాయి.' },
+    { time: 39, speaker: 'Sairam', text: 'సరే.' },
+    { time: 41, speaker: 'Jagan', text: 'సరే అండి, అర్థమైంది. మీకు గోల్డ్ జ్యువెలరీలో ఏవైనా పర్టిక్యులర్ డిజైన్స్ చూడాలని ఉందా? లేక కలెక్షన్స్ అన్నీ ఒక్కసారి చూడాలనుకుంటున్నారా?' },
+    { time: 50, speaker: 'Sairam', text: 'కలెక్షన్స్ అన్నీ ఒక్కసారి చూడాలనుకుంటున్నాను.' },
+    { time: 53, speaker: 'Jagan', text: 'తప్పకుండా అండి, కలెక్షన్స్ అన్నీ చాలా బాగుంటాయి. మీరొక్కసారి మా షాప్ కి వచ్చి చూస్తే మీకు నచ్చినవి సెలెక్ట్ చేసుకోవచ్చు. మీకు వీలైతే ఎప్పుడు రావాలనుకుంటున్నారు? లేదంటే లొకేషన్ డీటెయిల్స్ వాట్సాప్ లో పంపించమంటారా?' },
+    { time: 64, speaker: 'Sairam', text: 'ఆ పంపండి.' },
+    { time: 66, speaker: 'Jagan', text: 'తప్పకుండా అండి, లొకేషన్ డీటెయిల్స్ మీకు వాట్సాప్ లో పంపించేస్తాను. ఇంకేమైనా డీటెయిల్స్ కావాలా అండి? లేక షాప్ కి వచ్చేటప్పుడు ఏమైనా హెల్ప్ కావాలా?' },
+    { time: 74, speaker: 'Sairam', text: 'లేదు లేదు.' },
+    { time: 76, speaker: 'Jagan', text: 'సరే అండి థాంక్స్. లొకేషన్ పంపిస్తున్నాను. మీకు ఎప్పుడు వీలైతే అప్పుడు షాప్ కి రండి. క్రిస్మస్ ఆఫర్ మిస్ అవ్వకండి. ఇంకేమైనా డౌట్స్ ఉంటే ఎప్పుడైనా కాల్ చేయొచ్చండి. హ్యాపీ క్రిస్మస్!' }
   ];
 
   // Script steps on Step 4 (Concise 5 Steps + FAQs matching Outpero reference)
-  const [scriptSteps, setScriptSteps] = useState([
+    const [scriptSteps, setScriptSteps] = useState([
     {
       id: 1,
       title: '1. Orient & Context',
       badge: 'START',
-      body: "Once they've confirmed their identity, introduce yourself as 'Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â±ÂÃ Â°Â®Ã Â°Â¿' from 'Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â', and remind them they enquired about our services or consultations. Mention you'll help with info or next steps. Keep it brief and friendly Ã¢â‚¬â€ for example you might say: 'Ã Â°Â¨Ã Â±â€¡Ã Â°Â¨Ã Â±Â Ã Â°Â²Ã Â°â€¢Ã Â±ÂÃ Â°Â·Ã Â±ÂÃ Â°Â®Ã Â°Â¿, Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Â¡Ã Â°Â¿ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°Â®Ã Â±â‚¬Ã Â°Â°Ã Â±Â Ã Â°Â®Ã Â°Â¾ Ã Â°Â¸Ã Â°Â°Ã Â±ÂÃ Â°ÂµÃ Â±â‚¬Ã Â°Â¸Ã Â±â€ Ã Â°Â¸Ã Â±Â Ã Â°â€”Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ enquiry Ã Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â°Â¾Ã Â°Â°Ã Â±Â Ã Â°â€¢Ã Â°Â¦Ã Â°Â¾, Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂÃ Â°Â¦Ã Â±Ë†Ã Â°Â¨Ã Â°Â¾ Ã Â°â€¢Ã Â±ÂÃ Â°Â²Ã Â°Â¾Ã Â°Â°Ã Â°Â¿Ã Â°Å¸Ã Â±â‚¬ Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾ Ã Â°Â²Ã Â±â€¡Ã Â°Â¦Ã Â°Â¾ Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â¤Ã Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°â€¢Ã Â±â€¹Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¾?'"
+      body: "Once they've confirmed their identity, introduce yourself as 'లక్ష్మి' from 'సాయిరామ్', and remind them they enquired about our services or consultations. Mention you'll help with info or next steps. Keep it brief and friendly — for example you might say: 'నేను లక్ష్మి, సాయిరామ్ నుండి అండి. మీరు మా సర్వీసెస్ గురించి enquiry చేసారు కదా, మీకు ఏదైనా క్లారిటీ కావాలా లేదా డీటెయిల్స్ తెలుసుకోవాలా?'"
     },
     {
       id: 2,
       title: '2. Qualify Need',
-      body: "Find out what specific service or consultation they are interested in, and if they have any particular requirement or question. Ask ONE thing at a time, wait for their answer, and respond naturally before the next question. For example: 'Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°Â Ã Â°Â¸Ã Â°Â°Ã Â±ÂÃ Â°ÂµÃ Â±â‚¬Ã Â°Â¸Ã Â±Â Ã Â°â€”Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°Â¤Ã Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°â€¢Ã Â±â€¹Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â°Â¿ Ã Â°â€°Ã Â°â€šÃ Â°Â¦Ã Â°Â¿ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿?'"
+      body: "Find out what specific service or consultation they are interested in, and if they have any particular requirement or question. Ask ONE thing at a time, wait for their answer, and respond naturally before the next question. For example: 'మీకు ఏ సర్వీస్ గురించి తెలుసుకోవాలని ఉంది అండి?'"
     },
     {
       id: 3,
       title: '3. Share Info & Answer Questions',
-      body: "Based on their interest, briefly explain how our services/consultations work and mention the price (5222) if they ask or if it's relevant. Answer any questions they have. Mention you'll arrange a callback for more in-depth help. For example: 'Ã Â°Â®Ã Â°Â¾ Ã Â°Â¸Ã Â°Â°Ã Â±ÂÃ Â°ÂµÃ Â±â‚¬Ã Â°Â¸Ã Â±Â Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Å¡Ã Â±â€ Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°ÂªÃ Â±ÂÃ Â°Â°Ã Â±Ë†Ã Â°Â¸Ã Â±Â Ã Â°ÂÃ Â°Â¤Ã Â±â€¡ Ã Â°Â«Ã Â±Ë†Ã Â°ÂµÃ Â±Â Ã Â°Å¸Ã Â±â€š Ã Â°Å¸Ã Â±â€š Ã Â°Å¸Ã Â±â€š. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¹ Ã Â°Â¡Ã Â±â‚¬Ã Â°Å¸Ã Â±â€ Ã Â°Â¯Ã Â°Â¿Ã Â°Â²Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°ÂµÃ Â°Â¾Ã Â°Â²Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ callback arrange Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â.'"
+      body: "Based on their interest, briefly explain how our services/consultations work and mention the price (5222) if they ask or if it's relevant. Answer any questions they have. Mention you'll arrange a callback for more in-depth help. For example: 'మా సర్వీస్ డీటెయిల్స్ చెప్పొచ్చు అండి, ప్రైస్ అయితే ₹5,222. ఇంకో డీటెయిల్స్ కావాలంటే callback arrange చేయొచ్చు.'"
     },
     {
       id: 4,
       title: '4. Book Callback / Capture Next Step',
-      body: "Offer to arrange a callback from our team for more details or to help them proceed. Confirm their preferred callback time and thank them warmly. For example: 'Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°ÂµÃ Â±â‚¬Ã Â°Â²Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨ Ã Â°Å¸Ã Â±Ë†Ã Â°Â®Ã Â±Â Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â®Ã Â°Â¾ Ã Â°Å¸Ã Â±â‚¬Ã Â°Â®Ã Â±Â Ã Â°Â¨Ã Â±ÂÃ Â°â€šÃ Â°Å¡Ã Â°Â¿ Ã Â°â€¢Ã Â°Â¾Ã Â°Â²Ã Â±Â arrange Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â. Ã Â°Â¸Ã Â°Â°Ã Â±â€¡Ã Â°Â¨Ã Â°Â¾?'"
+      body: "Offer to arrange a callback from our team for more details or to help them proceed. Confirm their preferred callback time and thank them warmly. For example: 'మీకు వీలున్న టైమ్ ఎప్పుడు అండి, మా టీమ్ నుంచి కాల్ arrange చేయొచ్చు. సరేనా?'"
     },
     {
       id: 5,
       title: '5. Close',
-      body: "Wrap up warmly, confirming the next step and letting them know they can reach out if they have more questions. For example: 'Ã Â°Â¸Ã Â°Â°Ã Â±â€¡ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿, Ã Â°Â®Ã Â°Â¾ Ã Â°Å¸Ã Â±â‚¬Ã Â°Â®Ã Â±Â Ã Â°Â®Ã Â±â‚¬Ã Â°â€¢Ã Â±Â Ã Â°â€¢Ã Â°Â¾Ã Â°Â²Ã Â±Â Ã Â°Å¡Ã Â±â€¡Ã Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â°Â¾Ã Â°Â°Ã Â±Â. Ã Â°â€¡Ã Â°â€šÃ Â°â€¢Ã Â±â€¹ Ã Â°Â¡Ã Â±Å’Ã Â°Å¸Ã Â±Â Ã Â°â€°Ã Â°â€šÃ Â°Å¸Ã Â±â€¡ anytime Ã Â°â€¦Ã Â°Â¡Ã Â°â€”Ã Â±Å Ã Â°Å¡Ã Â±ÂÃ Â°Å¡Ã Â±Â. Ã Â°Â¥Ã Â°Â¾Ã Â°â€šÃ Â°â€¢Ã Â±ÂÃ Â°Â¯Ã Â±â€š!'"
+      body: "Wrap up warmly, confirming the next step and letting them know they can reach out if they have more questions. For example: 'సరే అండి, మా టీమ్ మీకు కాల్ చేస్తారు. ఇంకో డౌట్ ఉంటే anytime అడగొచ్చు. థాంక్యూ!'"
     },
     {
       id: 6,
       title: '6. FAQs',
-      body: "Common questions callers ask, and how to answer them. Add one per line as \"Q: Ã¢â‚¬Â¦ A: Ã¢â‚¬Â¦\".\nAnswer ONLY from what's written here; if a question isn't listed, use your don't-know response.\n\ne.g.\nQ: What are your timings?  A: We're open 9am to 6pm, Monday to Saturday.\nQ: Do you offer home delivery?  A: Yes, free within the city."
+      body: "Common questions callers ask, and how to answer them. Add one per line as \"Q: … A: …\".\nAnswer ONLY from what's written here; if a question isn't listed, use your don't-know response.\n\ne.g.\nQ: What are your timings?  A: We're open 9am to 6pm, Monday to Saturday.\nQ: Do you offer home delivery?  A: Yes, free within the city."
     }
   ]);
 
@@ -597,21 +597,21 @@ export default function NewEmployeeView({
 
   // Voices Catalog (Matching Screenshots 2, 3)
   const premiumVoices = [
-    { id: 'P09', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Professional', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Professional' },
-    { id: 'P01', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Friendly', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Friendly' },
-    { id: 'P07', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Calm', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Calm' },
-    { id: 'P06', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Warm', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Warm' },
-    { id: 'P02', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Professional', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Professional' },
-    { id: 'P15', gender: 'Female', badge: '', desc: 'Native Hindi Ã¢â‚¬Â¢ Clear, approachable Hindi female voice for customer service...', rate: 'Ã¢â€šÂ¹6.8/min', mood: 'Friendly' }
+    { id: 'P09', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹6.8/min', mood: 'Professional' },
+    { id: 'P01', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Friendly', rate: '₹6.8/min', mood: 'Friendly' },
+    { id: 'P07', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Calm', rate: '₹6.8/min', mood: 'Calm' },
+    { id: 'P06', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹6.8/min', mood: 'Warm' },
+    { id: 'P02', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹6.8/min', mood: 'Professional' },
+    { id: 'P15', gender: 'Female', badge: '', desc: 'Native Hindi ”¢ Clear, approachable Hindi female voice for customer service...', rate: '₹6.8/min', mood: 'Friendly' }
   ];
 
   const standardVoices = [
-    { id: 'S39', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Warm', rate: 'Ã¢â€šÂ¹5/min', mood: 'Warm' },
-    { id: 'S36', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Confident', rate: 'Ã¢â€šÂ¹5/min', mood: 'Confident' },
-    { id: 'S47', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Confident', rate: 'Ã¢â€šÂ¹5/min', mood: 'Confident' },
-    { id: 'S41', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Professional', rate: 'Ã¢â€šÂ¹5/min', mood: 'Professional' },
-    { id: 'S49', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi Ã¢â‚¬Â¢ Warm', rate: 'Ã¢â€šÂ¹5/min', mood: 'Warm' },
-    { id: 'S130', gender: 'Female', badge: '', desc: 'Native Hindi Ã¢â‚¬Â¢ Professional and clean female voice, with a ...', rate: 'Ã¢â€šÂ¹5/min', mood: 'Professional' }
+    { id: 'S39', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹5/min', mood: 'Warm' },
+    { id: 'S36', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Confident', rate: '₹5/min', mood: 'Confident' },
+    { id: 'S47', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Confident', rate: '₹5/min', mood: 'Confident' },
+    { id: 'S41', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹5/min', mood: 'Professional' },
+    { id: 'S49', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹5/min', mood: 'Warm' },
+    { id: 'S130', gender: 'Female', badge: '', desc: 'Native Hindi ”¢ Professional and clean female voice, with a ...', rate: '₹5/min', mood: 'Professional' }
   ];
 
   // Audio Event Listeners
@@ -1135,7 +1135,7 @@ export default function NewEmployeeView({
         ...prev,
         {
           role: 'jagan',
-          text: 'Ã Â°Â¸Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿Ã Â°Â°Ã Â°Â¾Ã Â°Â®Ã Â±Â Ã Â°Å“Ã Â±ÂÃ Â°ÂµÃ Â±â€ Ã Â°Â²Ã Â±ÂÃ Â°Â²Ã Â°Â°Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â²Ã Â±â€¹ Ã Â°â€¢Ã Â±ÂÃ Â°Â°Ã Â°Â¿Ã Â°Â¸Ã Â±ÂÃ Â°Â®Ã Â°Â¸Ã Â±Â Ã Â°Â¸Ã Â±ÂÃ Â°ÂªÃ Â±â€ Ã Â°Â·Ã Â°Â²Ã Â±Â Ã Â°â€ Ã Â°Â«Ã Â°Â°Ã Â±ÂÃ Â°Â¸Ã Â±Â Ã Â°Â¨Ã Â°Â¡Ã Â±ÂÃ Â°Â¸Ã Â±ÂÃ Â°Â¤Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â¯Ã Â°Â¿ Ã Â°â€¦Ã Â°â€šÃ Â°Â¡Ã Â°Â¿. Ã Â°Å“Ã Â±â‚¬Ã Â°Å½Ã Â°Â¸Ã Â±ÂÃ Â°Å¸Ã Â±â‚¬ Ã Â°Â®Ã Â°Â°Ã Â°Â¿Ã Â°Â¯Ã Â±Â Ã Â°Â®Ã Â±â€¡Ã Â°â€¢Ã Â°Â¿Ã Â°â€šÃ Â°â€”Ã Â±Â Ã Â°â€ºÃ Â°Â¾Ã Â°Â°Ã Â±ÂÃ Â°Å“Ã Â±â‚¬Ã Â°Â²Ã Â±Â Ã Â°ÂªÃ Â±â€šÃ Â°Â°Ã Â±ÂÃ Â°Â¤Ã Â°Â¿Ã Â°â€”Ã Â°Â¾ Ã Â°â€°Ã Â°Å¡Ã Â°Â¿Ã Â°Â¤Ã Â°â€š! Ã Â°Â®Ã Â±â‚¬Ã Â°Â°Ã Â±Â Ã Â°Å½Ã Â°ÂªÃ Â±ÂÃ Â°ÂªÃ Â±ÂÃ Â°Â¡Ã Â±Â Ã Â°ÂµÃ Â°Â¿Ã Â°Å“Ã Â°Â¿Ã Â°Å¸Ã Â±Â Ã Â°Å¡Ã Â±â€¡Ã Â°Â¯Ã Â°Â¾Ã Â°Â²Ã Â°Â¨Ã Â±ÂÃ Â°â€¢Ã Â±ÂÃ Â°â€šÃ Â°Å¸Ã Â±ÂÃ Â°Â¨Ã Â±ÂÃ Â°Â¨Ã Â°Â¾Ã Â°Â°Ã Â±Â?'
+          text: 'సాయిరామ్ జ్యువెలర్స్ లో క్రిస్మస్ స్పెషల్ ఆఫర్స్ నడుస్తున్నాయి అండి. జీఎస్టీ మరియు మేకింగ్ ఛార్జీలు పూర్తిగా ఉచితం! మీరు ఎప్పుడు విజిట్ చేయాలనుకుంటున్నారు?'
         }
       ]);
     }, 900);
@@ -1163,7 +1163,7 @@ export default function NewEmployeeView({
               className="w-full pl-9 pr-10 py-1.5 rounded-xl border border-[#e2e4ed] bg-white text-[12.5px] text-[#0f0e17] placeholder:text-zinc-400 focus:outline-hidden focus:border-[#7a50dc] shadow-2xs"
             />
             <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
-              Ã¢Å’ËœK
+              ⌘K
             </span>
           </div>
         </div>
@@ -1174,15 +1174,15 @@ export default function NewEmployeeView({
           <div className="px-3 py-1 rounded-xl bg-[#ecfdf5] border border-[#a7f3d0] text-[#065f46] text-right flex items-center gap-2 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <div>
-              <div className="text-[11.5px] font-bold leading-tight">0 on calls now Ã‚Â· 0.0 calls/min</div>
-              <div className="text-[9.5px] text-emerald-600/80 leading-tight">0 talking Ã‚Â· 0 ringing</div>
+              <div className="text-[11.5px] font-bold leading-tight">0 on calls now · 0.0 calls/min</div>
+              <div className="text-[9.5px] text-emerald-600/80 leading-tight">0 talking · 0 ringing</div>
             </div>
           </div>
 
           {/* Balance Pill */}
           <div className="px-2.5 py-1 rounded-xl bg-white border border-[#e2e4ed] text-[#0f0e17] text-[12px] font-semibold flex items-center gap-1.5 shadow-2xs">
             <Wallet className="w-3.5 h-3.5 text-amber-500" />
-            <span>6Ã¢â‚¬â€œ9 min</span>
+            <span>6—œ9 min</span>
             <button
               type="button"
               className="w-4 h-4 rounded-full bg-[#7a50dc] text-white flex items-center justify-center text-[10px] hover:bg-[#673fc4] cursor-pointer"
@@ -1228,11 +1228,11 @@ export default function NewEmployeeView({
             <span>
               <strong>New:</strong> your AI employee now answers your phone, and our API connects it to your own tools.{' '}
               <a href="#incoming" className="font-semibold underline hover:text-[#2d1264] ml-1 inline-flex items-center gap-0.5">
-                Set up incoming calls Ã¢â€ â€”
+                Set up incoming calls →
               </a>{' '}
-              Ã‚Â·{' '}
+              ·{' '}
               <a href="#api" className="font-semibold underline hover:text-[#2d1264] inline-flex items-center gap-0.5">
-                Get an API key Ã¢â€ â€”
+                Get an API key →
               </a>
             </span>
           </div>
@@ -1435,7 +1435,7 @@ export default function NewEmployeeView({
                     >
                       Train them
                     </div>
-                    <div className="text-[11.5px] text-[#6c6b7e] mt-0.5">Script &amp; Voice Ã¢â€šÂ¹</div>
+                    <div className="text-[11.5px] text-[#6c6b7e] mt-0.5">Script &amp; Voice ₹</div>
                   </div>
                 </div>
               </div>
@@ -1458,7 +1458,7 @@ export default function NewEmployeeView({
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#6c6b7e]">
                 <span>Voice tier</span>
-                <span className="font-semibold text-[#7a50dc]">P09 (Ã¢â€šÂ¹6.8/min)</span>
+                <span className="font-semibold text-[#7a50dc]">P09 (₹6.8/min)</span>
               </div>
             </div>
           </div>
@@ -1635,7 +1635,7 @@ export default function NewEmployeeView({
                           <div className="text-[11px] text-amber-300/90 bg-black/40 p-2.5 rounded-lg border border-amber-400/25 mt-1">
                             <strong>How to enable microphone in Chrome / Edge:</strong>
                             <ol className="list-decimal list-inside mt-1 space-y-0.5 text-amber-200/80">
-                              <li>Click the Ã°Å¸â€â€™ lock or Ã°Å¸Å½â„¢Ã¯Â¸Â icon in your browser URL bar.</li>
+                              <li>Click the 🔒 lock or 🎙️ microphone icon in your browser URL bar.</li>
                               <li>Toggle <strong>Microphone</strong> to <strong>Allow</strong>.</li>
                               <li>Click <em>Voice input</em> again to start dictating.</li>
                             </ol>
@@ -2261,10 +2261,16 @@ export default function NewEmployeeView({
                       <button
                         type="button"
                         disabled={isGeneratingPlan || isGeneratingEmployee}
-                        onClick={handleNextQuestion}
+                        onClick={() => {
+                          if (questionIdx === 3) {
+                            handleCompleteBuildToCall(false);
+                          } else {
+                            handleNextQuestion();
+                          }
+                        }}
                         className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                       >
-                        <span>{questionIdx === 3 ? 'Next: Plan Call' : 'Next'}</span>
+                        <span>{questionIdx === 3 ? (isGeneratingEmployee ? 'Building employee…' : 'Build AI Employee') : 'Next'}</span>
                         <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                       </button>
                     </div>
@@ -3296,7 +3302,7 @@ export default function NewEmployeeView({
               { key: 'training', label: 'Training' },
               { key: 'actions', label: 'Actions' },
               { key: 'outcomes', label: 'Outcomes' },
-              { key: 'voice', label: 'Voice Ã¢â€šÂ¹' },
+              { key: 'voice', label: 'Voice ₹' },
               { key: 'settings', label: 'Settings' }
             ].map((tab) => {
               const isActive = activeEmployeeTab === tab.key;
@@ -3483,7 +3489,7 @@ export default function NewEmployeeView({
                 </div>
               </div>
 
-              {/* Right: Outcome breakdown Ã‚Â· all time */}
+              {/* Right: Outcome breakdown · all time */}
               <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                 <div className="text-[14px] font-bold text-[#0f0e17]">
                   Outcome breakdown &bull; all time
@@ -3785,7 +3791,7 @@ export default function NewEmployeeView({
                   </div>
 
                   <div className="flex items-center gap-4 text-[12px] text-[#6c6b7e]">
-                    <span className="font-mono">5 steps Ã‚Â· 2,802 / 40,000</span>
+                    <span className="font-mono">5 steps · 2,802 / 40,000</span>
                     <label className="flex items-center gap-1.5 cursor-pointer text-[#0f0e17] font-medium">
                       <input
                         type="checkbox"
@@ -3913,7 +3919,7 @@ export default function NewEmployeeView({
                 {/* When the call ends Card (Screenshot 3 & User Flow) */}
                 <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                   <div className="flex items-center gap-2 text-[14px] font-bold text-[#0f0e17]">
-                    <span className="text-purple-600">Ã°Å¸Å¡Â©</span>
+                    <span className="text-purple-600">🚩</span>
                     <span>When the call ends</span>
                   </div>
                   <p className="text-[12px] text-[#6c6b7e] leading-relaxed">
@@ -4092,7 +4098,7 @@ export default function NewEmployeeView({
                 {/* Live Feedback Toast */}
                 {swaraFeedback && (
                   <div className="p-3 rounded-xl bg-[#ebf5ff] border border-[#bfdbfe] text-[11.5px] text-[#1e40af] font-medium leading-relaxed animate-in fade-in">
-                    Ã¢Å“Â¨ {swaraFeedback}
+                    ✨ {swaraFeedback}
                   </div>
                 )}
 
@@ -4136,7 +4142,7 @@ export default function NewEmployeeView({
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] font-bold text-[#0f0e17]">Pre-call variables</span>
                   <a href="#instant-leads" onClick={(e) => { e.preventDefault(); setActiveEmployeeTab('instant-leads'); }} className="text-[12px] text-[#7a50dc] hover:underline font-medium inline-flex items-center gap-0.5">
-                    Edit <span className="text-[10px]">Ã¢â€ â€”</span>
+                    Edit <span className="text-[10px]">→</span>
                   </a>
                 </div>
                 <p className="text-[11.5px] text-[#6c6b7e] leading-snug">
@@ -4172,10 +4178,10 @@ export default function NewEmployeeView({
               </div>
               <div className="flex items-center gap-4 text-[12px]">
                 <span className="flex items-center gap-1 text-[#0f0e17] font-medium">
-                  Ã°Å¸Å½â€œ {factsList.length} things taught
+                  🎓 {factsList.length} things taught
                 </span>
                 <span className="flex items-center gap-1 text-zinc-500 font-medium">
-                  Ã¢Å¡Â Ã¯Â¸Â 0 open from real calls
+                  ⚠️ 0 open from real calls
                 </span>
                 <button
                   type="button"
@@ -4203,7 +4209,7 @@ export default function NewEmployeeView({
                     rows={3}
                     value={newFactInput}
                     onChange={(e) => setNewFactInput(e.target.value)}
-                    placeholder={`Tell ${employeeName} something Ã¢â‚¬â€ a price, a place, a rule to follow...`}
+                    placeholder={`Tell ${employeeName} something — a price, a place, a rule to follow...`}
                     className="w-full p-3.5 rounded-xl border border-[#e2e4ed] text-[13.5px] resize-none focus:outline-hidden focus:border-[#7a50dc]"
                   />
                   <div className="flex items-center justify-between">
@@ -4287,7 +4293,7 @@ export default function NewEmployeeView({
                       Try it (text)
                     </span>
                     <span className="text-[11px] font-mono text-[#6c6b7e]">
-                      Ã¢â€šÂ¹0.20 per message
+                      ₹0.20 per message
                     </span>
                   </div>
 
@@ -4351,7 +4357,7 @@ export default function NewEmployeeView({
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: VOICE Ã¢â€šÂ¹ (SCREENSHOT 4) */}
+        {/* TAB 3: VOICE ₹ (SCREENSHOT 4) */}
         {/* ========================================================================= */}
         {activeEmployeeTab === 'voice' && (
           <div className="space-y-6">
@@ -4370,12 +4376,12 @@ export default function NewEmployeeView({
 
               <div className="flex flex-wrap items-center gap-2">
                 {[
-                  { id: 'Telugu', script: 'Ã Â°Â¤Ã Â±â€ ', label: 'Telugu' },
-                  { id: 'Hindi', script: 'Ã Â¤â€¦', label: 'Hindi' },
-                  { id: 'Tamil', script: 'Ã Â®â€¦', label: 'Tamil' },
-                  { id: 'Kannada', script: 'Ã Â²â€¢', label: 'Kannada' },
-                  { id: 'Malayalam', script: 'Ã Â´â€¦', label: 'Malayalam' },
-                  { id: 'Marathi', script: 'Ã Â¤â€¦', label: 'Marathi' },
+                  { id: 'Telugu', script: 'తె', label: 'Telugu' },
+                  { id: 'Hindi', script: 'अ', label: 'Hindi' },
+                  { id: 'Tamil', script: 'அ', label: 'Tamil' },
+                  { id: 'Kannada', script: 'ಕ', label: 'Kannada' },
+                  { id: 'Malayalam', script: 'അ', label: 'Malayalam' },
+                  { id: 'Marathi', script: 'अ', label: 'Marathi' },
                   { id: 'English', script: 'A', label: 'English' }
                 ].map((lang) => {
                   const isSelected = primaryLanguage === lang.id;
@@ -4509,14 +4515,14 @@ export default function NewEmployeeView({
 
             {/* 2-COLUMN VOICE GRID (Matching Screenshot 2 & 3) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Premium Voices Column (Ã¢â€šÂ¹6.8/min) */}
+              {/* Premium Voices Column (₹6.8/min) */}
               <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#f0f2f8]">
                   <div className="text-[15px] font-bold text-[#0f0e17]">
-                    Premium voices <span className="text-zinc-400 font-normal text-xs">&bull; 32 Ã‚Â· most natural-sounding</span>
+                    Premium voices <span className="text-zinc-400 font-normal text-xs">&bull; 32 · most natural-sounding</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-[#f2ecfd] text-[#7a50dc] font-mono text-[11px] font-bold">
-                    Ã¢â€šÂ¹6.8/min
+                    ₹6.8/min
                   </span>
                 </div>
 
@@ -4588,14 +4594,14 @@ export default function NewEmployeeView({
                 </div>
               </div>
 
-              {/* Standard Voices Column (Ã¢â€šÂ¹5/min) */}
+              {/* Standard Voices Column (₹5/min) */}
               <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#f0f2f8]">
                   <div className="text-[15px] font-bold text-[#0f0e17]">
-                    Standard voices <span className="text-zinc-400 font-normal text-xs">&bull; 23 Ã‚Â· great everyday quality</span>
+                    Standard voices <span className="text-zinc-400 font-normal text-xs">&bull; 23 · great everyday quality</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 font-mono text-[11px] font-bold">
-                    Ã¢â€šÂ¹5/min
+                    ₹5/min
                   </span>
                 </div>
 
@@ -5006,7 +5012,7 @@ export default function NewEmployeeView({
                     <p className="text-[11px] text-zinc-400">Calls every day.</p>
                   </div>
 
-                  {/* Holidays Ã¢â‚¬â€ never call on */}
+                  {/* Holidays — never call on */}
                   <div className="space-y-1.5 pt-1 border-t border-zinc-100">
                     <span className="font-semibold text-zinc-700 flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-zinc-400" />
@@ -5831,7 +5837,7 @@ export default function NewEmployeeView({
                   <div className="w-6 h-6 rounded-full border-2 border-[#7a50dc] text-[#7a50dc] flex items-center justify-center text-xs font-bold">9</div>
                   <h4 className="text-[15px] font-bold text-zinc-900 font-display">What each tier costs</h4>
                   <p className="text-[12.5px] text-zinc-600 leading-relaxed">
-                    Standard (Ã¢â€šÂ¹5/min) &mdash; noticeably warmer, the right default for most sales calls. Premium (Ã¢â€šÂ¹6.8/min) &mdash; the most human of the two, worth it when the call is a first impression. Every voice is tagged with its tier, so you always know the rate before you switch.
+                    Standard (₹5/min) &mdash; noticeably warmer, the right default for most sales calls. Premium (₹6.8/min) &mdash; the most human of the two, worth it when the call is a first impression. Every voice is tagged with its tier, so you always know the rate before you switch.
                   </p>
                 </>
               )}

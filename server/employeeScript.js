@@ -82,7 +82,12 @@ export function normalizeGeneratedEmployeeScript(result, request) {
   ) {
     throw new Error('The AI returned incomplete employee personalization. No employee was saved.');
   }
-  if (!openingGreeting.toLocaleLowerCase().includes(request.businessName.toLocaleLowerCase())) {
+  const langIsEn = !request.language || request.language.toLowerCase() === 'en' || request.language.toLowerCase().startsWith('en');
+  const greetingLower = openingGreeting.toLocaleLowerCase();
+  const bizLower = request.businessName.toLocaleLowerCase();
+  const hasBizName = greetingLower.includes(bizLower);
+
+  if (!hasBizName && (langIsEn || openingGreeting.length < 15)) {
     throw new Error('The AI opening greeting did not use your business name. No employee was saved.');
   }
 

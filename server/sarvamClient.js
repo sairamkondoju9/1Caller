@@ -24,6 +24,22 @@ export class SarvamClient {
 
     if (!this.apiKey) throw new Error('SARVAM_API_KEY is not configured.');
 
+    const langPrefix = (targetLanguageCode || 'te-IN').split('-')[0].toLowerCase();
+    const defaultSpeakerMap = {
+      te: 'kavitha_te_conversation',
+      hi: 'aditya_hi_conversational',
+      en: 'simran_en_conversation',
+      ta: 'aravind_ta_ads',
+      kn: 'chetan_kn_conversation',
+      mr: 'nilesh_mr_conversation',
+      bn: 'arnab_bn_conversation',
+      gu: 'pooja_gu_conversational',
+      pa: 'anand_pa_conversation'
+    };
+    const validSpeaker = (speaker && speaker !== 'meera' && speaker !== 'pavithra' && speaker !== 'mahesh')
+      ? speaker
+      : (defaultSpeakerMap[langPrefix] || 'simran_en_conversation');
+
     try {
       const response = await fetch(`${this.baseUrl}/text-to-speech`, {
         method: 'POST',
@@ -35,7 +51,7 @@ export class SarvamClient {
         body: JSON.stringify({
           inputs: [text],
           target_language_code: targetLanguageCode,
-          speaker: speaker,
+          speaker: validSpeaker,
           pitch: 0,
           pace: pace,
           loudness: 1.5,

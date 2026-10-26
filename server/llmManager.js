@@ -35,6 +35,7 @@ import {
 let groqCooldownUntil = 0;
 let mistralCooldownUntil = 0;
 let geminiCooldownUntil = 0;
+let cerebrasCooldownUntil = 0;
 
 export class LLMManager {
   constructor() {
@@ -58,7 +59,8 @@ export class LLMManager {
     return {
       groq: { cooling: now < groqCooldownUntil, cooldownRemainingSec: Math.max(0, Math.round((groqCooldownUntil - now) / 1000)) },
       mistral: { cooling: now < mistralCooldownUntil, cooldownRemainingSec: Math.max(0, Math.round((mistralCooldownUntil - now) / 1000)) },
-      gemini: { cooling: now < geminiCooldownUntil, cooldownRemainingSec: Math.max(0, Math.round((geminiCooldownUntil - now) / 1000)) }
+      gemini: { cooling: now < geminiCooldownUntil, cooldownRemainingSec: Math.max(0, Math.round((geminiCooldownUntil - now) / 1000)) },
+      cerebras: { cooling: now < cerebrasCooldownUntil, cooldownRemainingSec: Math.max(0, Math.round((cerebrasCooldownUntil - now) / 1000)) }
     };
   }
 
@@ -168,22 +170,26 @@ export class LLMManager {
     const request = normalizeSupportRequest(input);
     const providers = [
       { name: 'Groq', env: 'GROQ_API_KEY', client: groqClient, key: 'groq', cooldown: () => groqCooldownUntil },
+      { name: 'Cerebras', env: 'CEREBRAS_API_KEY', client: cerebrasClient, key: 'cerebras', cooldown: () => cerebrasCooldownUntil },
       { name: 'Mistral', env: 'MISTRAL_API_KEY', client: mistralClient, key: 'mistral', cooldown: () => mistralCooldownUntil },
       { name: 'Gemini', env: 'GEMINI_API_KEY', client: geminiClient, key: 'gemini', cooldown: () => geminiCooldownUntil }
     ];
     const configured = providers.filter(provider => Boolean(process.env[provider.env]?.trim()));
     if (configured.length === 0) {
-      throw new Error('No AI provider is configured. Set a Groq, Mistral, or Gemini API key in the server environment.');
+      throw new Error('No AI provider is configured. Set a Groq, Cerebras, Mistral, or Gemini API key in the server environment.');
     }
 
     const failures = [];
+    const deadline = Date.now() + 12000;
     for (const provider of configured) {
       if (Date.now() < provider.cooldown()) continue;
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) break;
       const startedAt = Date.now();
       let timeoutHandle;
       try {
         const timeout = new Promise((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} support script generation timed out.`)), 15000);
+          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} support script generation timed out.`)), Math.min(8000, remainingMs));
         });
         const result = await Promise.race([
           provider.client.generateSupportScript(request),
@@ -205,6 +211,7 @@ export class LLMManager {
           if (provider.key === 'groq') groqCooldownUntil = Date.now() + 60000;
           if (provider.key === 'mistral') mistralCooldownUntil = Date.now() + 60000;
           if (provider.key === 'gemini') geminiCooldownUntil = Date.now() + 60000;
+          if (provider.key === 'cerebras') cerebrasCooldownUntil = Date.now() + 60000;
         }
       } finally {
         clearTimeout(timeoutHandle);
@@ -219,25 +226,29 @@ export class LLMManager {
     const request = normalizeEmployeeScriptRequest(input);
     const providers = [
       { name: 'Groq', env: 'GROQ_API_KEY', client: groqClient, key: 'groq', cooldown: () => groqCooldownUntil },
+      { name: 'Cerebras', env: 'CEREBRAS_API_KEY', client: cerebrasClient, key: 'cerebras', cooldown: () => cerebrasCooldownUntil },
       { name: 'Mistral', env: 'MISTRAL_API_KEY', client: mistralClient, key: 'mistral', cooldown: () => mistralCooldownUntil },
       { name: 'Gemini', env: 'GEMINI_API_KEY', client: geminiClient, key: 'gemini', cooldown: () => geminiCooldownUntil }
     ];
     const configured = providers.filter(provider => Boolean(process.env[provider.env]?.trim()));
     if (configured.length === 0) {
-      throw new Error('No AI provider is configured. Set a Groq, Mistral, or Gemini API key in the server environment.');
+      throw new Error('No AI provider is configured. Set a Groq, Cerebras, Mistral, or Gemini API key in the server environment.');
     }
 
     const failures = [];
+    const deadline = Date.now() + 12000;
     for (const provider of configured) {
       if (Date.now() < provider.cooldown()) {
         failures.push(`${provider.name} is temporarily cooling down.`);
         continue;
       }
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) break;
       const startedAt = Date.now();
       let timeoutHandle;
       try {
         const timeout = new Promise((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} employee script generation timed out.`)), 15000);
+          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} employee script generation timed out.`)), Math.min(8000, remainingMs));
         });
         const result = await Promise.race([
           provider.client.generateEmployeeScript(request),
@@ -259,6 +270,7 @@ export class LLMManager {
           if (provider.key === 'groq') groqCooldownUntil = Date.now() + 60000;
           if (provider.key === 'mistral') mistralCooldownUntil = Date.now() + 60000;
           if (provider.key === 'gemini') geminiCooldownUntil = Date.now() + 60000;
+          if (provider.key === 'cerebras') cerebrasCooldownUntil = Date.now() + 60000;
         }
       } finally {
         clearTimeout(timeoutHandle);
@@ -273,25 +285,29 @@ export class LLMManager {
     const request = normalizeEmployeeBuildStageRequest(input);
     const providers = [
       { name: 'Groq', env: 'GROQ_API_KEY', client: groqClient, key: 'groq', cooldown: () => groqCooldownUntil },
+      { name: 'Cerebras', env: 'CEREBRAS_API_KEY', client: cerebrasClient, key: 'cerebras', cooldown: () => cerebrasCooldownUntil },
       { name: 'Mistral', env: 'MISTRAL_API_KEY', client: mistralClient, key: 'mistral', cooldown: () => mistralCooldownUntil },
       { name: 'Gemini', env: 'GEMINI_API_KEY', client: geminiClient, key: 'gemini', cooldown: () => geminiCooldownUntil }
     ];
     const configured = providers.filter(provider => Boolean(process.env[provider.env]?.trim()));
     if (configured.length === 0) {
-      throw new Error('No AI provider is configured. Set a Groq, Mistral, or Gemini API key in the server environment.');
+      throw new Error('No AI provider is configured. Set a Groq, Cerebras, Mistral, or Gemini API key in the server environment.');
     }
 
     const failures = [];
+    const deadline = Date.now() + 12000;
     for (const provider of configured) {
       if (Date.now() < provider.cooldown()) {
         failures.push(`${provider.name} is temporarily cooling down.`);
         continue;
       }
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) break;
       const startedAt = Date.now();
       let timeoutHandle;
       try {
         const timeout = new Promise((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} employee setup ${request.stage} timed out.`)), 12000);
+          timeoutHandle = setTimeout(() => reject(new Error(`${provider.name} employee setup ${request.stage} timed out.`)), Math.min(8000, remainingMs));
         });
         const result = await Promise.race([
           provider.client.generateEmployeeBuildStage(request),
@@ -313,6 +329,7 @@ export class LLMManager {
           if (provider.key === 'groq') groqCooldownUntil = Date.now() + 60000;
           if (provider.key === 'mistral') mistralCooldownUntil = Date.now() + 60000;
           if (provider.key === 'gemini') geminiCooldownUntil = Date.now() + 60000;
+          if (provider.key === 'cerebras') cerebrasCooldownUntil = Date.now() + 60000;
         }
       } finally {
         clearTimeout(timeoutHandle);
