@@ -218,7 +218,7 @@ export default function DashboardView({
     if (questionIdx < totalQ - 1) {
       setQuestionIdx(questionIdx + 1);
     } else {
-      setHeroStage('planning');
+      handleFinishAndGoToStudio('call-script');
     }
   };
 
@@ -1143,8 +1143,15 @@ export default function DashboardView({
 
                     <button
                       type="button"
-                      onClick={handleHeroNextQuestion}
-                      className="text-white/60 hover:text-white transition-colors cursor-pointer text-[13px] font-medium"
+                      disabled={isBuilding}
+                      onClick={() => {
+                        if (questionIdx === 3) {
+                          handleFinishAndGoToStudio('call-script');
+                        } else {
+                          handleHeroNextQuestion();
+                        }
+                      }}
+                      className="text-white/60 hover:text-white transition-colors cursor-pointer text-[13px] font-medium disabled:opacity-50"
                     >
                       Skip
                     </button>
@@ -1161,10 +1168,11 @@ export default function DashboardView({
 
                     <button
                       type="button"
+                      disabled={isBuilding}
                       onClick={handleHeroNextQuestion}
-                      className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <span>{questionIdx === 3 ? 'Next: Plan Call' : 'Next'}</span>
+                      <span>{questionIdx === 3 ? (isBuilding ? 'Building employee…' : 'Build AI Employee') : 'Next'}</span>
                       <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                     </button>
                   </div>

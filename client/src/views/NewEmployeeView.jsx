@@ -271,12 +271,12 @@ export default function NewEmployeeView({
     setEmployeeRole(analysis.role);
     setQuickQuestions([
       { step: 1, id: 'business_name', title: 'What is your business name?', subtitle: 'Use the name customers know.', defaultValue: '', type: 'text' },
-      { step: 2, id: 'price_range', title: analysis.questions[0], subtitle: 'Confirm only details the business can share.', defaultValue: '', type: 'text' },
-      { step: 3, id: 'categories', title: analysis.questions[1], subtitle: 'AI suggestions are editable; choose only what your business offers.', options: analysis.offerings, defaultSelected: [], type: 'chips' },
-      { step: 4, id: 'next_action', title: analysis.questions[2], subtitle: 'Choose an action your business can actually support.', options: [...analysis.nextActions, 'Other'], defaultSelected: [], type: 'pills' }
+      { step: 2, id: 'price_range', title: 'What price or budget details may the employee share?', subtitle: 'Leave blank if the employee should not quote prices.', defaultValue: '', type: 'text' },
+      { step: 3, id: 'categories', title: selectedCategory === 'Car & bike dealership' ? 'What types of cars do you sell?' : 'Which products, services, or issues should the employee handle?', subtitle: 'Select or enter only details your business confirms.', options: (analysis.offerings && analysis.offerings.length) ? analysis.offerings : ['Products', 'Services', 'Appointments', 'Support requests', 'Other'], defaultSelected: [], type: 'chips' },
+      { step: 4, id: 'next_action', title: 'What should the caller do next?', subtitle: 'Choose an action the business can actually support.', options: (analysis.nextActions && analysis.nextActions.length) ? [...analysis.nextActions, 'Other'] : ['Request a callback', 'Schedule an appointment', 'Visit the business', 'Other'], defaultSelected: [], type: 'pills' }
     ]);
-    setActionOptions([...analysis.nextActions, 'Other']);
-    setJewelleryOptions(analysis.offerings);
+    setActionOptions(analysis.nextActions && analysis.nextActions.length ? [...analysis.nextActions, 'Other'] : ['Request a callback', 'Schedule an appointment', 'Visit the business', 'Other']);
+    setJewelleryOptions(analysis.offerings && analysis.offerings.length ? analysis.offerings : ['Products', 'Services', 'Appointments', 'Support requests', 'Other']);
     setPriceRange('');
     setSelectedJewelleryTypes([]);
     setQ2Selection('');
@@ -788,7 +788,7 @@ export default function NewEmployeeView({
   };
 
   const handleNextQuestion = async () => {
-    if (isGeneratingPlan) return;
+    if (isGeneratingPlan || isGeneratingEmployee) return;
     const totalQ = 4;
     if (questionIdx < totalQ - 1) {
       setQuestionIdx(questionIdx + 1);
@@ -805,16 +805,7 @@ export default function NewEmployeeView({
     }
 
     setEmployeeGenerationError('');
-    setAiPlanSteps([]);
-    setStep2Mode('planning');
-    setIsGeneratingPlan(true);
-    try {
-      await generateEmployeePlan();
-    } catch (error) {
-      setEmployeeGenerationError(error.message || 'AI could not create your employee call plan. Please retry.');
-    } finally {
-      setIsGeneratingPlan(false);
-    }
+    await handleCompleteBuildToCall(false);
   };
 
   const handlePrevQuestion = () => {
@@ -1991,14 +1982,7 @@ export default function NewEmployeeView({
                       {employeeGenerationError}
                     </div>
                   )}
-                  {employeeSetupAnalysis?.summary && (
-                    <div className="my-4 rounded-xl border border-[#a78bfa]/30 bg-[#7a50dc]/10 p-3 text-sm text-white/80">
-                      <span className="font-semibold text-[#c4b5fd]">AI business analysis:</span> {employeeSetupAnalysis.summary}
-                      <div className="mt-1 text-xs text-white/60">
-                        Suggested role: {employeeSetupAnalysis.role} · Industry: {employeeSetupAnalysis.industry}
-                      </div>
-                    </div>
-                  )}
+
                   {isGeneratingEmployee && (
                     <div role="status" className="my-4 text-sm text-amber-200">
                       Generating and validating your employee script with an available AI provider…
@@ -2243,7 +2227,13 @@ export default function NewEmployeeView({
                       <button
                         type="button"
                         disabled={isGeneratingPlan || isGeneratingEmployee}
-                        onClick={handleNextQuestion}
+                        onClick={() => {
+                          if (questionIdx === 3) {
+                            handleCompleteBuildToCall(false);
+                          } else {
+                            handleNextQuestion();
+                          }
+                        }}
                         className="text-white/60 hover:text-white transition-colors cursor-pointer text-[13px] font-medium disabled:opacity-50"
                       >
                         Skip
