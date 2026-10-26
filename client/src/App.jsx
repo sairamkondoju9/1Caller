@@ -492,6 +492,10 @@ export default function App() {
               initialStep={2}
               initialData={null}
               onSaveEmployee={handleSaveEmployee}
+              onBuildEmployee={(emp, targetTab = 'call-script') => {
+                setSelectedEmployee({ ...emp, initialTab: targetTab });
+                setActiveTab('employee-studio');
+              }}
               onNavigate={(tab) => setActiveTab(tab)}
             />
           )}

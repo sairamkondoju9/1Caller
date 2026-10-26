@@ -79,6 +79,134 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   assert.equal(noScriptProviderResponse.status, 503);
   assert.match((await noScriptProviderResponse.json()).error, /No AI provider is configured/);
 
+  const [{ groqClient }, { mistralClient }] = await Promise.all([
+    import('./groqClient.js'),
+    import('./mistralClient.js')
+  ]);
+  const originalGroqKey = process.env.GROQ_API_KEY;
+  const originalMistralKey = process.env.MISTRAL_API_KEY;
+  const originalGroqGeneration = groqClient.generateEmployeeScript;
+  const originalMistralGeneration = mistralClient.generateEmployeeScript;
+  const originalGroqSupportGeneration = groqClient.generateSupportScript;
+  process.env.GROQ_API_KEY = 'mock-groq-key';
+  process.env.MISTRAL_API_KEY = 'mock-mistral-key';
+  groqClient.generateEmployeeScript = async () => ({
+    openingLine: 'Hello there.',
+    enquiryPrompts: ['Question one?', 'Question two?', 'Question three?']
+  });
+  mistralClient.generateEmployeeScript = async request => {
+    assert.equal(request.businessName, 'Acme Clinic');
+    return {
+      openingLine: 'Hello, this is Priya from Acme Clinic. How may I help?',
+      enquiryPrompts: [
+        'What appointment do you need?',
+        'What would you like to know?',
+        'Would you prefer a callback?'
+      ]
+    };
+  };
+  try {
+    const generatedSalesResponse = await fetch(`${baseUrl}/api/employees/generate-script`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        prompt: 'Answer clinic calls and help callers request appointments.',
+        businessName: 'Acme Clinic',
+        employeeName: 'Priya',
+        role: 'Patient Coordinator',
+        industry: 'Healthcare',
+        language: 'en',
+        offerings: ['Appointment requests'],
+        nextActions: ['Request a callback']
+      })
+    });
+    const generatedSales = await generatedSalesResponse.json();
+    assert.equal(generatedSalesResponse.status, 200);
+    assert.match(generatedSales.source, /Mistral/);
+    assert.equal(generatedSales.business_name, 'Acme Clinic');
+    assert.equal(generatedSales.call_steps.length, 6);
+
+    const saveGeneratedSalesResponse = await fetch(`${baseUrl}/api/employees`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        name: generatedSales.employee_name,
+        type: 'instant_lead',
+        primary_language: 'en',
+        industry: generatedSales.industry,
+        opening_greeting: generatedSales.opening_greeting,
+        prompt_text: generatedSales.small_context,
+        scriptSteps: generatedSales.call_steps,
+        status: 'ready'
+      })
+    });
+    const savedGeneratedSales = await saveGeneratedSalesResponse.json();
+    assert.equal(saveGeneratedSalesResponse.status, 200);
+    const salesRow = testDb.prepare('SELECT tenant_id, name, opening_greeting, call_steps, status FROM employees WHERE id = ?')
+      .get(savedGeneratedSales.id);
+    assert.equal(salesRow.tenant_id, 'test-tenant');
+    assert.equal(salesRow.name, 'Priya');
+    assert.equal(salesRow.opening_greeting, generatedSales.opening_greeting);
+    assert.equal(JSON.parse(salesRow.call_steps).length, 6);
+    assert.equal(salesRow.status, 'ready');
+
+    groqClient.generateSupportScript = async request => ({
+      openingLine: `Hello, thank you for contacting ${request.businessName}.`,
+      empathyLine: 'I am sorry this has caused trouble.',
+      issueQuestions: [
+        'Is this about your delivery?',
+        'Could you describe the payment issue?',
+        'What would help resolve this?'
+      ]
+    });
+    const generatedSupportResponse = await fetch(`${baseUrl}/api/employees/generate-support-script`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        prompt: 'Help customers with delivery and payment issues.',
+        businessName: 'Acme Store',
+        employeeName: 'Maya',
+        language: 'en',
+        commonIssues: ['Delivery delay', 'Payment issue'],
+        policies: 'Escalate refund decisions to a human.',
+        nextActions: ['Escalate to a human']
+      })
+    });
+    const generatedSupport = await generatedSupportResponse.json();
+    assert.equal(generatedSupportResponse.status, 200);
+    assert.equal(generatedSupport.call_steps.length, 6);
+    assert.match(generatedSupport.call_steps[3].body, /Escalate refund decisions to a human/);
+
+    const saveGeneratedSupportResponse = await fetch(`${baseUrl}/api/employees`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        name: generatedSupport.employee_name,
+        type: 'customer_support',
+        primary_language: 'en',
+        industry: generatedSupport.industry,
+        opening_greeting: generatedSupport.opening_greeting,
+        prompt_text: generatedSupport.small_context,
+        scriptSteps: generatedSupport.call_steps,
+        status: 'draft'
+      })
+    });
+    const savedGeneratedSupport = await saveGeneratedSupportResponse.json();
+    assert.equal(saveGeneratedSupportResponse.status, 200);
+    const supportRow = testDb.prepare('SELECT tenant_id, name, opening_greeting, call_steps, status FROM employees WHERE id = ?')
+      .get(savedGeneratedSupport.id);
+    assert.equal(supportRow.tenant_id, 'test-tenant');
+    assert.equal(supportRow.name, 'Maya');
+    assert.equal(JSON.parse(supportRow.call_steps).length, 6);
+    assert.equal(supportRow.status, 'draft');
+  } finally {
+    groqClient.generateEmployeeScript = originalGroqGeneration;
+    groqClient.generateSupportScript = originalGroqSupportGeneration;
+    mistralClient.generateEmployeeScript = originalMistralGeneration;
+    process.env.GROQ_API_KEY = originalGroqKey;
+    process.env.MISTRAL_API_KEY = originalMistralKey;
+  }
+
   const directTopup = await fetch(`${baseUrl}/api/billing/topup`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },

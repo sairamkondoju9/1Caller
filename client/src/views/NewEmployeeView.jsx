@@ -85,6 +85,7 @@ function InstagramIcon({ className = "w-5 h-5" }) {
 
 export default function NewEmployeeView({ 
   onSaveEmployee, 
+  onBuildEmployee,
   onNavigate, 
   initialStep = 4, 
   initialData = null,
@@ -933,18 +934,29 @@ export default function NewEmployeeView({
       created_at: new Date().toISOString()
     };
     
-    if (onSaveEmployee) {
-      try {
-        const saved = await onSaveEmployee(updatedEmp);
-        if (!saved) return;
-        if (typeof saved === 'string') {
-          updatedEmp.id = saved;
-          setEmployeeId(saved);
-        }
-      } catch (err) {
-        console.warn('Save employee handler warning:', err);
+    if (typeof onSaveEmployee !== 'function') {
+      setEmployeeGenerationError('Employee saving is unavailable. Please reload the workspace and try again.');
+      return;
+    }
+    try {
+      const saved = await onSaveEmployee(updatedEmp);
+      if (!saved) {
+        setEmployeeGenerationError('The employee script was generated but could not be saved. Please retry after checking the workspace notice.');
         return;
       }
+      if (typeof saved === 'string') {
+        updatedEmp.id = saved;
+        setEmployeeId(saved);
+      }
+    } catch (err) {
+      console.error('Save employee handler failed:', err);
+      setEmployeeGenerationError(err.message || 'The employee script was generated but could not be saved. Please try again.');
+      return;
+    }
+
+    if (onBuildEmployee) {
+      onBuildEmployee(updatedEmp, 'call-script');
+      return;
     }
 
     if (deployAfterSave && onNavigate) {
@@ -2252,6 +2264,12 @@ export default function NewEmployeeView({
                         : `This is a planning outline based on the details you supplied for ${businessName || 'your business'}, not a generated script.`}
                     </p>
                   </div>
+
+                  {employeeGenerationError && (
+                    <div role="alert" className="rounded-xl border border-red-300/40 bg-red-500/15 p-3 text-sm text-red-100">
+                    {employeeGenerationError}
+                    </div>
+                  )}
 
                   {/* Planning outline; the provider-generated script appears in the employee editor. */}
                   <div className="space-y-3">
