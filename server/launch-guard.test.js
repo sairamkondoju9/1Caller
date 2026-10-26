@@ -1,0 +1,331 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import jwt from 'jsonwebtoken';
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const testDbDir = path.join(currentDir, '..', 'data', 'launch-guard-test');
+const testDbPath = path.join(testDbDir, 'sarvam.db');
+
+process.env.NODE_ENV = 'test';
+process.env.VERCEL = '1';
+process.env.JWT_SECRET = 'launch-guard-test-secret';
+process.env.SARVAM_DB_PATH = testDbPath;
+process.env.GOOGLE_CLIENT_ID = '';
+process.env.RAZORPAY_KEY_ID = '';
+process.env.RAZORPAY_KEY_SECRET = '';
+process.env.TURSO_DATABASE_URL = '';
+process.env.TURSO_AUTH_TOKEN = '';
+process.env.GROQ_API_KEY = '';
+process.env.MISTRAL_API_KEY = '';
+process.env.GEMINI_API_KEY = '';
+process.env.SARVAM_API_KEY = '';
+process.env.CARTESIA_API_KEY = '';
+
+let appServer;
+let baseUrl;
+let testDb;
+
+test('public API rejects unverified login and direct wallet top-ups', async () => {
+  fs.mkdirSync(testDbDir, { recursive: true });
+  ({ db: testDb } = await import('./db.js'));
+  const { server } = await import('./server.js');
+  appServer = server;
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  baseUrl = `http://127.0.0.1:${address.port}`;
+
+  const emailLogin = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'attacker@example.com', role: 'owner' })
+  });
+  assert.equal(emailLogin.status, 410);
+
+  const spoofedGoogle = await fetch(`${baseUrl}/api/auth/google`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'attacker@example.com', name: 'Attacker' })
+  });
+  assert.equal(spoofedGoogle.status, 503);
+
+  const token = jwt.sign({ id: 'test-user', tenant_id: 'test-tenant', role: 'client' }, process.env.JWT_SECRET);
+  const noProviderResponse = await fetch(`${baseUrl}/api/employees/parse-prompt`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      prompt: 'Create a friendly employee for Acme Clinic',
+      businessName: 'Acme Clinic',
+      language: 'en'
+    })
+  });
+  assert.equal(noProviderResponse.status, 503);
+  assert.match((await noProviderResponse.json()).error, /requires a Groq, Mistral, or Gemini API key/);
+
+  const noScriptProviderResponse = await fetch(`${baseUrl}/api/employees/generate-script`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      prompt: 'Answer calls for our clinic and help callers request appointments.',
+      businessName: 'Acme Clinic',
+      language: 'en'
+    })
+  });
+  assert.equal(noScriptProviderResponse.status, 503);
+  assert.match((await noScriptProviderResponse.json()).error, /No AI provider is configured/);
+
+  const directTopup = await fetch(`${baseUrl}/api/billing/topup`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ amount: 10000, bonusCredits: 100000 })
+  });
+  assert.equal(directTopup.status, 410);
+
+  const unavailablePayment = await fetch(`${baseUrl}/api/billing/create-order`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ amount: 100 })
+  });
+  assert.equal(unavailablePayment.status, 503, 'payment test must fail before contacting Razorpay when credentials are absent');
+
+  for (const provider of ['sarvam', 'cartesia']) {
+    const unavailableVoiceTest = await fetch(`${baseUrl}/api/voice/test-${provider}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ text: 'No external synthesis should occur in this test.' })
+    });
+    assert.equal(unavailableVoiceTest.status, 503, `${provider} test must fail before contacting a speech provider`);
+  }
+
+  const config = await fetch(`${baseUrl}/api/config`).then(response => response.json());
+  assert.equal(config.hasGoogleAuth, false);
+  assert.equal(config.hasRazorpay, false);
+  assert.equal(config.hasPersistentDatabase, false);
+  assert.equal(config.databaseBackend, 'ephemeral_sqlite');
+
+  const healthResponse = await fetch(`${baseUrl}/api/health`);
+  const health = await healthResponse.json();
+  assert.equal(healthResponse.status, 503);
+  assert.equal(health.status, 'degraded');
+  assert.equal(health.providers.database, 'not_configured');
+  assert.equal(health.providers.databaseBackend, 'ephemeral_sqlite');
+  assert.equal(health.providers.aiGeneration, 'not_configured');
+  assert.equal(health.providers.voiceGateway, 'not_configured');
+
+  testDb.prepare('INSERT INTO employees (id, tenant_id, name, type, primary_language, voice) VALUES (?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-employee', 'tenant-a', 'Tenant A Agent', 'instant_lead', 'en', 'E01');
+  testDb.prepare('INSERT INTO employees (id, tenant_id, name, type, primary_language, voice) VALUES (?, ?, ?, ?, ?, ?)')
+    .run('tenant-b-employee', 'tenant-b', 'Tenant B Agent', 'instant_lead', 'en', 'E01');
+  testDb.prepare('INSERT INTO employees (id, tenant_id, name, type, primary_language, voice, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-draft-employee', 'tenant-a', 'Draft Support Agent', 'customer_support', 'en', 'E01', 'draft');
+  testDb.prepare('INSERT INTO leads (id, tenant_id, name, phone) VALUES (?, ?, ?, ?)')
+    .run('tenant-a-lead', 'tenant-a', 'A Contact', '+14155550101');
+  testDb.prepare('INSERT INTO leads (id, tenant_id, name, phone) VALUES (?, ?, ?, ?)')
+    .run('tenant-b-lead', 'tenant-b', 'B Contact', '+14155550102');
+  testDb.prepare('INSERT INTO campaigns (id, tenant_id, name) VALUES (?, ?, ?)')
+    .run('tenant-a-campaign', 'tenant-a', 'A Draft');
+  testDb.prepare('INSERT INTO campaigns (id, tenant_id, name) VALUES (?, ?, ?)')
+    .run('tenant-b-campaign', 'tenant-b', 'B Draft');
+  const now = new Date();
+  const recentCallTime = new Date(now.getTime() - 60_000).toISOString().replace('T', ' ').slice(0, 19);
+  const oldCallTime = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+  testDb.prepare('INSERT INTO calls (id, tenant_id, phone, contact_name, duration_seconds, direction, channel, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-recent-call', 'tenant-a', '+14155550110', 'Recent Customer', 45, 'inbound', 'Inbound', recentCallTime);
+  testDb.prepare('INSERT INTO calls (id, tenant_id, phone, contact_name, duration_seconds, direction, channel, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-unanswered-call', 'tenant-a', '+14155550111', 'Unanswered Customer', 0, 'outbound', 'Outbound', recentCallTime);
+  testDb.prepare('INSERT INTO calls (id, tenant_id, phone, contact_name, duration_seconds, direction, channel, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-old-call', 'tenant-a', '+14155550112', 'Old Customer', 90, 'outbound', 'Outbound', oldCallTime);
+  testDb.prepare('INSERT INTO calls (id, tenant_id, phone, contact_name, duration_seconds, direction, channel, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('tenant-b-recent-call', 'tenant-b', '+14155550113', 'Other Workspace', 120, 'outbound', 'Outbound', recentCallTime);
+  testDb.prepare('INSERT INTO leads (id, tenant_id, name, phone, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-recent-qualified', 'tenant-a', 'Recent Qualified', '+14155550114', 'qualified', recentCallTime);
+  testDb.prepare('INSERT INTO leads (id, tenant_id, name, phone, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run('tenant-a-old-qualified', 'tenant-a', 'Old Qualified', '+14155550115', 'qualified', oldCallTime);
+  testDb.prepare('INSERT INTO billing (id, tenant_id, balance_credits, balance_inr, rate_standard) VALUES (?, ?, ?, ?, ?)')
+    .run('tenant-a-billing', 'tenant-a', 100, 100, 10);
+
+  const tenantA = jwt.sign({ id: 'user-a', tenant_id: 'tenant-a', role: 'client' }, process.env.JWT_SECRET);
+  const dashboardResponse = await fetch(`${baseUrl}/api/dashboard-summary?range=7d`, {
+    headers: { authorization: 'Bearer ' + tenantA }
+  });
+  assert.equal(dashboardResponse.status, 200);
+  const dashboard = await dashboardResponse.json();
+  assert.equal(dashboard.totalCalls, 2, 'dashboard calls should use the selected date range and workspace');
+  assert.equal(dashboard.atAGlance.customersReached, 1);
+  assert.equal(dashboard.atAGlance.avgConversationFormatted, '45s');
+  assert.equal(dashboard.qualifiedLeads, 1, 'qualified leads should use the selected date range');
+  assert.equal(dashboard.summary.unansweredCalls, 1);
+  assert.equal(dashboard.summary.minutesLeft, 10, 'available minutes should use the workspace standard rate');
+  assert.equal(dashboard.summary.activeEmployeesCount, 1, 'draft employees are not counted as active');
+  assert.equal(dashboard.recentCalls.some(call => call.tenant_id === 'tenant-b'), false);
+
+  const performanceResponse = await fetch(`${baseUrl}/api/performance?range=all`, {
+    headers: { authorization: 'Bearer ' + tenantA }
+  });
+  assert.equal(performanceResponse.status, 200);
+  const performance = await performanceResponse.json();
+  assert.equal(performance.summary.totalCalls, 3, 'analytics must count only this tenant actual calls');
+  assert.equal(performance.summary.totalTalkTimeHours, '0.0');
+  assert.equal(performance.summary.avgDurationSec, 68);
+  assert.equal(performance.funnel[0].count, 3);
+  assert.equal(performance.funnel[1].count, 2);
+  assert.equal(performance.funnel[3].count, 2);
+
+  const recentPerformanceResponse = await fetch(`${baseUrl}/api/performance?range=7d`, {
+    headers: { authorization: 'Bearer ' + tenantA }
+  });
+  assert.equal(recentPerformanceResponse.status, 200);
+  assert.equal((await recentPerformanceResponse.json()).summary.totalCalls, 2);
+
+  const invalidPerformanceRange = await fetch(`${baseUrl}/api/performance?range=year`, {
+    headers: { authorization: 'Bearer ' + tenantA }
+  });
+  assert.equal(invalidPerformanceRange.status, 400);
+
+  for (const route of ['/api/employees', '/api/campaigns', '/api/leads', '/api/calls']) {
+    const response = await fetch(`${baseUrl}${route}`, { headers: { authorization: `Bearer ${tenantA}` } });
+    assert.equal(response.status, 200, `${route} should load for an authenticated tenant`);
+    const rows = await response.json();
+    assert.equal(rows.some(row => row.tenant_id === 'tenant-b'), false, `${route} must not expose another tenant's rows`);
+  }
+
+  const saveEmployee = await fetch(`${baseUrl}/api/employees`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      name: 'Workspace Agent',
+      primary_language: 'te',
+      scriptSteps: [{ id: 1, title: 'Qualify', body: 'Ask the contact about their needs.' }]
+    })
+  });
+  const savedEmployee = await saveEmployee.json();
+  assert.equal(saveEmployee.status, 200);
+  const storedEmployee = testDb.prepare('SELECT tenant_id, call_steps FROM employees WHERE id = ?').get(savedEmployee.id);
+  assert.equal(storedEmployee.tenant_id, 'tenant-a');
+  assert.equal(JSON.parse(storedEmployee.call_steps)[0].body, 'Ask the contact about their needs.');
+
+  const crossTenantUpdate = await fetch(`${baseUrl}/api/employees`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({ id: 'tenant-b-employee', name: 'Hijacked', primary_language: 'en' })
+  });
+  assert.notEqual(crossTenantUpdate.status, 200);
+  assert.equal(testDb.prepare('SELECT name FROM employees WHERE id = ?').get('tenant-b-employee').name, 'Tenant B Agent');
+
+  const createDraft = await fetch(`${baseUrl}/api/campaigns`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      name: 'Uploaded contacts',
+      employee_id: 'tenant-a-employee',
+      leads: [{ name: 'New Contact', phone: '+14155550103' }]
+    })
+  });
+  const draftResult = await createDraft.json();
+  assert.equal(createDraft.status, 200);
+  assert.equal(draftResult.status, 'draft');
+  assert.equal(draftResult.dialingStarted, false);
+  assert.equal(draftResult.leadsCreated, 1);
+  assert.equal(
+    testDb.prepare('SELECT employee_id FROM campaigns WHERE id = ?').get(draftResult.id).employee_id,
+    'tenant-a-employee'
+  );
+
+  const unassignedCampaign = await fetch(`${baseUrl}/api/campaigns`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tenantA },
+    body: JSON.stringify({
+      name: 'Unassigned campaign',
+      leads: [{ name: 'New Contact', phone: '+14155550105' }]
+    })
+  });
+  assert.equal(unassignedCampaign.status, 400);
+  assert.match((await unassignedCampaign.json()).error, /select a published AI employee/i);
+
+  const draftEmployeeCampaign = await fetch(`${baseUrl}/api/campaigns`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tenantA },
+    body: JSON.stringify({
+      name: 'Draft employee campaign',
+      employee_id: 'tenant-a-draft-employee',
+      leads: [{ name: 'New Contact', phone: '+14155550104' }]
+    })
+  });
+  assert.equal(draftEmployeeCampaign.status, 400);
+  assert.match((await draftEmployeeCampaign.json()).error, /publish this employee/i);
+
+  const originalFetch = globalThis.fetch;
+  const originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  process.env.GOOGLE_CLIENT_ID = 'google-client-test';
+  const missingDatabaseResponse = await originalFetch(`${baseUrl}/api/auth/google`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ credential: 'mock-google-id-token' })
+  });
+  const missingDatabaseData = await missingDatabaseResponse.json();
+  assert.equal(missingDatabaseResponse.status, 503, 'Vercel must not issue accounts backed by ephemeral SQLite');
+  assert.match(missingDatabaseData.error, /persistent business data storage/i);
+
+  process.env.NODE_ENV = 'test';
+  globalThis.fetch = async (input, init) => {
+    if (String(input).includes('oauth2.googleapis.com/tokeninfo')) {
+      return new Response(JSON.stringify({
+        aud: 'google-client-test',
+        email_verified: true,
+        email: 'verified-login@example.com',
+        name: 'Verified User',
+        sub: 'google-sub-test'
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return originalFetch(input, init);
+  };
+  try {
+    const loginResponse = await originalFetch(`${baseUrl}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ credential: 'mock-google-id-token' })
+    });
+    const loginData = await loginResponse.json();
+    assert.equal(loginResponse.status, 200, 'verified Google login should accept boolean email_verified');
+    assert.equal(loginData.success, true);
+    assert.equal(loginData.user.email, 'verified-login@example.com');
+    const newTenantId = loginData.user.tenant_id;
+    const signupBalance = testDb.prepare('SELECT balance_credits, balance_inr FROM billing WHERE tenant_id = ?').get(newTenantId);
+    assert.equal(signupBalance.balance_credits, 50, 'new accounts receive the advertised 50 free credits');
+    assert.equal(signupBalance.balance_inr, 0, 'free signup credits are not recorded as paid revenue');
+    assert.equal(
+      testDb.prepare("SELECT COUNT(*) AS count FROM transactions WHERE tenant_id = ? AND type = 'signup_bonus' AND credits = 50").get(newTenantId).count,
+      1,
+      'signup credits are represented in the account ledger'
+    );
+
+    const profileResponse = await originalFetch(`${baseUrl}/api/auth/me`, {
+      headers: { authorization: `Bearer ${loginData.token}` }
+    });
+    const profileData = await profileResponse.json();
+    assert.equal(profileResponse.status, 200, 'newly issued token should validate on the profile endpoint');
+    assert.equal(profileData.user.id, loginData.user.id);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.GOOGLE_CLIENT_ID = '';
+    process.env.NODE_ENV = originalNodeEnv;
+  }
+});
+
+test.after(async () => {
+  if (appServer?.listening) {
+    await new Promise(resolve => appServer.close(resolve));
+  }
+  testDb?.close();
+  if (fs.existsSync(testDbDir)) {
+    fs.rmSync(testDbDir, { recursive: true, force: true });
+  }
+  delete process.env.SARVAM_DB_PATH;
+  delete process.env.VERCEL;
+});
