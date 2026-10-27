@@ -82,12 +82,10 @@ export function getIndustryDefaults(industry = 'Real estate', language = 'te') {
         title: 'What clinical services or specialities do you provide?',
         subtitle: 'Tick all that apply.',
         options: [
-          'General Physician Consultation',
-          'Dental Care & Implants',
-          'Pediatric & Child Care',
-          'Orthopedic & Joint Pain',
-          'Dermatology & Skin Clinic',
-          'Diagnostic Lab & Blood Tests',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['General Physician Consultation'],
@@ -99,9 +97,10 @@ export function getIndustryDefaults(industry = 'Real estate', language = 'te') {
         title: 'What should the patient do next?',
         subtitle: 'So your test call sounds like your business.',
         options: [
-          'Confirm morning or evening doctor slot',
-          'Send clinic map & appointment token on WhatsApp',
-          'Schedule tele-consultation',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Confirm morning or evening doctor slot'],
@@ -202,12 +201,10 @@ Q: Where are you located?  A: Road No. 12, Banjara Hills, Hyderabad.`
         title: 'What types of interior services do you offer?',
         subtitle: 'Tick all that apply.',
         options: [
-          'Modular kitchens',
-          'Wardrobes & storage',
-          'Full home 3D interior design',
-          'False ceiling & lighting',
-          'Living & bedroom decor',
-          'Turnkey renovation',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Modular kitchens', 'Full home 3D interior design'],
@@ -219,10 +216,10 @@ Q: Where are you located?  A: Road No. 12, Banjara Hills, Hyderabad.`
         title: 'What should the caller do next?',
         subtitle: 'So your test call sounds like your business.',
         options: [
-          'Schedule free 3D design consultation',
-          'Book free site measurement visit',
-          'Get portfolio & estimate on WhatsApp',
-          'Request designer callback',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Schedule free 3D design consultation'],
@@ -313,11 +310,10 @@ Q: Do you offer warranty?  A: Yes, we provide a 10-year warranty on modular wood
         title: 'What courses or batches do you offer?',
         subtitle: 'Tick all that apply.',
         options: [
-          'IIT-JEE Repeaters & Long Term',
-          'NEET Repeaters & Foundation',
-          'Class 11 & 12 Science Tuitions',
-          'Diagnostic Scholarship Test',
-          'Spoken English & Skills',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['IIT-JEE Repeaters & Long Term', 'NEET Repeaters & Foundation'],
@@ -329,9 +325,10 @@ Q: Do you offer warranty?  A: Yes, we provide a 10-year warranty on modular wood
         title: 'What should the student or parent do next?',
         subtitle: 'So your test call sounds like your business.',
         options: [
-          'Schedule academic counselling session this Saturday',
-          'Book diagnostic scholarship test',
-          'Send syllabus & fee structure on WhatsApp',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Schedule academic counselling session this Saturday'],
@@ -421,7 +418,13 @@ Q: Do you offer hostel facility?  A: Yes, separate supervised hostels for boys a
         id: 'categories',
         title: 'What types of cars do you sell?',
         subtitle: 'Tick all that apply.',
-        options: ['New cars', 'Used cars', 'Electric cars', 'Luxury cars', 'Commercial vehicles', 'Other'],
+        options: [
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
+          'Other'
+        ],
         defaultSelected: ['New cars', 'Used cars', 'Electric cars'],
         type: 'chips'
       },
@@ -431,10 +434,10 @@ Q: Do you offer hostel facility?  A: Yes, separate supervised hostels for boys a
         title: 'What should the customer do next?',
         subtitle: 'So your test call sounds like your business.',
         options: [
-          'Book home test drive this Saturday or Sunday',
-          'Visit showroom',
-          'Send brochure & EMI calculator on WhatsApp',
-          'Speak to sales manager',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Book home test drive this Saturday or Sunday'],
@@ -525,11 +528,10 @@ Q: Can I get doorstep test drive?  A: Yes, free doorstep test drives across the 
         title: 'What repair or local services do you provide?',
         subtitle: 'Tick all that apply.',
         options: [
-          'AC Repair, Gas Refill & Servicing',
-          'Plumbing & Water Motor Repairs',
-          'Electrical Wiring & Appliances',
-          'Home Deep Cleaning',
-          'Carpentry & Furniture Assembly',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['AC Repair, Gas Refill & Servicing'],
@@ -541,9 +543,10 @@ Q: Can I get doorstep test drive?  A: Yes, free doorstep test drives across the 
         title: 'What should the caller do next?',
         subtitle: 'So your test call sounds like your business.',
         options: [
-          'Schedule technician doorstep visit',
-          'Get upfront price estimate on WhatsApp',
-          'Urgent 2-hour technician dispatch',
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
           'Other'
         ],
         defaultSelected: ['Schedule technician doorstep visit'],
@@ -633,13 +636,12 @@ Q: Is there any warranty?  A: Yes, 30-day rework warranty on all repairs.`
       title: 'What types of properties do you sell?',
       subtitle: 'Tick all that apply.',
       options: [
-        '2 BHK & 3 BHK Luxury Apartments',
-        'Gated Community Villas',
-        'Commercial Office & Retail Spaces',
-        'Approved Residential Plots & Land',
-        'Penthouse Suites',
-        'Other'
-      ],
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
+          'Other'
+        ],
       defaultSelected: ['2 BHK & 3 BHK Luxury Apartments', 'Gated Community Villas'],
       type: 'chips'
     },
@@ -649,11 +651,12 @@ Q: Is there any warranty?  A: Yes, 30-day rework warranty on all repairs.`
       title: 'What should the customer do next?',
       subtitle: 'So your test call sounds like your business.',
       options: [
-        'Book weekend site visit with free cab pickup',
-        'Send floor plan PDF & pricing on WhatsApp',
-        'Arrange call with project manager',
-        'Other'
-      ],
+          'Schedule a site visit for measurement',
+          'Send product catalog via email',
+          'Request specific design preferences',
+          'Confirm delivery timeline expectations',
+          'Other'
+        ],
       defaultSelected: ['Book weekend site visit with free cab pickup'],
       type: 'pills'
     }

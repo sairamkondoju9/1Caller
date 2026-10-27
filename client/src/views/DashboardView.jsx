@@ -76,9 +76,18 @@ import {
   Hammer,
   HelpCircle,
   Globe,
-  FileText
+  FileText,
+  Lock
 } from 'lucide-react';
 import { useSpeechRecognition } from '../lib/useSpeechRecognition';
+
+export const DEFAULT_DASHBOARD_NEXT_ACTIONS = [
+  'Schedule a site visit for measurement',
+  'Send product catalog via email',
+  'Request specific design preferences',
+  'Confirm delivery timeline expectations',
+  'Other'
+];
 
 export default function DashboardView({
   onNavigate,
@@ -201,6 +210,9 @@ export default function DashboardView({
   const [priceRange, setPriceRange] = useState(initialRealEstate.priceRange);
   const [q2Selection, setQ2Selection] = useState(initialRealEstate.questions[3].defaultSelected[0]);
   const [otherNextActionText, setOtherNextActionText] = useState('');
+  const [selectedNextActions, setSelectedNextActions] = useState([
+    'Schedule a site visit for measurement'
+  ]);
   const [selectedDetailsToCollect, setSelectedDetailsToCollect] = useState(initialRealEstate.questions[2].defaultSelected);
   const [otherCategoryText, setOtherCategoryText] = useState('');
   const [customNotes, setCustomNotes] = useState('');
@@ -296,7 +308,13 @@ export default function DashboardView({
     const effectiveIndustry = selectedIndustry === 'Other' && customIndustryText.trim()
       ? customIndustryText.trim()
       : selectedIndustry;
-    const effectiveNextAction = q2Selection === 'Other' && otherNextActionText ? otherNextActionText : q2Selection;
+    const activeNextActions = [
+      ...selectedNextActions.filter(x => x !== 'Other'),
+      ...(otherNextActionText.trim() ? [otherNextActionText.trim()] : [])
+    ];
+    const effectiveNextAction = activeNextActions.length > 0
+      ? activeNextActions.join(', ')
+      : 'Schedule a site visit for measurement';
     const effectiveObjection = q4Selection === 'Other' && otherActionText ? otherActionText : q4Selection;
     const effectiveCategories = [
       ...selectedDetailsToCollect.filter(detail => detail !== 'Other'),
@@ -326,7 +344,7 @@ export default function DashboardView({
           industry: effectiveIndustry || 'General Business',
           offerings: effectiveCategories,
           priceRange,
-          nextActions: [effectiveNextAction].filter(Boolean),
+          nextActions: activeNextActions.length > 0 ? activeNextActions : ['Schedule a site visit for measurement'],
           objectionHandling: effectiveObjection
         })
       });
@@ -1199,53 +1217,78 @@ export default function DashboardView({
                       </p>
                     </div>
 
+                    {/* Multi-select Pills */}
                     <div className="flex flex-wrap gap-2.5 pt-1">
-                      {(quickQuestions[3]?.options || ['Book a test drive', 'Visit showroom', 'Get WhatsApp brochure & EMI quotes', 'Speak to a sales executive', 'Other']).map((opt) => {
-                        const isSelected = q2Selection === opt;
+                      {DEFAULT_DASHBOARD_NEXT_ACTIONS.map((opt) => {
+                        const isSelected = selectedNextActions.includes(opt);
                         return (
                           <button
                             key={opt}
                             type="button"
                             onClick={() => {
-                              setQ2Selection(opt);
+                              setSelectedNextActions(prev => {
+                                if (prev.includes(opt)) {
+                                  return prev.filter(x => x !== opt);
+                                } else {
+                                  return [...prev, opt];
+                                }
+                              });
                             }}
-                            className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium border transition-all cursor-pointer ${
+                            className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium border transition-all cursor-pointer flex items-center gap-2 select-none ${
                               isSelected
-                                ? 'bg-[#D99A2B]/15 border-[#D99A2B] text-white shadow-sm ring-1 ring-[#D99A2B]/50 font-medium'
+                                ? 'bg-[#D99A2B]/20 border-[#D99A2B] text-white shadow-sm ring-1 ring-[#D99A2B]/50 font-bold'
                                 : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
                             }`}
                           >
-                            {opt}
+                            <div
+                              className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                                isSelected ? 'bg-[#D99A2B] text-[#130e26]' : 'border border-white/30'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span>{opt}</span>
                           </button>
                         );
                       })}
                     </div>
 
-                    {/* Dedicated input when Q4 'Other' is selected */}
-                    {q2Selection === 'Other' && (
-                      <div className="pt-2 animate-in fade-in duration-150">
-                        <label className="block text-[12px] font-medium text-amber-300 mb-1.5 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Custom next step:</span>
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={otherNextActionText}
-                            onChange={(e) => setOtherNextActionText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleHeroNextQuestion();
-                              }
-                            }}
-                            placeholder="Type custom next step..."
-                            className="flex-1 p-3.5 rounded-xl bg-white/5 border border-amber-400/50 text-white placeholder-white/30 text-[14px] focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
-                          />
-                        </div>
+                    {/* ALWAYS OPEN: Other input tab */}
+                    <div className="pt-2 animate-in fade-in duration-150">
+                      <label className="block text-[12px] font-medium text-amber-300 mb-1.5 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Other / Custom Next Action (always open):</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={otherNextActionText}
+                          onChange={(e) => {
+                            setOtherNextActionText(e.target.value);
+                            if (e.target.value && !selectedNextActions.includes('Other')) {
+                              setSelectedNextActions(prev => [...prev, 'Other']);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleHeroNextQuestion();
+                            }
+                          }}
+                          placeholder="Type custom next step or special instruction..."
+                          className="flex-1 p-3.5 rounded-xl bg-white/5 border border-amber-400/50 text-white placeholder-white/30 text-[14px] focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
+                        />
+                        {otherNextActionText && (
+                          <button
+                            type="button"
+                            onClick={() => setOtherNextActionText('')}
+                            className="p-2 text-white/50 hover:text-white"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
@@ -1651,624 +1694,242 @@ export default function DashboardView({
         )}
       </div>
 
-      {/* 3. QUICK ACTIONS & YOUR AI EMPLOYEES (Matching Screenshot 1) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: Quick Actions 6-Card Grid */}
-        <div className="lg:col-span-8 space-y-3">
-          <div className="text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-            QUICK ACTIONS
+            {/* 2. REAL METRICS STRIP (CLEAN & MINIMAL) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="text-xs font-medium">Calls Handled</span>
+            <Phone className="w-4 h-4" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[
-              {
-                id: 'new-employee',
-                title: 'New employee',
-                subtitle: 'Add an AI teammate',
-                icon: UserPlus,
-                bgColor: 'bg-purple-100 text-purple-700'
-              },
-              {
-                id: 'instant-leads',
-                title: 'Instant leads',
-                subtitle: 'Sub-30s speed-to-lead',
-                icon: Zap,
-                bgColor: 'bg-amber-100 text-amber-700'
-              },
-              {
-                id: 'bulk-campaigns',
-                title: 'New campaign',
-                subtitle: 'Bulk-call a list',
-                icon: Megaphone,
-                bgColor: 'bg-blue-100 text-blue-700'
-              },
-              {
-                id: 'billing',
-                title: 'Add credits',
-                subtitle: `₹${Number(stats?.balanceCredits ?? 0).toFixed(2)} balance`,
-                icon: CreditCard,
-                bgColor: 'bg-orange-100 text-orange-700'
-              },
-              {
-                id: 'phone-numbers',
-                title: 'Phone numbers',
-                subtitle: 'Buy & route lines',
-                icon: Phone,
-                bgColor: 'bg-emerald-100 text-emerald-700'
-              },
-              {
-                id: 'all-conversations',
-                title: 'Call log',
-                subtitle: 'Every conversation',
-                icon: MessageSquare,
-                bgColor: 'bg-violet-100 text-violet-700'
-              }
-            ].map((action) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={() => onNavigate && onNavigate(action.id)}
-                  className="p-4 rounded-2xl bg-white border border-[#e2e4ed] hover:border-[#cbd0df] hover:shadow-xs transition-all text-left flex items-center gap-3.5 group cursor-pointer"
-                >
-                  <div className={`w-10 h-10 rounded-xl ${action.bgColor} flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-[#0f0e17] group-hover:text-black">
-                      {action.title}
-                    </div>
-                    <div className="text-[12px] text-[#6c6b7e] truncate">
-                      {action.subtitle}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="text-2xl font-bold font-display text-[#0f0e17]">
+            {metrics.callsHandled}
+          </div>
+          <div className="text-[11px] text-[#6c6b7e]">
+            Real completed conversations
           </div>
         </div>
 
-        {/* Right Column: Your AI Employees Card */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-            <span>YOUR AI EMPLOYEES</span>
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('my-employees')}
-              className="text-[#7a50dc] hover:underline normal-case font-semibold text-xs flex items-center gap-0.5 cursor-pointer"
-            >
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="text-xs font-medium">Active AI Employees</span>
+            <Users className="w-4 h-4 text-purple-600" />
           </div>
+          <div className="text-2xl font-bold font-display text-[#7a50dc]">
+            {employees.filter(e => ['active', 'ready'].includes(e.status)).length || employees.length}
+          </div>
+          <div className="text-[11px] text-[#6c6b7e]">
+            Trained and on duty
+          </div>
+        </div>
 
-          <div className="bg-white rounded-2xl border border-[#e2e4ed] p-4 space-y-2 shadow-xs">
-            {employees.slice(0, 4).map((emp) => (
-              <div
-                key={emp.id}
-                onClick={() => {
-                  if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                  else if (onNavigate) onNavigate('employee-studio');
-                }}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#EA580C] text-white font-bold text-base flex items-center justify-center shadow-xs">
-                    {emp.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-[#0f0e17] group-hover:text-[#7a50dc] transition-colors">
-                      {emp.name}
-                    </div>
-                    <div className="text-[11.5px] text-[#6c6b7e] truncate max-w-[160px]">
-                      {emp.industry || 'Sales Specialist'}
-                    </div>
-                  </div>
-                </div>
+        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="text-xs font-medium">Total Talk Time</span>
+            <Clock className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="text-2xl font-bold font-display text-[#0f0e17]">
+            {metrics.talkTimeFormatted || '0 min'}
+          </div>
+          <div className="text-[11px] text-[#6c6b7e]">
+            Customer call duration
+          </div>
+        </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <div className="text-[11px] font-bold text-[#0f0e17] font-mono">
-                      {emp.callsCount || 0}
-                    </div>
-                    <div className="text-[9.5px] text-[#6c6b7e] font-mono">CALLS</div>
-                  </div>
-                  <span className="text-[11px] font-bold bg-[#f2ecfd] text-[#7a50dc] px-2.5 py-0.5 rounded-full border border-[#d9c7fa]">
-                    Ready
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-[#cbd0df] group-hover:text-[#0f0e17] transition-colors" />
-                </div>
-              </div>
-            ))}
+        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[#6c6b7e]">
+              <span className="text-xs font-medium">Calling Balance</span>
+              <CreditCard className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="text-2xl font-bold font-display text-[#0f0e17] mt-1.5">
+              ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('billing')}
+            className="text-xs font-bold text-[#7a50dc] hover:text-[#5b32ba] flex items-center gap-1 cursor-pointer w-fit pt-1"
+          >
+            + Add credits &rarr;
+          </button>
+        </div>
+      </div>
 
-            {employees.length === 0 && (
-              <div className="rounded-xl bg-[#f8f9fc] px-4 py-6 text-center">
-                <p className="text-sm font-semibold text-[#0f0e17]">No AI employees yet</p>
-                <p className="mt-1 text-xs text-[#6c6b7e]">Build and save your first employee before testing a call.</p>
-              </div>
-            )}
+      {/* 3. MY AI EMPLOYEES (FOCUSED & CLEAN) */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#e2e4ed]">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold font-display text-[#0f0e17]">My AI Employees</h2>
+            <span className="text-xs font-bold font-mono px-2.5 py-0.5 rounded-full bg-purple-50 text-[#7a50dc] border border-[#d9c7fa]">
+              {employees.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('new-employee')}
+            className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-xs px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer w-fit"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Add New Employee</span>
+          </button>
+        </div>
 
-            {/* Add another employee action */}
+        {employees.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#cbd0df] bg-white p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 text-[#7a50dc] mx-auto flex items-center justify-center">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[#0f0e17]">No AI employees created yet</h3>
+              <p className="mt-1 text-xs text-[#6c6b7e]">Use the builder above or click below to launch your first voice telecaller.</p>
+            </div>
             <button
               type="button"
               onClick={() => onNavigate && onNavigate('new-employee')}
-              className="w-full py-2.5 px-3 rounded-xl border border-dashed border-[#cbd0df] hover:border-[#7a50dc] hover:bg-[#fbf9fe] text-xs font-semibold text-[#7a50dc] flex items-center justify-center gap-1.5 transition-all cursor-pointer mt-2"
+              className="sarvam-btn-primary rounded-xl px-4 py-2 text-xs font-semibold"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Add another employee</span>
+              Build an Employee
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* 4. NEEDS YOUR ATTENTION (Matching Screenshot 1) */}
-      <div className="space-y-3">
-        <div className="text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-          NEEDS YOUR ATTENTION
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1: Low credits */}
-          <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs flex flex-col justify-between space-y-4">
-            <div className="space-y-1.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-bold text-[#0f0e17]">
-                {summary.minutesLeft > 0 ? `About ${summary.minutesLeft} minutes available` : 'No calling credits yet'}
-              </h4>
-              <p className="text-xs text-[#6c6b7e]">
-                {summary.minutesLeft > 0 ? "Review your balance before starting a campaign." : 'Add credits when you are ready to use a configured calling provider.'}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('billing')}
-              className="text-xs font-bold text-[#7a50dc] hover:text-[#5b32ba] flex items-center gap-1 cursor-pointer w-fit"
-            >
-              Add credits &rarr;
-            </button>
-          </div>
-
-          {/* Card 2: Teach the selected employee */}
-          {primaryEmployee && <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs flex flex-col justify-between space-y-4">
-            <div className="space-y-1.5">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-2">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-bold text-[#0f0e17]">
-                Teach {primaryEmployee.name}
-              </h4>
-              <p className="text-xs text-[#6c6b7e]">
-                {primaryEmployee.callsCount || 0} calls recorded. Review and improve this employee's script.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('train-employees')}
-              className="text-xs font-bold text-[#7a50dc] hover:text-[#5b32ba] flex items-center gap-1 cursor-pointer w-fit"
-            >
-              Open &amp; teach &rarr;
-            </button>
-          </div>}
-        </div>
-      </div>
-
-      {/* 5. RECENT SUMMARY & AT A GLANCE (Matching Screenshot 2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: Your AI Team Lately */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-            RECENT SUMMARY
-          </div>
-          <div className="p-6 rounded-3xl bg-white border border-[#e2e4ed] shadow-xs space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#0f0e17]">
-              <Sparkles className="w-4 h-4 text-[#7a50dc] fill-current" />
-              <span>Your AI team lately</span>
-            </div>
-
-            <div className="space-y-3 text-xs text-[#3a3f5c] leading-relaxed">
-              <div className="flex items-start gap-2.5">
-                <PhoneCall className="w-4 h-4 text-[#6c6b7e] shrink-0 mt-0.5" />
-                <span>
-                  Handled <strong>{summary.handledConversations}</strong> customer conversations in the selected period.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <span>No customers were left unattended.</span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  <strong>{summary.workAutomatedMin} min</strong> of repetitive work automated in the last 7 days.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <Users className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                <span>
-                  <strong>{summary.activeEmployeesCount}</strong> AI employee on duty.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2.5 pt-1 text-[#6c6b7e] border-t border-[#f0f2f8]">
-                <CreditCard className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>
-                  {summary.minutesLeft} min of calls left &mdash; ~{summary.conversationsLeft} more conversations
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: AT A GLANCE (Real KPIs with Range Toggles) */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-            <span>AT A GLANCE</span>
-            <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-xl p-0.5">
-              {[
-                { id: 'today', label: 'Today' },
-                { id: '7d', label: '7 days' },
-                { id: '30d', label: '30 days' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setTimeRange(tab.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    timeRange === tab.id
-                      ? 'bg-white text-[#0f0e17] shadow-xs'
-                      : 'text-[#6c6b7e] hover:text-[#0f0e17]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {[
-              {
-                icon: Phone,
-                value: metrics.callsHandled,
-                label: 'Calls handled',
-                color: 'text-[#0f0e17]'
-              },
-              {
-                icon: Users,
-                value: metrics.customersReached,
-                label: 'Customers reached',
-                color: 'text-emerald-600'
-              },
-              {
-                icon: Award,
-                value: metrics.qualified,
-                label: 'Qualified',
-                color: 'text-[#0f0e17]'
-              },
-              {
-                icon: Clock,
-                value: metrics.talkTimeFormatted,
-                label: 'Talk time handled',
-                color: 'text-[#0f0e17]'
-              },
-              {
-                icon: Clock,
-                value: metrics.avgConversationFormatted,
-                label: 'Avg conversation',
-                color: 'text-[#0f0e17]'
-              },
-              {
-                icon: Users,
-                value: metrics.customersServed,
-                label: 'Customers served',
-                color: 'text-[#0f0e17]'
-              }
-            ].map((kpi, idx) => {
-              const Icon = kpi.icon;
-              return (
-                <div
-                  key={idx}
-                  className="p-4 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5"
-                >
-                  <Icon className="w-4 h-4 text-[#6c6b7e]" />
-                  <div className={`text-2xl font-bold font-display ${kpi.color}`}>
-                    {kpi.value}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {employees.map((emp) => (
+              <div
+                key={emp.id}
+                className="w-full bg-white rounded-2xl border border-[#e2e4ed] hover:border-[#7a50dc] p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between space-y-4 text-left relative"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div
+                    onClick={() => {
+                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                      else if (onNavigate) onNavigate('employee-studio');
+                    }}
+                    className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                  >
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7a50dc] to-[#a78bfa] text-white font-bold text-base flex items-center justify-center shadow-xs shrink-0">
+                      {emp.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-[#0f0e17] group-hover:text-[#7a50dc] transition-colors truncate">
+                        {emp.name}
+                      </h3>
+                      <p className="text-xs text-[#6c6b7e] truncate">{emp.industry || 'Sales Specialist'}</p>
+                    </div>
                   </div>
-                  <div className="text-[11.5px] text-[#6c6b7e] font-medium">
-                    {kpi.label}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                      emp.status === 'draft'
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : emp.status === 'archived'
+                          ? 'bg-slate-50 text-slate-600 border-slate-200'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {emp.status === 'draft' ? 'Draft' : emp.status === 'archived' ? 'Archived' : 'Ready'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEmployeeToDelete(emp);
+                        setDeleteEmployeeError('');
+                      }}
+                      title={`Delete ${emp.name}`}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
-      {/* 6. TRENDS • LAST 7 DAYS (Matching Screenshot 3) */}
-      <div className="space-y-3">
-        <div className="text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-          TRENDS &bull; {timeRange === 'today' ? 'TODAY' : timeRange === '30d' ? 'LAST 30 DAYS' : 'LAST 7 DAYS'}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Chart 1: Calls Over Time */}
-          <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#0f0e17]">
-              <TrendingUp className="w-4 h-4 text-[#7a50dc]" />
-              <span>Calls over time</span>
-            </div>
-
-            {/* Smooth SVG chart matching screenshot 3 curve */}
-            <div className="h-44 w-full flex flex-col justify-between pt-2">
-              <svg className="w-full h-32 overflow-visible" viewBox="0 0 350 120" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7a50dc" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#7a50dc" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                {/* Horizontal reference lines */}
-                <line x1="0" y1="10" x2="350" y2="10" stroke="#f0f2f8" strokeDasharray="3 3" />
-                <line x1="0" y1="45" x2="350" y2="45" stroke="#f0f2f8" strokeDasharray="3 3" />
-                <line x1="0" y1="80" x2="350" y2="80" stroke="#f0f2f8" strokeDasharray="3 3" />
-                <line x1="0" y1="115" x2="350" y2="115" stroke="#e2e4ed" />
-
-                <path d={chartArea} fill="url(#purpleGrad)" />
-                <path d={chartLine} fill="none" stroke="#7a50dc" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-
-              {/* Date Labels on X Axis */}
-              <div className="flex justify-between text-[10px] text-[#6c6b7e] font-mono pt-2">
-                {chartSeries.map((item, index) => <span key={`${item.date}-${index}`}>{item.date}</span>)}
-              </div>
-            </div>
-          </div>
-
-          {/* Chart 2: Busiest Hours Bar Chart */}
-          <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#0f0e17]">
-              <Clock className="w-4 h-4 text-[#7a50dc]" />
-              <span>Busiest hours</span>
-            </div>
-
-            <div className="h-44 w-full flex flex-col justify-end pt-2">
-              <div className="h-32 flex items-end justify-between px-2 gap-2 border-b border-[#e2e4ed]">
-                {trends.busiestHours.map((item, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                    {item.count > 0 && <span className="text-[10px] font-bold text-[#7a50dc]">{item.count}</span>}
-                    <div
-                      className="w-full max-w-[18px] rounded-t-sm bg-[#7a50dc] transition-all"
-                      style={{ height: item.count > 0 ? `${Math.max(8, (item.count / Math.max(1, ...trends.busiestHours.map(hour => hour.count))) * 75)}%` : '0%' }}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between text-[10px] text-[#6c6b7e] font-mono pt-2">
-                {trends.busiestHours.map((item, index) => <span key={`${item.hour}-${index}`}>{item.hour}</span>)}
-              </div>
-            </div>
-          </div>
-
-          {/* Chart 3: Where Conversations Came From */}
-          <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-4">
-            <div className="text-xs font-bold text-[#0f0e17]">
-              Where conversations came from
-            </div>
-
-            {trends.channels?.length ? <div className="space-y-4">
-              {trends.channels.slice(0, 4).map(channel => <div key={channel.name}>
-                <div className="flex justify-between text-xs font-medium text-[#0f0e17] mb-1.5">
-                  <span>{channel.name}</span>
-                  <span className="font-bold font-mono">{channel.count} calls ({channel.percentage}%)</span>
+                <div className="pt-3 border-t border-[#f0f2f8] flex items-center justify-between text-xs text-[#6c6b7e]">
+                  <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">
+                    {emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                      else if (onNavigate) onNavigate('employee-studio');
+                    }}
+                    className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                  >
+                    Open Call Script &rarr;
+                  </button>
                 </div>
-                <div className="h-3 w-full bg-[#f0f1f6] rounded-md overflow-hidden">
-                  <div className="h-full bg-[#3b82f6] rounded-md" style={{ width: `${channel.percentage}%` }} />
-                </div>
-              </div>)}
-            </div> : <div className="h-44 flex items-center justify-center text-xs text-[#6c6b7e]">No channel activity in this period.</div>}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* 7. MANAGER INSIGHTS (Matching Screenshot 4) */}
-      <div className="space-y-3">
-        <div className="text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-          MANAGER INSIGHTS
-        </div>
-        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-3">
-          {dashboardInsights.length ? dashboardInsights.map((insight, index) => <div key={index} className="flex items-center gap-3 text-xs text-[#0f0e17] font-medium">
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-[#7a50dc] flex items-center justify-center shrink-0">
-              {index === 0 ? <Clock className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-            </div>
-            <span>{insight}</span>
-          </div>) : <p className="text-xs text-[#6c6b7e]">No insights available for this period yet.</p>}
-        </div>
-      </div>
-
-      {/* 8. RECENT CALLS TABLE (Matching Screenshot 4) */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-bold tracking-wider text-[#6c6b7e] uppercase font-mono">
-          <span>RECENT CALLS</span>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-xl p-0.5">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'positive', label: 'Positive' },
-                { id: 'neutral', label: 'Neutral' },
-                { id: 'negative', label: 'Negative' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCallFilter(tab.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    callFilter === tab.id
-                      ? 'bg-[#181335] text-white shadow-xs'
-                      : 'text-[#6c6b7e] hover:text-[#0f0e17]'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+      {/* Delete Confirmation Modal (Available directly on Dashboard) */}
+      {employeeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900">Delete AI Employee?</h3>
+                <p className="text-xs text-zinc-500">This action permanently deletes this employee.</p>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onNavigate && onNavigate('all-conversations')}
-              className="text-[#7a50dc] hover:underline normal-case font-semibold text-xs flex items-center gap-0.5 cursor-pointer ml-1"
-            >
-              Full call log <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            <p className="text-xs text-zinc-600 leading-relaxed">
+              Are you sure you want to delete <strong className="text-zinc-900">{employeeToDelete.name}</strong>?
+              All associated call scripts, voice configurations, and prompt rules will be permanently removed.
+            </p>
+
+            {deleteEmployeeError && (
+              <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2.5 rounded-xl">
+                {deleteEmployeeError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmployeeToDelete(null);
+                  setDeleteEmployeeError('');
+                }}
+                disabled={isDeletingEmployee}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingEmployee}
+                onClick={async () => {
+                  setIsDeletingEmployee(true);
+                  setDeleteEmployeeError('');
+                  try {
+                    if (onDeleteEmployee) {
+                      const ok = await onDeleteEmployee(employeeToDelete.id);
+                      if (ok) {
+                        setEmployeeToDelete(null);
+                      } else {
+                        setDeleteEmployeeError('Failed to delete employee. Please try again.');
+                      }
+                    } else {
+                      setDeleteEmployeeError('Delete function unavailable.');
+                    }
+                  } catch (err) {
+                    setDeleteEmployeeError(err.message || 'Failed to delete employee.');
+                  } finally {
+                    setIsDeletingEmployee(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                {isDeletingEmployee ? 'Deleting...' : 'Delete Employee'}
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Real Calls Table Container */}
-        <div className="overflow-x-auto rounded-2xl bg-white border border-[#e2e4ed] shadow-xs">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#e2e4ed] bg-[#fbfbfd] text-[#6c6b7e] font-mono text-[11px]">
-                <th className="py-3 px-4 font-semibold">CONTACT</th>
-                <th className="py-3 px-4 font-semibold">EMPLOYEE</th>
-                <th className="py-3 px-4 font-semibold">CHANNEL</th>
-                <th className="py-3 px-4 font-semibold">OUTCOME</th>
-                <th className="py-3 px-4 font-semibold">SENTIMENT</th>
-                <th className="py-3 px-4 font-semibold">CAPTURED</th>
-                <th className="py-3 px-4 font-semibold">TALK TIME</th>
-                <th className="py-3 px-4 font-semibold">CREDITS</th>
-                <th className="py-3 px-4 font-semibold">SPEED TO LEAD</th>
-                <th className="py-3 px-4 font-semibold">TIME</th>
-                <th className="py-3 px-4 font-semibold">SUMMARY</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f0f2f8]">
-              {filteredCalls.map((call) => {
-                const capturedObj = typeof call.captured === 'string'
-                  ? JSON.parse(call.captured || '{}')
-                  : (call.captured || {});
-                const capturedKeys = Object.keys(capturedObj);
-
-                // Outcome pill styling matching screenshot 4
-                const outcomeLower = (call.outcome || '').toLowerCase();
-                let outcomeStyle = 'bg-zinc-100 text-zinc-700 border-zinc-200';
-                if (outcomeLower === 'qualified') {
-                  outcomeStyle = 'bg-[#f2ecfd] text-[#7a50dc] border-[#d9c7fa] font-bold';
-                } else if (outcomeLower === 'callback') {
-                  outcomeStyle = 'bg-amber-100 text-amber-800 border-amber-200 font-bold';
-                } else if (outcomeLower === 'voicemail') {
-                  outcomeStyle = 'bg-red-50 text-red-600 border-red-200 font-bold';
-                }
-
-                // Format talk time mm:ss
-                const min = Math.floor((call.duration_seconds || 0) / 60);
-                const sec = (call.duration_seconds || 0) % 60;
-                const talkTimeFormatted = `${min}:${sec < 10 ? '0' : ''}${sec}`;
-
-                return (
-                  <tr key={call.id} className="hover:bg-[#fafafc] transition-colors">
-                    {/* Contact & Badges */}
-                    <td className="py-3.5 px-4 font-medium text-[#0f0e17]">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold">{call.contact_name || call.phone}</span>
-                          {call.badge && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-                              {call.badge}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-[#6c6b7e] font-mono">
-                          {call.phone === 'Web call' ? `Web call #${call.id.slice(5, 13)}` : `#${call.id.slice(5, 13)}`}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Employee */}
-                    <td className="py-3.5 px-4 text-[#0f0e17]">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-[#EA580C] text-white text-[10px] font-bold flex items-center justify-center">
-                          {(call.employee_name || 'AI Employee').charAt(0)}
-                        </div>
-                        <span className="font-medium">{call.employee_name || 'AI Employee'}</span>
-                      </div>
-                    </td>
-
-                    {/* Channel */}
-                    <td className="py-3.5 px-4 font-mono text-[#6c6b7e]">
-                      <span className="flex items-center gap-1 text-[#ea580c] font-semibold">
-                        <Zap className="w-3 h-3 fill-current" />
-                        Instant
-                      </span>
-                    </td>
-
-                    {/* Outcome */}
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] border ${outcomeStyle}`}>
-                        {call.outcome || 'Completed'}
-                      </span>
-                    </td>
-
-                    {/* Sentiment */}
-                    <td className="py-3.5 px-4 text-[#6c6b7e]">
-                      <span className="flex items-center gap-1 font-medium">
-                        😐 {call.sentiment || 'Neutral'}
-                      </span>
-                    </td>
-
-                    {/* Captured fields */}
-                    <td className="py-3.5 px-4 text-[#6c6b7e]">
-                      {capturedKeys.length > 0 ? (
-                        <div className="flex items-center gap-1 flex-wrap text-[11px]">
-                          {capturedKeys.slice(0, 2).map((k) => (
-                            <span key={k} className="bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded font-mono text-[#0f0e17]">
-                              {k}: {String(capturedObj[k])}
-                            </span>
-                          ))}
-                          {capturedKeys.length > 2 && (
-                            <span className="text-[#7a50dc] font-bold">+{capturedKeys.length - 2}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span>&mdash;</span>
-                      )}
-                    </td>
-
-                    {/* Talk Time */}
-                    <td className="py-3.5 px-4 font-mono font-medium text-[#0f0e17]">
-                      {talkTimeFormatted}
-                    </td>
-
-                    {/* Credits */}
-                    <td className="py-3.5 px-4 font-mono text-[#0f0e17]">
-                      {call.cost > 0 ? `₹${call.cost.toFixed(2)}` : '&mdash;'}
-                    </td>
-
-                    {/* Speed to Lead */}
-                    <td className="py-3.5 px-4 font-mono text-[#6c6b7e]">
-                      {call.speed_to_lead || '&mdash;'}
-                    </td>
-
-                    {/* Time */}
-                    <td className="py-3.5 px-4 text-[#6c6b7e] whitespace-nowrap">
-                      {call.created_at ? 'Today ' + new Date(call.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Today'}
-                    </td>
-
-                    {/* Summary */}
-                    <td className="py-3.5 px-4 text-[#6c6b7e] max-w-[260px] truncate" title={call.summary}>
-                      {call.summary || 'No summary'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

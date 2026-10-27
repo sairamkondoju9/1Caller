@@ -84,6 +84,45 @@ function InstagramIcon({ className = "w-5 h-5" }) {
   );
 }
 
+// Locked Telecaller Identity Helper in Call Script
+function renderGreetingWithLockedName(text, callerName) {
+  if (!text) return null;
+  const nameToLock = callerName || 'AI Assistant';
+  if (!text.includes(nameToLock)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 flex-wrap">
+        <span>{text}</span>
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#7a50dc]/15 text-[#7a50dc] font-bold border border-[#7a50dc]/30 text-xs select-none cursor-not-allowed shadow-2xs"
+          title="Telecaller name is locked from Employee Profile and un-editable in script"
+        >
+          <Lock className="w-3 h-3 text-[#7a50dc]" />
+          {nameToLock}
+        </span>
+      </span>
+    );
+  }
+  const parts = text.split(nameToLock);
+  return (
+    <span className="inline-flex items-center gap-1 flex-wrap">
+      {parts.map((part, index) => (
+        <React.Fragment key={index}>
+          <span>{part}</span>
+          {index < parts.length - 1 && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#7a50dc]/15 text-[#7a50dc] font-bold border border-[#7a50dc]/30 text-xs select-none cursor-not-allowed shadow-2xs"
+              title="Telecaller name is locked and un-editable in the script"
+            >
+              <Lock className="w-3 h-3 text-[#7a50dc]" />
+              {nameToLock}
+            </span>
+          )}
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
 export default function NewEmployeeView({ 
   onSaveEmployee, 
   onBuildEmployee,
@@ -218,6 +257,13 @@ export default function NewEmployeeView({
     'Order via phone',
     'Send details on WhatsApp'
   ]);
+  const DEFAULT_NEW_EMP_NEXT_ACTIONS = [
+    'Schedule a site visit for measurement',
+    'Send product catalog via email',
+    'Request specific design preferences',
+    'Confirm delivery timeline expectations',
+    'Other'
+  ];
   const [actionOptions, setActionOptions] = useState([
     'Schedule a visit',
     'Store visit',
@@ -227,6 +273,9 @@ export default function NewEmployeeView({
     'Other'
   ]);
   const [q2Selection, setQ2Selection] = useState('');
+  const [selectedNextActions, setSelectedNextActions] = useState([
+    'Schedule a site visit for measurement'
+  ]);
   const [customNotes, setCustomNotes] = useState('');
   const [q4Selection, setQ4Selection] = useState('');
 
@@ -879,7 +928,13 @@ export default function NewEmployeeView({
       ...(selectedJewelleryTypes || []).filter(t => t !== 'Other'),
       ...((selectedJewelleryTypes || []).includes('Other') && otherCategoryText ? [otherCategoryText] : [])
       ];
-    const effectiveNextAction = q2Selection === 'Other' && otherNextActionText ? otherNextActionText : q2Selection;
+    const activeNextActionsList = [
+      ...selectedNextActions.filter(t => t !== 'Other'),
+      ...(otherNextActionText.trim() ? [otherNextActionText.trim()] : [])
+    ];
+    const effectiveNextAction = activeNextActionsList.length > 0
+      ? activeNextActionsList.join(', ')
+      : 'Schedule a site visit for measurement';
 
     let finalScriptSteps = scriptSteps;
     let finalOpeningGreeting = '';
@@ -2200,55 +2255,75 @@ export default function NewEmployeeView({
                       </p>
 
                       <div className="space-y-3 pt-1">
+                        {/* Multi-select Pills */}
                         <div className="flex flex-wrap gap-2.5">
                           {(employeePurpose === 'support'
                             ? ['Escalate to a human', 'Create a support ticket', 'Share an approved help article', 'Other']
-                            : (quickQuestions[3]?.options || actionOptions || ['Schedule a visit', 'Store visit', 'Send details on WhatsApp', 'Request a callback', 'Other'])
+                            : DEFAULT_NEW_EMP_NEXT_ACTIONS
                           ).map((opt) => {
-                            const isSelected = q2Selection === opt;
+                            const isSelected = selectedNextActions.includes(opt);
                             return (
                               <button
                                 key={opt}
                                 type="button"
-                                onClick={() => setQ2Selection(opt)}
-                                className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium border transition-all cursor-pointer ${
+                                onClick={() => {
+                                  setSelectedNextActions(prev => {
+                                    if (prev.includes(opt)) {
+                                      return prev.filter(x => x !== opt);
+                                    } else {
+                                      return [...prev, opt];
+                                    }
+                                  });
+                                }}
+                                className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium border transition-all cursor-pointer flex items-center gap-2 select-none ${
                                   isSelected
-                                    ? 'bg-[#D99A2B]/15 border-[#D99A2B] text-white shadow-sm ring-1 ring-[#D99A2B]/50 font-medium'
+                                    ? 'bg-[#D99A2B]/20 border-[#D99A2B] text-white shadow-sm ring-1 ring-[#D99A2B]/50 font-bold'
                                     : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
                                 }`}
                               >
-                                {opt}
+                                <div
+                                  className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                                    isSelected ? 'bg-[#D99A2B] text-[#130e26]' : 'border border-white/30'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span>{opt}</span>
                               </button>
                             );
                           })}
                         </div>
 
-                        {q2Selection === 'Other' && (
-                          <div className="pt-1 animate-in fade-in duration-200">
-                            <label className="text-[11.5px] font-bold text-amber-300 uppercase tracking-wider font-mono block mb-1.5">
-                              Specify custom next step:
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                autoFocus
-                                value={otherNextActionText}
-                                onChange={(e) => setOtherNextActionText(e.target.value)}
-                                placeholder="e.g. Schedule a 15-minute test drive, video consultation..."
-                                className="w-full p-3.5 pr-10 rounded-xl bg-white/5 border border-amber-400/50 text-white placeholder-white/30 text-[14px] focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
-                              />
-                              {otherNextActionText && (
-                                <button
-                                  type="button"
-                                  onClick={() => setOtherNextActionText('')}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1 cursor-pointer"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
+                        {/* ALWAYS OPEN: Other input tab */}
+                        <div className="pt-2 animate-in fade-in duration-150">
+                          <label className="text-[12px] font-bold text-amber-300 uppercase tracking-wider font-mono block mb-1.5 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Other custom next action / note (always open):</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={otherNextActionText}
+                              onChange={(e) => {
+                                setOtherNextActionText(e.target.value);
+                                if (e.target.value && !selectedNextActions.includes('Other')) {
+                                  setSelectedNextActions(prev => [...prev, 'Other']);
+                                }
+                              }}
+                              placeholder="e.g. Schedule a 15-minute test drive, video consultation, or custom instruction..."
+                              className="w-full p-3.5 pr-10 rounded-xl bg-white/5 border border-amber-400/50 text-white placeholder-white/30 text-[14px] focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50"
+                            />
+                            {otherNextActionText && (
+                              <button
+                                type="button"
+                                onClick={() => setOtherNextActionText('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white p-1 cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -3877,13 +3952,23 @@ export default function NewEmployeeView({
                   </div>
                 </div>
 
-                {/* OPENS WITH */}
+                {/* OPENS WITH (Telecaller name locked) */}
                 <div className="space-y-2 p-4.5 rounded-2xl bg-[#faf9fe] border border-[#eee8fc]">
-                  <div className="text-[10.5px] font-bold text-[#7a50dc] uppercase tracking-wider font-mono">
-                    OPENS WITH
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10.5px] font-bold text-[#7a50dc] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <Lock className="w-3 h-3 text-[#7a50dc]" />
+                      <span>OPENS WITH</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1 select-none">
+                      <Lock className="w-2.5 h-2.5" />
+                      Telecaller Identity Locked
+                    </span>
                   </div>
                   <div className="text-[16px] text-[#0f0e17] font-medium leading-relaxed">
-                    {openingGreeting || scriptSteps[0]?.body || `Hello, this is ${employeeName || 'your support employee'} from ${businessName || 'your business'}.`}
+                    {renderGreetingWithLockedName(
+                      openingGreeting || `నమస్కారం, ${businessName || 'Our Business'} లో ${employeeName || 'AI Assistant'}. మీరు ఏ రకమైన ${effectiveSalesCategories()[0] || 'తలుపుల'} గురించి తెలుసుకోవాలనుకుంటున్నారు?`,
+                      employeeName || 'AI Assistant'
+                    )}
                   </div>
                   <div className="flex items-center gap-3 pt-1">
                     <button
@@ -3893,7 +3978,7 @@ export default function NewEmployeeView({
                       &lt;+ Variable
                     </button>
                     <span className="text-[11.5px] text-[#6c6b7e]">
-                      Spoken word-for-word the moment the call connects.
+                      Spoken word-for-word the moment the call connects. Telecaller identity is locked from employee profile and un-editable in script.
                     </span>
                   </div>
                 </div>
@@ -3927,6 +4012,12 @@ export default function NewEmployeeView({
 
                       {editingStepId === step.id ? (
                         <div className="space-y-2 pt-1">
+                          {(step.id === 1 || (step.title && step.title.toLowerCase().includes('open'))) && (
+                            <div className="text-[11px] font-mono text-[#7a50dc] flex items-center gap-1.5 bg-[#f4effe] px-2.5 py-1.5 rounded-lg border border-[#e2d5fc]">
+                              <Lock className="w-3 h-3 text-[#7a50dc]" />
+                              <span>Telecaller identity <strong>"{employeeName || 'AI Assistant'}"</strong> is locked from Employee Profile and un-editable in this script.</span>
+                            </div>
+                          )}
                           <textarea
                             className="w-full p-3 rounded-xl border-2 border-[#7a50dc]/50 bg-white text-[13px] text-[#0f0e17] focus:outline-none focus:border-[#7a50dc] leading-relaxed font-sans min-h-[90px]"
                             value={step.body}
