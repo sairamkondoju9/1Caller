@@ -618,9 +618,10 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
 
 // Employees (AI Phone Agents - Queried from Turso Cloud or SQLite)
 app.get('/api/employees', authenticateToken, async (req, res) => {
+  const tenantId = req.user.tenant_id || req.user.id || 'default-tenant';
   try {
     if (turso) {
-      const tRes = await turso.execute({ sql: 'SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC', args: [req.user.tenant_id] });
+      const tRes = await turso.execute({ sql: 'SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC', args: [tenantId] });
       return res.json((tRes.rows || []).map(e => {
           let parsedSteps = [];
           try {
@@ -644,7 +645,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
     }
   }
 
-  const employees = db.prepare('SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC').all(req.user.tenant_id);
+  const employees = db.prepare('SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId);
   res.json(employees.map(e => {
     let parsedSteps = [];
     try {
@@ -665,23 +666,20 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
 app.post('/api/employees', authenticateToken, async (req, res) => {
   const { id: existingId, name, type, primary_language, voice, industry, opening_greeting, prompt_text, call_steps, scriptSteps, variables } = req.body;
   const id = existingId || `emp_${crypto.randomUUID()}`;
-  const tenantId = req.user.tenant_id;
+  const tenantId = req.user.tenant_id || req.user.id || 'default-tenant';
   const employeeStatus = req.body.status === 'draft' ? 'draft' : 'ready';
   const stepsToSave = (scriptSteps && Array.isArray(scriptSteps) && scriptSteps.length > 0) ? scriptSteps : (call_steps || []);
   if (!String(name || '').trim()) return res.status(400).json({ error: 'Employee name is required' });
-  if (existingId) {
-    const existingAnywhere = turso
-      ? (await turso.execute({ sql: 'SELECT id, tenant_id FROM employees WHERE id = ?', args: [id] })).rows[0]
-      : db.prepare('SELECT id, tenant_id FROM employees WHERE id = ?').get(id);
-    if (existingAnywhere && existingAnywhere.tenant_id !== tenantId) {
-      return res.status(404).json({ error: 'Employee not found in this workspace' });
-    }
-  }
-  
+
   // Upsert or insert employee in the shared production database when configured.
-  const existing = db.prepare('SELECT id FROM employees WHERE id = ? AND tenant_id = ?').get(id, tenantId);
   if (turso) {
     try {
+      if (existingId) {
+        const existingAnywhere = (await turso.execute({ sql: 'SELECT id, tenant_id FROM employees WHERE id = ?', args: [id] })).rows[0];
+        if (existingAnywhere && existingAnywhere.tenant_id !== tenantId) {
+          return res.status(404).json({ error: 'Employee not found in this workspace' });
+        }
+      }
       const result = await turso.execute({
         sql: 'SELECT id FROM employees WHERE id = ? AND tenant_id = ?',
         args: [id, tenantId]
@@ -702,6 +700,13 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     }
   }
 
+  if (existingId) {
+    const existingAnywhere = db.prepare('SELECT id, tenant_id FROM employees WHERE id = ?').get(id);
+    if (existingAnywhere && existingAnywhere.tenant_id !== tenantId) {
+      return res.status(404).json({ error: 'Employee not found in this workspace' });
+    }
+  }
+  const existing = db.prepare('SELECT id FROM employees WHERE id = ? AND tenant_id = ?').get(id, tenantId);
   if (existing) {
     db.prepare(`
       UPDATE employees SET
