@@ -245,13 +245,46 @@ export default function DashboardView({
     setSelectedDetailsToCollect([]);
     setQ2Selection('');
     setQ4Selection('');
-    setQuickQuestions(previous => previous.map(question => ({
-      ...question,
-      defaultValue: '',
-      defaultSelected: []
-    })));
-    setQuestionIdx(0);
-    setHeroStage('quick-details');
+    setHeroStage('analyzing');
+
+    try {
+      const response = await fetch('/api/employees/build-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          stage: 'analyze',
+          prompt: promptText,
+          language: currentLangObj.code,
+          industry: selectedIndustry === 'Other' && customIndustryText.trim() ? customIndustryText.trim() : (selectedIndustry || '')
+        })
+      });
+      const analysis = await response.json();
+      if (response.ok && analysis.stage === 'analyze') {
+        if (analysis.role) setEmployeeRole(analysis.role);
+        setQuickQuestions([
+          { step: 1, id: 'business_name', title: 'What is your business name?', subtitle: 'So your test call sounds like your business.', defaultValue: '', type: 'text' },
+          { step: 2, id: 'price_range', title: (analysis.questions && analysis.questions[0]) || 'What is your price or budget range?', subtitle: 'So your test call sounds like your business.', defaultValue: '', type: 'text' },
+          { step: 3, id: 'categories', title: (analysis.questions && analysis.questions[1]) || (selectedIndustry === 'Car & bike dealership' ? 'What types of cars do you sell?' : 'Which categories or services do you offer?'), subtitle: 'Tick all that apply.', options: (analysis.offerings && analysis.offerings.length) ? [...analysis.offerings, 'Other'] : ['Products', 'Services', 'Appointments', 'Other'], defaultSelected: [], type: 'chips' },
+          { step: 4, id: 'next_action', title: (analysis.questions && analysis.questions[2]) || 'What should the customer do next?', subtitle: 'So your test call sounds like your business.', options: (analysis.nextActions && analysis.nextActions.length) ? [...analysis.nextActions, 'Other'] : ['Schedule a visit', 'Store visit', 'Send details on WhatsApp', 'Request a callback', 'Other'], defaultSelected: [], type: 'pills' }
+        ]);
+      } else {
+        setQuickQuestions(previous => previous.map(question => ({
+          ...question,
+          defaultValue: '',
+          defaultSelected: []
+        })));
+      }
+    } catch (err) {
+      console.warn('AI analysis skipped, using template defaults:', err.message);
+      setQuickQuestions(previous => previous.map(question => ({
+        ...question,
+        defaultValue: '',
+        defaultSelected: []
+      })));
+    } finally {
+      setQuestionIdx(0);
+      setHeroStage('quick-details');
+    }
   };
   const handleFinishAndGoToStudio = async (targetTab = 'call-script') => {
     if (isBuilding) return;

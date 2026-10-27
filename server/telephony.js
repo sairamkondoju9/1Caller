@@ -27,7 +27,7 @@ export class SarvamTelephonyService {
   }
 
   get connectionId() {
-    return this.config.connectionId || process.env.SARVAM_CONNECTION_ID;
+    return this.config.connectionId || process.env.SARVAM_CONNECTION_ID || 'de08394b-11-5a4532ad-606b';
   }
 
   isConfigured() {
@@ -52,14 +52,49 @@ export class SarvamTelephonyService {
       );
     }
 
+    // Extract rich script steps and variables from the employee
+    let parsedSteps = [];
+    if (employee?.call_steps) {
+      try {
+        parsedSteps = typeof employee.call_steps === 'string' ? JSON.parse(employee.call_steps) : employee.call_steps;
+      } catch (e) {
+        parsedSteps = [];
+      }
+    }
+    const stepsText = Array.isArray(parsedSteps) && parsedSteps.length > 0
+      ? parsedSteps.map((s, idx) => `${idx + 1}. ${s.title || s.step || ''}: ${s.body || s.detail || ''}`).join('\n')
+      : '';
+
+    let parsedVars = {};
+    if (employee?.variables) {
+      try {
+        parsedVars = typeof employee.variables === 'string' ? JSON.parse(employee.variables) : employee.variables;
+      } catch (e) {
+        parsedVars = {};
+      }
+    }
+
+    const agentVariables = {
+      business_name: employee?.business || employee?.name || 'Our Business',
+      employee_name: employee?.name || 'AI Assistant',
+      role: employee?.role || 'Customer Representative',
+      industry: employee?.industry || 'General Business',
+      language: language,
+      prompt_context: employee?.prompt_text || '',
+      call_script: stepsText,
+      ...(Array.isArray(parsedVars) ? { offerings: parsedVars.join(', ') } : (typeof parsedVars === 'object' ? parsedVars : {}))
+    };
+
     const payload = {
       app_config: {
         app_id: this.appId || employee?.id || 'agent-default',
         app_version: appVersion,
+        app_type: 'agent',
         connection_config: {
-          connection_id: this.connectionId || 'conn_sarvam_vobiz',
+          connection_id: this.connectionId,
           agent_phone_number: cleanFrom
         },
+        agent_variables: agentVariables,
         app_overrides: {
           initial_bot_message: message || employee?.opening_greeting || undefined,
           initial_language_name: language

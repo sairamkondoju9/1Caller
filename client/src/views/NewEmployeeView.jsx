@@ -861,9 +861,8 @@ export default function NewEmployeeView({
       try {
         finalPlanSteps = await generateEmployeePlan();
       } catch (error) {
-        setEmployeeGenerationError(error.message || 'AI could not create your employee call plan. Please retry.');
-        setStep2Mode('planning');
-        return;
+        console.warn('Plan stage skipped, proceeding to direct employee build:', error.message);
+        finalPlanSteps = [];
       } finally {
         setIsGeneratingPlan(false);
       }
