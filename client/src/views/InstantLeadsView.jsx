@@ -82,17 +82,17 @@ export default function InstantLeadsView({ onNavigate }) {
       time: 'Today 5:00 PM',
       audioUrl: '/audio/jagan-test-call.mp3',
       transcript: [
-        { speaker: 'Jagan', text: 'à°¨à°®à°¸à±à°•à°¾à°°à°‚ à°¸à°¾à°¯à°¿à°°à°¾à°®à± à°—à°¾à°°à±, à°¨à±‡à°¨à± à°œà°¿à°²à±à°²à±‡à°¡à±à°—à±‚à°¡ à°¸à°¾à°¯à°¿à°°à°¾à°®à± à°œà±à°¯à±à°µà±†à°²à°°à±à°¸à± à°¨à±à°‚à°¡à°¿ à°œà°—à°¨à± à°®à°¾à°Ÿà±à°²à°¾à°¡à±à°¤à±à°¨à±à°¨à°¾à°¨à±.' },
-        { speaker: 'Sairam', text: 'à°…à°µà±à°¨à°‚à°¡à°¿, à°•à±à°°à°¿à°¸à±à°®à°¸à± à°†à°«à°°à±à°²à± à°à°®à±ˆà°¨à°¾ à°‰à°¨à±à°¨à°¾à°¯à°¾?' },
-        { speaker: 'Jagan', text: 'à°…à°µà±à°¨à°‚à°¡à°¿! à°¨à±‹ à°œà±€à°Žà°¸à±à°Ÿà±€, à°¨à±‹ à°®à±‡à°•à°¿à°‚à°—à± à°›à°¾à°°à±à°œà±†à°¸à± à°…à°¨à±à°¨à°¿ à°¬à°‚à°—à°¾à°°à±, à°µà±†à°‚à°¡à°¿ à°†à°­à°°à°£à°¾à°²à°ªà±ˆ à°¨à°¡à±à°¸à±à°¤à±à°¨à±à°¨à°¾à°¯à°¿.' },
-        { speaker: 'Sairam', text: 'à°¸à°°à±‡ à°µà°¿à°µà°°à°¾à°²à± à°µà°¾à°Ÿà±à°¸à°¾à°ªà± à°ªà°‚à°ªà°¿à°‚à°šà°‚à°¡à°¿, à°šà±‚à°¸à°¿ à°µà°¸à±à°¤à°¾à°¨à±.' }
+        { speaker: 'Jagan', text: 'నమస్కారం సాయిరామ్ గారు, నేను జిల్లేడుగూడ సాయిరామ్ జ్యువెలర్స్ నుండి జగన్ మాట్లాడుతున్నాను.' },
+        { speaker: 'Sairam', text: 'అవునండి, క్రిస్మస్ ఆఫర్లు ఏమైనా ఉన్నాయా?' },
+        { speaker: 'Jagan', text: 'అవునండి! నో జీఎస్టీ, నో మేకింగ్ ఛార్జెస్ అన్ని బంగారు, వెండి ఆభరణాలపై నడుస్తున్నాయి.' },
+        { speaker: 'Sairam', text: 'సరే వివరాలు వాట్సాప్ పంపించండి, చూసి వస్తాను.' }
       ]
     },
     {
       id: 'call-2',
       contact: '+918919112039',
       contactName: 'Sairam',
-      jewelleryType: 'â€”',
+      jewelleryType: '—',
       sendWhatsapp: 'Pending',
       isHot: false,
       summary: 'Call reached voicemail after 4 rings, automatic 20 min retry scheduled.',
@@ -117,9 +117,9 @@ export default function InstantLeadsView({ onNavigate }) {
       time: 'Today 4:30 PM',
       audioUrl: '/audio/jagan-test-call.mp3',
       transcript: [
-        { speaker: 'Jagan', text: 'à°¹à°²à±‹ à°…à°¨à±€à°²à± à°—à°¾à°°à±, à°¸à°¾à°¯à°¿à°°à°¾à°®à± à°œà±à°¯à±à°µà±†à°²à°°à±à°¸à± à°¨à±à°‚à°šà°¿ à°…à°‚à°¡à°¿.' },
-        { speaker: 'Customer', text: 'à°°à±‡à°ªà± à°‰à°¦à°¯à°‚ 11 à°—à°‚à°Ÿà°²à°•à± à°šà±‡à°¯à°‚à°¡à°¿, à°‡à°ªà±à°ªà±à°¡à± à°®à±€à°Ÿà°¿à°‚à°—à±â€Œà°²à±‹ à°‰à°¨à±à°¨à°¾à°¨à±.' },
-        { speaker: 'Jagan', text: 'à°¤à°ªà±à°ªà°•à±à°‚à°¡à°¾ à°…à°‚à°¡à±€, à°°à±‡à°ªà± à°‰à°¦à°¯à°‚ 11 à°—à°‚à°Ÿà°²à°•à± à°®à°³à±à°²à±€ à°•à°¾à°²à± à°šà±‡à°¸à±à°¤à°¾à°¨à±. à°§à°¨à±à°¯à°µà°¾à°¦à°¾à°²à±.' }
+        { speaker: 'Jagan', text: 'హలో అనీల్ గారు, సాయిరామ్ జ్యువెలర్స్ నుంచి అండి.' },
+        { speaker: 'Customer', text: 'రేపు ఉదయం 11 గంటలకు చేయండి, ఇప్పుడు మీటింగ్‌లో ఉన్నాను.' },
+        { speaker: 'Jagan', text: 'తప్పకుండా అండీ, రేపు ఉదయం 11 గంటలకు మళ్ళీ కాల్ చేస్తాను. ధన్యవాదాలు.' }
       ]
     }
   ];
@@ -130,7 +130,7 @@ export default function InstantLeadsView({ onNavigate }) {
     if (isHotFilter && !call.isHot) return false;
 
     // Field filter
-    if (fieldFilter === 'JEWELLERY_TYPE' && call.jewelleryType === 'â€”') return false;
+    if (fieldFilter === 'JEWELLERY_TYPE' && call.jewelleryType === '—') return false;
     if (fieldFilter === 'SEND_WHATSAPP' && call.sendWhatsapp !== 'Sent') return false;
 
     // Outcome filter
@@ -250,7 +250,7 @@ export default function InstantLeadsView({ onNavigate }) {
             </span>
           </h1>
           <p className="text-xs text-[#6c6b7e] mt-1 font-sans">
-            Calls brand-new leads within seconds of submission â€” before your competitor's human team even opens their CRM.
+            Calls brand-new leads within seconds of submission — before your competitor's human team even opens their CRM.
           </p>
         </div>
 
@@ -324,7 +324,7 @@ export default function InstantLeadsView({ onNavigate }) {
               Connect your leads
             </h3>
             <p className="text-xs text-[#6c6b7e] mt-0.5">
-              Jagan calls new leads within seconds of submission â€” before your competitor's human team even opens their CRM.
+              Jagan calls new leads within seconds of submission — before your competitor's human team even opens their CRM.
             </p>
           </div>
 
@@ -490,7 +490,7 @@ export default function InstantLeadsView({ onNavigate }) {
 
           {/* Holidays */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-[#0f0e17]">Holidays â€” never call on</label>
+            <label className="block text-xs font-bold text-[#0f0e17]">Holidays — never call on</label>
             <div className="flex items-center gap-2">
               <input
                 type="date"

@@ -59,7 +59,7 @@ export default function TermsAndConditionsView({ onBack, onNavigate }) {
             <CreditCard className="w-5 h-5 text-emerald-400" />
             <div className="text-sm font-bold text-white">Transparent Per-Minute Billing</div>
             <p className="text-xs text-white/60 leading-relaxed">
-              Real-time per-second billing: Standard Indian voices @ â‚¹5/min, Premium Ultra-realistic voices @ â‚¹6.8/min.
+              Real-time per-second billing: Standard Indian voices @ ₹5/min, Premium Ultra-realistic voices @ ₹6.8/min.
             </p>
           </div>
         </div>

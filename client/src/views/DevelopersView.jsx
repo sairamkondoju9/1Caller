@@ -128,7 +128,7 @@ payload = {
     "first_name": "Sairam",
     "metadata": {
         "lead_source": "Google Search Ads",
-        "budget": "â‚¹3.5 Cr"
+        "budget": "₹3.5 Cr"
     }
 }
 

@@ -223,7 +223,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
               onClick={() => onNavigate && onNavigate('dashboard')}
               className="text-xs text-white/40 hover:text-white transition-colors cursor-pointer"
             >
-              â† Back to Customer Workspace
+              &larr; Back to Customer Workspace
             </button>
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full border border-[#bbf7d0]">
-                        âš¡ PRIMARY ULTRA-FAST
+                        ⚡ PRIMARY ULTRA-FAST
                       </span>
                       <h4 className="text-base font-bold text-[#0f0e17] font-display mt-1">Groq LPU Engine</h4>
                     </div>
@@ -693,7 +693,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
                 <span>Platform Billed Revenue</span>
                 <DollarSign className="w-4 h-4 text-[#16a34a]" />
               </div>
-              <div className="text-3xl font-black text-[#0f0e17] tracking-tight font-mono">â‚¹1.42 Cr</div>
+              <div className="text-3xl font-black text-[#0f0e17] tracking-tight font-mono">₹1.42 Cr</div>
               <div className="flex items-center gap-1.5 mt-2 text-xs font-bold text-[#16a34a]">
                 <TrendingUp className="w-3.5 h-3.5" />
                 <span>71.4% Net Margin</span>
@@ -727,7 +727,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
               </div>
               <div className="text-xs text-[#16a34a] mt-2 font-bold flex items-center justify-between">
                 <span>{llmUsage?.totalRemaining?.toLocaleString() || '16,900'} left</span>
-                <span className="text-[10px] text-[#6c6b7e] group-hover:text-[#0f0e17] font-normal">View quotas â†’</span>
+                <span className="text-[10px] text-[#6c6b7e] group-hover:text-[#0f0e17] font-normal">View quotas →</span>
               </div>
             </div>
 
@@ -819,9 +819,9 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
               </div>
 
               <div className="p-3 bg-white/60 rounded-xl border border-[#e2e4ed] text-xs text-[#3a3f5c] flex items-center justify-between">
-                <span>Customer billed: <strong>â‚¹5.00 - â‚¹6.80/min</strong></span>
-                <span>Total COGS: <strong>â‚¹1.62/min</strong></span>
-                <span className="font-bold text-[#16a34a]">Net: +â‚¹3.38 - â‚¹5.18/min</span>
+                <span>Customer billed: <strong>₹5.00 - ₹6.80/min</strong></span>
+                <span>Total COGS: <strong>₹1.62/min</strong></span>
+                <span className="font-bold text-[#16a34a]">Net: +₹3.38 - ₹5.18/min</span>
               </div>
             </div>
           </div>
@@ -874,7 +874,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
                         </span>
                       </td>
                       <td className="py-4 px-4 font-bold text-[#0f0e17]">
-                        â‚¹{parseFloat(t.balance_credits).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{parseFloat(t.balance_credits).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-4 font-semibold text-[#0f0e17]">{t.active_employees} Agents</td>
                       <td className="py-4 px-4 font-mono text-[#6c6b7e]">{t.monthly_calls.toLocaleString()}</td>
@@ -946,7 +946,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
 
             <form onSubmit={handleAddCreditsSubmit} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#3a3f5c]">Credits to Grant (1 Credit = â‚¹1)</label>
+                <label className="text-xs font-semibold text-[#3a3f5c]">Credits to Grant (1 Credit = ₹1)</label>
                 <input
                   type="number"
                   value={creditAmount}

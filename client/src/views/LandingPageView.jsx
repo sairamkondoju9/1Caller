@@ -706,7 +706,7 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-[15px] font-semibold tracking-tight">Aman Verma</div>
-                      <div className="text-[12px] text-muted font-mono truncate">+91 98••• ••210 · Meta ad · Noida</div>
+                      <div className="text-[12px] text-muted font-mono truncate">+91 98765 43210 · Meta ad · Noida</div>
                     </div>
                     <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11.5px] font-medium leading-none bg-brand-50 text-brand-700 border-brand-100 shrink-0">
                       {languagesList.find((l) => l.id === activeHowLang)?.name || 'Hindi'} + English
@@ -1089,16 +1089,16 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
                 <div className="grid gap-2">
                   <div className="flex items-center gap-3 rounded-xl border px-3 py-2.5 bg-paper border-brand-300 shadow-card">
                     <span className="grid place-items-center w-7 h-7 rounded-lg text-[12px] font-semibold bg-brand-600 text-white">1</span>
-                    <span className="font-mono text-[13.5px] tracking-tight text-ink font-medium">+91 88521 •••••</span>
+                    <span className="font-mono text-[13.5px] tracking-tight text-ink font-medium">+91 79 6548 1367</span>
                     <Check className="w-4 h-4 ml-auto text-brand-600" />
                   </div>
                   <div className="flex items-center gap-3 rounded-xl border px-3 py-2.5 bg-paper border-line">
                     <span className="grid place-items-center w-7 h-7 rounded-lg text-[12px] font-semibold bg-canvas text-muted">2</span>
-                    <span className="font-mono text-[13.5px] tracking-tight text-muted">+91 90758 •••••</span>
+                    <span className="font-mono text-[13.5px] tracking-tight text-muted">+91 80 4567 8901</span>
                   </div>
                   <div className="flex items-center gap-3 rounded-xl border px-3 py-2.5 bg-paper border-line">
                     <span className="grid place-items-center w-7 h-7 rounded-lg text-[12px] font-semibold bg-canvas text-muted">3</span>
-                    <span className="font-mono text-[13.5px] tracking-tight text-muted">+91 70412 •••••</span>
+                    <span className="font-mono text-[13.5px] tracking-tight text-muted">+91 40 6789 0123</span>
                   </div>
                 </div>
               </div>
@@ -1229,10 +1229,10 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
             <div className="bg-[#0f0e1a] text-white p-5 sm:p-6 font-mono text-[13px] leading-relaxed flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/10">
               <div className="text-white/40 mb-2">// Send a lead for instant outbound call</div>
               <div className="text-brand-300 font-bold">POST /lead-intake/&#123;slug&#125;</div>
-              <div className="text-white/60 text-[12px] mt-1">X-Sarvam-Lead-Secret: ••••••</div>
+              <div className="text-white/60 text-[12px] mt-1">X-Sarvam-Lead-Secret: [configured]</div>
               <pre className="mt-3 text-emerald-400 text-[12.5px] overflow-x-auto">
 {`{
-  "phone": "+9198•••••210",
+  "phone": "+919876543210",
   "name": "Rahul Verma",
   "variables": {
     "property": "Sector 150",

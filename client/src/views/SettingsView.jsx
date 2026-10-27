@@ -267,11 +267,11 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                   onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
                   className="apple-glass-input w-full text-xs"
                 >
-                  <option value="te">Telugu (à°¤à±†à°²à±à°—à±)</option>
-                  <option value="hi">Hindi (à¤¹à¤¿à¤¨à¥à¤¦à¥€)</option>
-                  <option value="ta">Tamil (à®¤à®®à®¿à®´à¯)</option>
-                  <option value="kn">Kannada (à²•à²¨à³à²¨à²¡)</option>
-                  <option value="mr">Marathi (à¤®à¤°à¤¾à¤ à¥€)</option>
+                  <option value="te">Telugu (తెలుగు)</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
+                  <option value="ta">Tamil (தமிழ்)</option>
+                  <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                  <option value="mr">Marathi (मराठी)</option>
                   <option value="en">English (Indian)</option>
                 </select>
               </div>
@@ -290,7 +290,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
             {/* Onboarding & Welcome Bonus Modal Testing */}
             <div className="pt-4 border-t border-[#e2e4ed] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-xs font-bold text-[#0f0e17] font-display">Welcome â‚¹50 Free Credits Dialog</h3>
+                <h3 className="text-xs font-bold text-[#0f0e17] font-display">Welcome ₹50 Free Credits Dialog</h3>
                 <p className="text-[11px] text-[#6c6b7e]">Shown selectively upon new account onboarding or first sign-in (controlled via localStorage).</p>
               </div>
               <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                   type="button"
                   onClick={() => {
                     localStorage.removeItem('outpero_welcome_credits_claimed');
-                    alert('Bonus state reset in browser localStorage. The â‚¹50 credit modal will display upon next sign-in or preview.');
+                    alert('Bonus state reset in browser localStorage. The ₹50 credit modal will display upon next sign-in or preview.');
                   }}
                   className="px-3 py-1.5 rounded-lg border border-[#e2e4ed] text-[11px] font-semibold text-[#6c6b7e] hover:bg-[#f0f1f6] cursor-pointer"
                 >
@@ -310,7 +310,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                     onClick={onTriggerWelcomeCredits}
                     className="px-3 py-1.5 rounded-lg bg-[#f6f7fb] text-[#0f0e17] border border-[#e2e4ed] text-[11px] font-bold hover:bg-[#f0f2f8] cursor-pointer"
                   >
-                    Preview â‚¹50 Modal
+                    Preview ₹50 Modal
                   </button>
                 )}
               </div>
