@@ -714,7 +714,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         opening_greeting = ?, prompt_text = ?, call_steps = ?, variables = ?, status = ?
       WHERE id = ? AND tenant_id = ?
     `).run(
-      name || 'AI Assistant',
+      name || (req.body.language === 'te' ? 'కావ్య' : 'Kavya'),
       type || 'instant_lead',
       primary_language || 'en',
       voice || 'Cartesia Sonic-2 / Bulbul V4',
@@ -734,7 +734,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     `).run(
       id,
       tenantId,
-      name || 'AI Assistant',
+      name || (req.body.language === 'te' ? 'కావ్య' : 'Kavya'),
       type || 'instant_lead',
       primary_language || 'en',
       voice || 'Cartesia Sonic-2 / Bulbul V4',

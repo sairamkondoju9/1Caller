@@ -84,17 +84,19 @@ function InstagramIcon({ className = "w-5 h-5" }) {
   );
 }
 
-// Locked Telecaller Identity Helper in Call Script
+// Locked Constant Telecaller Identity Helper in Call Script (AI Assistant removed)
 function renderGreetingWithLockedName(text, callerName) {
   if (!text) return null;
-  const nameToLock = callerName || 'AI Assistant';
-  if (!text.includes(nameToLock)) {
+  // Clean any accidental "AI Assistant" string
+  const clean = text.replace(/AI Assistant\s*/gi, '').replace(/\s+/g, ' ');
+  const nameToLock = callerName || 'కావ్య';
+  if (!clean.includes(nameToLock)) {
     return (
       <span className="inline-flex items-center gap-1.5 flex-wrap">
-        <span>{text}</span>
+        <span>{clean}</span>
         <span
           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#7a50dc]/15 text-[#7a50dc] font-bold border border-[#7a50dc]/30 text-xs select-none cursor-not-allowed shadow-2xs"
-          title="Telecaller name is locked from Employee Profile and un-editable in script"
+          title="Telecaller name is constant and locked from Employee Profile"
         >
           <Lock className="w-3 h-3 text-[#7a50dc]" />
           {nameToLock}
@@ -102,7 +104,7 @@ function renderGreetingWithLockedName(text, callerName) {
       </span>
     );
   }
-  const parts = text.split(nameToLock);
+  const parts = clean.split(nameToLock);
   return (
     <span className="inline-flex items-center gap-1 flex-wrap">
       {parts.map((part, index) => (
@@ -111,7 +113,7 @@ function renderGreetingWithLockedName(text, callerName) {
           {index < parts.length - 1 && (
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#7a50dc]/15 text-[#7a50dc] font-bold border border-[#7a50dc]/30 text-xs select-none cursor-not-allowed shadow-2xs"
-              title="Telecaller name is locked and un-editable in the script"
+              title="Telecaller name is constant and locked from Employee Profile"
             >
               <Lock className="w-3 h-3 text-[#7a50dc]" />
               {nameToLock}
@@ -3966,8 +3968,8 @@ export default function NewEmployeeView({
                   </div>
                   <div className="text-[16px] text-[#0f0e17] font-medium leading-relaxed">
                     {renderGreetingWithLockedName(
-                      openingGreeting || `నమస్కారం, ${businessName || 'Our Business'} లో ${employeeName || 'AI Assistant'}. మీరు ఏ రకమైన ${effectiveSalesCategories()[0] || 'తలుపుల'} గురించి తెలుసుకోవాలనుకుంటున్నారు?`,
-                      employeeName || 'AI Assistant'
+                      openingGreeting || `నమస్కారం, ${businessName || 'Our Business'} లో ${employeeName || 'కావ్య'}. మీరు ఏ రకమైన ${effectiveSalesCategories()[0] || 'తలుపుల'} గురించి తెలుసుకోవాలనుకుంటున్నారు?`,
+                      employeeName || 'కావ్య'
                     )}
                   </div>
                   <div className="flex items-center gap-3 pt-1">
@@ -4015,7 +4017,7 @@ export default function NewEmployeeView({
                           {(step.id === 1 || (step.title && step.title.toLowerCase().includes('open'))) && (
                             <div className="text-[11px] font-mono text-[#7a50dc] flex items-center gap-1.5 bg-[#f4effe] px-2.5 py-1.5 rounded-lg border border-[#e2d5fc]">
                               <Lock className="w-3 h-3 text-[#7a50dc]" />
-                              <span>Telecaller identity <strong>"{employeeName || 'AI Assistant'}"</strong> is locked from Employee Profile and un-editable in this script.</span>
+                              <span>Telecaller identity <strong>"{employeeName || 'కావ్య'}"</strong> is locked from Employee Profile and un-editable in this script.</span>
                             </div>
                           )}
                           <textarea
@@ -4038,7 +4040,9 @@ export default function NewEmployeeView({
                         </div>
                       ) : (
                         <p className="text-[13px] text-[#3a3f5c] leading-relaxed whitespace-pre-line">
-                          {step.body}
+                          {(step.id === 1 || (step.title && step.title.toLowerCase().includes('open')))
+                            ? renderGreetingWithLockedName(step.body, employeeName || 'కావ్య')
+                            : step.body}
                         </p>
                       )}
 

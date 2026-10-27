@@ -2,7 +2,7 @@
 export function pickAutoNameAndVoice(langStr) {
   const l = (langStr || '').toLowerCase();
   if (l.includes('telugu') || l.includes('te')) {
-    const list = ['Siri', 'Vandana', 'Lakshmi', 'Kavya', 'Ananya'];
+    const list = ['కావ్య', 'లక్ష్మి', 'సిరి', 'వందన', 'అనన్య'];
     const name = list[Math.floor(Math.random() * list.length)];
     return { name, voice: 'P09', label: 'P09 • Warm Telugu Voice' };
   }
@@ -1034,10 +1034,10 @@ export default function DashboardView({
                 {/* Mini Employee Badge */}
                 <div className="pt-3 border-t border-white/10 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#EA580C] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                    {(employeeName || 'AI Assistant').charAt(0)}
+                    {(employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')).charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-bold text-white truncate">{employeeName || 'AI Assistant'}</div>
+                    <div className="text-[12px] font-bold text-white truncate">{employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')}</div>
                     <div className="text-[10.5px] text-white/60 truncate">{businessName || 'My Business'}</div>
                   </div>
                 </div>
@@ -1411,10 +1411,10 @@ export default function DashboardView({
                 {/* Mini Employee Badge */}
                 <div className="pt-3 border-t border-white/10 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#EA580C] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                    {(employeeName || 'AI Assistant').charAt(0)}
+                    {(employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')).charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-bold text-white truncate">{employeeName || 'AI Assistant'}</div>
+                    <div className="text-[12px] font-bold text-white truncate">{employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')}</div>
                     <div className="text-[10.5px] text-white/60 truncate">{businessName || 'My Business'}</div>
                   </div>
                 </div>
@@ -1424,10 +1424,10 @@ export default function DashboardView({
               <div className="lg:col-span-8 space-y-5">
                 <div className="space-y-1.5">
                   <h3 className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white font-display">
-                    Call flow drafted for {employeeName || 'AI Assistant'}
+                    Call flow drafted for {employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')}
                   </h3>
                   <p className="text-[13px] text-white/60 leading-relaxed">
-                    Based on your details ({q2Selection === 'Other' && otherNextActionText ? otherNextActionText : q2Selection}, {priceRange}), here is how {employeeName || 'AI Assistant'} will guide conversations:
+                    Based on your details ({q2Selection === 'Other' && otherNextActionText ? otherNextActionText : q2Selection}, {priceRange}), here is how {employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')} will guide conversations:
                   </p>
                 </div>
 
@@ -1501,7 +1501,7 @@ export default function DashboardView({
                       onClick={() => handleFinishAndGoToStudio('call-script')}
                       className="bg-gradient-to-r from-[#D99A2B] to-[#F2B94A] hover:from-[#c88d25] hover:to-[#e5ae40] text-[#130e26] font-bold text-[13px] px-6 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      <span>Build AI Employee &amp; Open Call Script ({employeeName || 'AI Assistant'})</span>
+                      <span>Build AI Employee &amp; Open Call Script ({employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')})</span>
                       <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                     </button>
                   </div>
@@ -1575,10 +1575,10 @@ export default function DashboardView({
                 {/* Mini Employee Badge */}
                 <div className="pt-3 border-t border-white/10 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#EA580C] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                    {(employeeName || 'AI Assistant').charAt(0)}
+                    {(employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')).charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-bold text-white truncate">{employeeName || 'AI Assistant'}</div>
+                    <div className="text-[12px] font-bold text-white truncate">{employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')}</div>
                     <div className="text-[10.5px] text-white/60 truncate">{businessName || 'My Business'}</div>
                   </div>
                 </div>
@@ -1588,10 +1588,10 @@ export default function DashboardView({
               <div className="lg:col-span-8 space-y-5">
                 <div className="space-y-1">
                   <h3 className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white font-display">
-                    Choose a voice for {employeeName || 'AI Assistant'}
+                    Choose a voice for {employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')}
                   </h3>
                   <p className="text-[13px] text-white/60 leading-relaxed">
-                    Pick how {employeeName || 'AI Assistant'} speaks on phone calls with callers. You can test and refine anytime.
+                    Pick how {employeeName || (currentLangObj.code === 'te' ? 'కావ్య' : 'Kavya')} speaks on phone calls with callers. You can test and refine anytime.
                   </p>
                 </div>
 
