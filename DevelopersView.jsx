@@ -128,7 +128,7 @@ payload = {
     "first_name": "Sairam",
     "metadata": {
         "lead_source": "Google Search Ads",
-        "budget": "â‚¹3.5 Cr"
+        "budget": "₹3.5 Cr"
     }
 }
 
@@ -308,7 +308,7 @@ paths:
                     {envMode === 'live' ? 'Live Production Key' : 'Test Sandbox Key'}
                   </span>
                 </div>
-                <span className="text-[11px] text-[#6c6b7e]">Created 2 days ago Â· Full Access</span>
+                <span className="text-[11px] text-[#6c6b7e]">Created 2 days ago · Full Access</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -405,7 +405,7 @@ paths:
                   Webhook delivered successfully to {testResult.targetUrl}
                 </div>
                 <div className="mt-2 font-mono text-[11px] bg-white/80 p-2.5 rounded border border-[#bbf7d0]">
-                  Status: 200 OK Â· Round-trip latency: {testResult.latencyMs}ms Â· Event: call.completed
+                  Status: 200 OK · Round-trip latency: {testResult.latencyMs}ms · Event: call.completed
                 </div>
               </div>
             )}

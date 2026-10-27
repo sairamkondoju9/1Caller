@@ -240,7 +240,7 @@ export default function InstantLeadsView({ onNavigate }) {
         <div>
           <div className="flex items-center gap-2 text-[11px] font-mono text-[#6c6b7e] uppercase tracking-wider mb-1">
             <span>Calling Channels</span>
-            <span>Â·</span>
+            <span>·</span>
             <span className="text-[#d97757] font-semibold">Speed-to-Lead</span>
           </div>
           <h1 className="text-2xl font-bold text-[#0f0e17] tracking-tight flex items-center gap-2.5 font-display">
@@ -932,10 +932,10 @@ export default function InstantLeadsView({ onNavigate }) {
             <div className="flex items-center justify-between border-b border-[#e2e4ed] pb-3">
               <div>
                 <h3 className="text-sm font-bold text-[#0f0e17] font-display">
-                  Call Transcript Â· {selectedTranscriptCall.contactName}
+                  Call Transcript · {selectedTranscriptCall.contactName}
                 </h3>
                 <p className="text-[11px] font-mono text-[#6c6b7e]">
-                  {selectedTranscriptCall.contact} Â· {selectedTranscriptCall.time}
+                  {selectedTranscriptCall.contact} · {selectedTranscriptCall.time}
                 </p>
               </div>
               <button

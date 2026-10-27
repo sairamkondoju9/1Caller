@@ -240,7 +240,7 @@ app.get('/api/config', (req, res) => {
     hasPersistentVoiceGateway: Boolean(process.env.VOICE_WS_URL),
     nodeEnv: process.env.NODE_ENV || 'production',
     environment: process.env.NODE_ENV || 'production',
-    preferredTtsEngine: 'cartesia',
+    preferredTtsEngine: process.env.CARTESIA_API_KEY ? 'cartesia' : 'sarvam',
     preferredTelephony: 'sarvam'
   });
 });

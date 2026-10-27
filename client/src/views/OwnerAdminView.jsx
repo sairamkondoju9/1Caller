@@ -246,7 +246,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-white/10 text-[#cbd0df] border border-white/15 backdrop-blur-md font-mono">
                 <ShieldAlert className="w-3.5 h-3.5 text-[#86efac]" />
-                Secret Admin Console Â· Master Control
+                Secret Admin Console · Master Control
               </span>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#86efac] bg-[#16a34a]/20 px-2.5 py-0.5 rounded-full border border-[#16a34a]/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#86efac] animate-ping" />
@@ -768,7 +768,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
                       <div>
                         <div className="text-xs font-bold text-[#0f0e17]">{trunk.name}</div>
                         <div className="text-[11px] text-[#6c6b7e] font-mono">
-                          Pacing: {trunk.cps} Â· Warm CLIs: {trunk.warmCLIs}
+                          Pacing: {trunk.cps} · Warm CLIs: {trunk.warmCLIs}
                         </div>
                       </div>
                     </div>
@@ -807,7 +807,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
                     <div>
                       <div className="text-xs font-bold text-[#0f0e17]">{m.model}</div>
                       <div className="text-[11px] text-[#6c6b7e] font-mono">
-                        Latency: {m.latencyMs || m.ttftMs}ms Â· Fleet share: {m.sharePct}%
+                        Latency: {m.latencyMs || m.ttftMs}ms · Fleet share: {m.sharePct}%
                       </div>
                     </div>
                     <div className="text-right">

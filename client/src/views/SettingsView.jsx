@@ -465,7 +465,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                   Sub-80ms first audio chunk streaming. High emotional prosody for English, Hindi, and Hinglish calls.
                 </p>
                 <div className="text-[10px] font-mono text-[#0f0e17] pt-1 border-t border-[#e2e4ed]">
-                  Latency: 78ms Â· Voice: Kavya / Arjun Natural
+                  Latency: 78ms · Voice: Kavya / Arjun Natural
                 </div>
               </div>
 
@@ -483,7 +483,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                   Regional Indic engine for Telugu, Tamil, Kannada, Marathi, and Bengali native phrasing.
                 </p>
                 <div className="text-[10px] font-mono text-[#6c6b7e] pt-1 border-t border-[#e2e4ed]">
-                  Latency: 95ms Â· Language: te-IN / ta-IN / kn-IN
+                  Latency: 95ms · Language: te-IN / ta-IN / kn-IN
                 </div>
               </div>
             </div>

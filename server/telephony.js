@@ -3,12 +3,31 @@
 
 export class SarvamTelephonyService {
   constructor(config = {}) {
-    this.apiKey = config.apiKey || process.env.SARVAM_TELEPHONY_API_KEY || process.env.SARVAM_API_KEY;
-    this.primaryCli = config.primaryCli || process.env.SARVAM_PRIMARY_CLI || '+917965481367';
-    this.orgId = config.orgId || process.env.SARVAM_ORG_ID;
-    this.workspaceId = config.workspaceId || process.env.SARVAM_WORKSPACE_ID;
-    this.appId = config.appId || process.env.SARVAM_APP_ID;
-    this.connectionId = config.connectionId || process.env.SARVAM_CONNECTION_ID;
+    this.config = config;
+  }
+
+  get apiKey() {
+    return this.config.apiKey || process.env.SARVAM_TELEPHONY_API_KEY || process.env.SARVAM_API_KEY;
+  }
+
+  get primaryCli() {
+    return this.config.primaryCli || process.env.SARVAM_PRIMARY_CLI || '+917965481367';
+  }
+
+  get orgId() {
+    return this.config.orgId || process.env.SARVAM_ORG_ID;
+  }
+
+  get workspaceId() {
+    return this.config.workspaceId || process.env.SARVAM_WORKSPACE_ID;
+  }
+
+  get appId() {
+    return this.config.appId || process.env.SARVAM_APP_ID;
+  }
+
+  get connectionId() {
+    return this.config.connectionId || process.env.SARVAM_CONNECTION_ID;
   }
 
   isConfigured() {
@@ -69,7 +88,7 @@ export class SarvamTelephonyService {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const errDetail = data?.detail || data?.error?.message || response.statusText;
+      const errDetail = data?.error?.data?.details || data?.detail || data?.error?.message || response.statusText;
       throw new Error(`Sarvam Outbound Call failed (${response.status}): ${typeof errDetail === 'object' ? JSON.stringify(errDetail) : errDetail}`);
     }
 
