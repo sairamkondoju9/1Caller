@@ -20,6 +20,7 @@ import { mistralClient } from './mistralClient.js';
 import { geminiClient } from './geminiClient.js';
 import { llmManager } from './llmManager.js';
 import { whatsappClient } from './whatsappClient.js';
+import { TelephonyService } from './telephony.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -200,6 +201,7 @@ app.get('/api/health', async (req, res) => {
   const providers = {
     cartesia: process.env.CARTESIA_API_KEY ? 'configured' : 'not_configured',
     sarvam: process.env.SARVAM_API_KEY ? 'configured' : 'not_configured',
+    sarvamTelephony: process.env.SARVAM_TELEPHONY_API_KEY ? 'configured' : 'not_configured',
     aiGeneration,
     googleAuth: process.env.GOOGLE_CLIENT_ID ? 'configured' : 'not_configured',
     database: databaseStatus,
@@ -228,6 +230,8 @@ app.get('/api/config', (req, res) => {
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || null,
     hasRazorpay: Boolean(razorpay),
     hasSarvamKey: Boolean(process.env.SARVAM_API_KEY),
+    hasSarvamTelephony: Boolean(process.env.SARVAM_TELEPHONY_API_KEY),
+    primaryCli: process.env.SARVAM_PRIMARY_CLI || '+917965481367',
     hasCartesiaKey: Boolean(process.env.CARTESIA_API_KEY),
     hasDatabaseUrl: Boolean(turso),
     hasPersistentDatabase,
@@ -986,6 +990,63 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
   `).run(id, tenantId, name.trim(), String(phone).trim(), status || 'pending', campaign_id || null, JSON.stringify(extracted_data || {}));
 
   res.json({ success: true, id });
+});
+
+// Outbound Telephony Dispatch via Sarvam Samvaad
+app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
+  try {
+    const { phone, employee_id, custom_message, language } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required.' });
+    }
+
+    const tenantId = req.user.tenant_id;
+    let employee = null;
+    if (employee_id) {
+      if (turso) {
+        const empRes = await turso.execute({
+          sql: 'SELECT * FROM employees WHERE id = ? AND tenant_id = ?',
+          args: [employee_id, tenantId]
+        });
+        employee = empRes.rows && empRes.rows[0];
+      } else {
+        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND tenant_id = ?').get(employee_id, tenantId);
+      }
+    }
+
+    const result = await TelephonyService.dialCall({
+      to: phone,
+      employee,
+      message: custom_message || employee?.opening_greeting,
+      language: language || employee?.primary_language || 'Telugu'
+    });
+
+    const callId = `call_${crypto.randomUUID()}`;
+    const insertSql = `
+      INSERT INTO calls (id, tenant_id, phone, employee_id, status, duration_seconds, cost, created_at)
+      VALUES (?, ?, ?, ?, 'ringing', 0, 0, CURRENT_TIMESTAMP)
+    `;
+    if (turso) {
+      await turso.execute({
+        sql: insertSql,
+        args: [callId, tenantId, phone, employee_id || null]
+      });
+    } else {
+      db.prepare(insertSql).run(callId, tenantId, phone, employee_id || null);
+    }
+
+    return res.json({
+      success: true,
+      call_id: callId,
+      attempt_id: result.attemptId,
+      status: 'initiated',
+      from: result.from,
+      to: result.to
+    });
+  } catch (error) {
+    console.error('[Call Dispatch Error]:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 // All Conversations & Call Logs

@@ -597,21 +597,21 @@ export default function NewEmployeeView({
 
   // Voices Catalog (Matching Screenshots 2, 3)
   const premiumVoices = [
-    { id: 'P09', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹6.8/min', mood: 'Professional' },
-    { id: 'P01', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Friendly', rate: '₹6.8/min', mood: 'Friendly' },
-    { id: 'P07', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Calm', rate: '₹6.8/min', mood: 'Calm' },
-    { id: 'P06', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹6.8/min', mood: 'Warm' },
-    { id: 'P02', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹6.8/min', mood: 'Professional' },
-    { id: 'P15', gender: 'Female', badge: '', desc: 'Native Hindi ”¢ Clear, approachable Hindi female voice for customer service...', rate: '₹6.8/min', mood: 'Friendly' }
+    { id: 'P09', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Professional', rate: '₹6.8/min', mood: 'Professional' },
+    { id: 'P01', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Friendly', rate: '₹6.8/min', mood: 'Friendly' },
+    { id: 'P07', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Calm', rate: '₹6.8/min', mood: 'Calm' },
+    { id: 'P06', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Warm', rate: '₹6.8/min', mood: 'Warm' },
+    { id: 'P02', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Professional', rate: '₹6.8/min', mood: 'Professional' },
+    { id: 'P15', gender: 'Female', badge: '', desc: 'Native Hindi • Clear, approachable Hindi female voice for customer service...', rate: '₹6.8/min', mood: 'Friendly' }
   ];
 
   const standardVoices = [
-    { id: 'S39', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹5/min', mood: 'Warm' },
-    { id: 'S36', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Confident', rate: '₹5/min', mood: 'Confident' },
-    { id: 'S47', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Confident', rate: '₹5/min', mood: 'Confident' },
-    { id: 'S41', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Professional', rate: '₹5/min', mood: 'Professional' },
-    { id: 'S49', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi ”¢ Warm', rate: '₹5/min', mood: 'Warm' },
-    { id: 'S130', gender: 'Female', badge: '', desc: 'Native Hindi ”¢ Professional and clean female voice, with a ...', rate: '₹5/min', mood: 'Professional' }
+    { id: 'S39', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Warm', rate: '₹5/min', mood: 'Warm' },
+    { id: 'S36', gender: 'Female', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Confident', rate: '₹5/min', mood: 'Confident' },
+    { id: 'S47', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Confident', rate: '₹5/min', mood: 'Confident' },
+    { id: 'S41', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Professional', rate: '₹5/min', mood: 'Professional' },
+    { id: 'S49', gender: 'Male', badge: 'SARVAM SPECIAL', desc: 'Great Hindi • Warm', rate: '₹5/min', mood: 'Warm' },
+    { id: 'S130', gender: 'Female', badge: '', desc: 'Native Hindi • Professional and clean female voice, with a ...', rate: '₹5/min', mood: 'Professional' }
   ];
 
   // Audio Event Listeners
