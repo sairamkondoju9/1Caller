@@ -750,6 +750,34 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   res.json({ success: true, id });
 });
 
+app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant_id || req.user.id || 'default-tenant';
+  if (!id) return res.status(400).json({ error: 'Employee ID is required' });
+
+  if (turso) {
+    try {
+      const result = await turso.execute({
+        sql: 'DELETE FROM employees WHERE id = ? AND tenant_id = ?',
+        args: [id, tenantId]
+      });
+      if (result.rowsAffected === 0 && (req.user.role === 'owner' || req.user.role === 'admin')) {
+        await turso.execute({ sql: 'DELETE FROM employees WHERE id = ?', args: [id] });
+      }
+      return res.json({ success: true, message: 'Employee deleted successfully' });
+    } catch (err) {
+      console.error('[Turso Employee Delete Error]:', err.message);
+      return res.status(503).json({ error: 'Could not delete employee from database.' });
+    }
+  }
+
+  const result = db.prepare('DELETE FROM employees WHERE id = ? AND tenant_id = ?').run(id, tenantId);
+  if (result.changes === 0 && (req.user.role === 'owner' || req.user.role === 'admin')) {
+    db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+  }
+  res.json({ success: true, message: 'Employee deleted successfully' });
+});
+
 // Compatibility endpoint for the admin provider test; uses the compact profile contract.
 app.post('/api/employees/parse-prompt', authenticateToken, async (req, res) => {
   try {

@@ -251,6 +251,29 @@ export default function App() {
     }
   };
 
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!currentUser) {
+      setWorkflowNotice('Sign in before deleting an AI employee.');
+      setIsAuthModalOpen(true);
+      return false;
+    }
+    try {
+      const res = await apiFetch(`/api/employees/${employeeId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete employee');
+      refreshEmployees();
+      refreshStats();
+      setWorkflowNotice('Employee deleted successfully.');
+      return true;
+    } catch (err) {
+      setWorkflowNotice(err.message || 'Failed to delete employee.');
+      return false;
+    }
+  };
+
   const handleImpersonateTenant = (tenant) => {
     alert(`Switched workspace to: ${tenant.name} (${tenant.id})`);
     setActiveTab('dashboard');
@@ -454,6 +477,7 @@ export default function App() {
             <DashboardView
               onNavigate={(tab) => setActiveTab(tab)}
               onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
                 setSelectedEmployee({ ...emp, initialTab: targetTab });
                 setActiveTab('employee-studio');
@@ -467,6 +491,7 @@ export default function App() {
             <DashboardView
               onNavigate={(tab) => setActiveTab(tab)}
               onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
                 setSelectedEmployee({ ...emp, initialTab: targetTab });
                 setActiveTab('employee-studio');
@@ -483,6 +508,7 @@ export default function App() {
               initialData={selectedEmployee}
               initialTab={selectedEmployee?.initialTab || 'call-script'}
               onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
               onNavigate={(tab) => setActiveTab(tab)}
             />
           )}

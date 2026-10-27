@@ -70,6 +70,7 @@ import {
   Coffee,
   Store,
   Crown,
+  Trash2,
 } from 'lucide-react';
 import { useSpeechRecognition } from '../lib/useSpeechRecognition';
 
@@ -86,6 +87,7 @@ function InstagramIcon({ className = "w-5 h-5" }) {
 export default function NewEmployeeView({ 
   onSaveEmployee, 
   onBuildEmployee,
+  onDeleteEmployee,
   onNavigate, 
   initialStep = 4, 
   initialData = null,
@@ -424,6 +426,9 @@ export default function NewEmployeeView({
   const [isSwaraThinking, setIsSwaraThinking] = useState(false);
   const [swaraFeedback, setSwaraFeedback] = useState('');
   const [swaraSuggestedQuestion, setSwaraSuggestedQuestion] = useState('What are you expecting from the customer?');
+  const [showStudioDeleteConfirm, setShowStudioDeleteConfirm] = useState(false);
+  const [isDeletingInStudio, setIsDeletingInStudio] = useState(false);
+  const [studioDeleteError, setStudioDeleteError] = useState('');
   const [teluguEnhance, setTeluguEnhance] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -3858,6 +3863,17 @@ export default function NewEmployeeView({
                     >
                       Copy / paste
                     </button>
+                    {(employeeId || initialData?.id) && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowStudioDeleteConfirm(true); setStudioDeleteError(''); }}
+                        className="text-red-500 hover:text-red-700 hover:underline font-medium cursor-pointer flex items-center gap-1"
+                        title="Delete this employee"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

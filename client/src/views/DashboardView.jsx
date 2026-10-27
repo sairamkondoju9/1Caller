@@ -49,6 +49,7 @@ import {
   MessageSquare,
   Database,
   UserPlus,
+  Trash2,
   Play,
   Pause,
   ArrowRight,
@@ -83,6 +84,7 @@ export default function DashboardView({
   onNavigate,
   onBuildEmployee,
   onSaveEmployee,
+  onDeleteEmployee,
   employees = [],
   stats = {},
   isMyEmployeesView = false
@@ -95,6 +97,9 @@ export default function DashboardView({
   const [customIndustryText, setCustomIndustryText] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
   const [employeeBuildError, setEmployeeBuildError] = useState('');
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
+  const [deleteEmployeeError, setDeleteEmployeeError] = useState('');
   const [timeRange, setTimeRange] = useState('7d'); // 'today' | '7d' | '30d'
   const [callFilter, setCallFilter] = useState('all'); // 'all' | 'positive' | 'neutral' | 'negative'
   const [summaryData, setSummaryData] = useState(null);
@@ -444,46 +449,130 @@ export default function DashboardView({
           </div>
         ) : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {employees.map((emp) => (
-            <button
-              type="button"
+            <div
               key={emp.id}
-              onClick={() => {
-                if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                else if (onNavigate) onNavigate('employee-studio');
-              }}
-              className="w-full bg-white rounded-2xl border border-[#e2e4ed] hover:border-[#7a50dc] p-5 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between space-y-4 text-left"
+              className="w-full bg-white rounded-2xl border border-[#e2e4ed] hover:border-[#7a50dc] p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between space-y-4 text-left relative"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7a50dc] to-[#a78bfa] text-white font-bold text-lg flex items-center justify-center shadow-xs">
+                <div
+                  onClick={() => {
+                    if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                    else if (onNavigate) onNavigate('employee-studio');
+                  }}
+                  className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7a50dc] to-[#a78bfa] text-white font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
                     {emp.name.charAt(0)}
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#0f0e17] group-hover:text-[#7a50dc] transition-colors">{emp.name}</h3>
-                    <p className="text-xs text-[#6c6b7e] line-clamp-1">{emp.industry || 'Sales Specialist'}</p>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-[#0f0e17] group-hover:text-[#7a50dc] transition-colors truncate">{emp.name}</h3>
+                    <p className="text-xs text-[#6c6b7e] truncate">{emp.industry || 'Sales Specialist'}</p>
                   </div>
                 </div>
-                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                  emp.status === 'draft'
-                    ? 'bg-amber-50 text-amber-800 border-amber-200'
-                    : emp.status === 'archived'
-                      ? 'bg-slate-50 text-slate-600 border-slate-200'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                }`}>
-                  {emp.status === 'draft' ? 'Review draft' : emp.status === 'archived' ? 'Archived' : 'Ready'}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                    emp.status === 'draft'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : emp.status === 'archived'
+                        ? 'bg-slate-50 text-slate-600 border-slate-200'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}>
+                    {emp.status === 'draft' ? 'Review draft' : emp.status === 'archived' ? 'Archived' : 'Ready'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEmployeeToDelete(emp);
+                      setDeleteEmployeeError('');
+                    }}
+                    title={`Delete ${emp.name}`}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-[#f0f2f8] flex items-center justify-between text-xs text-[#6c6b7e]">
                 <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">{emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}</span>
-                <span className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                    else if (onNavigate) onNavigate('employee-studio');
+                  }}
+                  className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                >
                   Open Call Script &rarr;
-                </span>
+                </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
         }
+
+        {/* Delete Confirmation Modal */}
+        {employeeToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 text-red-600">
+                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 font-display">Delete AI Employee?</h3>
+                  <p className="text-xs text-zinc-500">This action cannot be undone.</p>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                Are you sure you want to delete <strong className="text-zinc-900">{employeeToDelete.name}</strong> ({employeeToDelete.industry || employeeToDelete.role || 'AI Employee'})? This employee, their opening greeting, and all customized call script steps will be permanently deleted.
+              </p>
+              {deleteEmployeeError && (
+                <div className="text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
+                  {deleteEmployeeError}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-100">
+                <button
+                  type="button"
+                  disabled={isDeletingEmployee}
+                  onClick={() => { setEmployeeToDelete(null); setDeleteEmployeeError(''); }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingEmployee}
+                  onClick={async () => {
+                    setIsDeletingEmployee(true);
+                    setDeleteEmployeeError('');
+                    try {
+                      if (onDeleteEmployee) {
+                        const ok = await onDeleteEmployee(employeeToDelete.id);
+                        if (ok) {
+                          setEmployeeToDelete(null);
+                        } else {
+                          setDeleteEmployeeError('Failed to delete employee. Please try again.');
+                        }
+                      } else {
+                        setDeleteEmployeeError('Delete function unavailable.');
+                      }
+                    } catch (err) {
+                      setDeleteEmployeeError(err.message || 'Failed to delete employee.');
+                    } finally {
+                      setIsDeletingEmployee(false);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                >
+                  {isDeletingEmployee ? 'Deleting...' : 'Delete Employee'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
