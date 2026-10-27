@@ -423,6 +423,7 @@ export default function NewEmployeeView({
   const [swaraInput, setSwaraInput] = useState('');
   const [isSwaraThinking, setIsSwaraThinking] = useState(false);
   const [swaraFeedback, setSwaraFeedback] = useState('');
+  const [swaraSuggestedQuestion, setSwaraSuggestedQuestion] = useState('What are you expecting from the customer?');
   const [teluguEnhance, setTeluguEnhance] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -1038,10 +1039,18 @@ export default function NewEmployeeView({
 
   const handleDeployEmployee = async () => handleCompleteBuildToCall(false, true);
 
-  const handleSwaraSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const instruction = swaraInput.trim();
+  const handleSwaraSubmit = async (customInstructionOrEvent) => {
+    let instruction = '';
+    if (typeof customInstructionOrEvent === 'string') {
+      instruction = customInstructionOrEvent.trim();
+    } else if (customInstructionOrEvent && customInstructionOrEvent.preventDefault) {
+      customInstructionOrEvent.preventDefault();
+      instruction = swaraInput.trim();
+    } else {
+      instruction = swaraInput.trim();
+    }
     if (!instruction) return;
+
     setIsSwaraThinking(true);
     setSwaraFeedback('Swara is analyzing and rewriting your call flow...');
 
@@ -1053,45 +1062,73 @@ export default function NewEmployeeView({
           currentScript: scriptSteps,
           userInstruction: instruction,
           businessName: businessName || 'My Business',
-          employeeName: employeeName || 'Employee'
+          employeeName: employeeName || 'Employee',
+          openingGreeting: openingGreeting || '',
+          language: employeeLanguage || 'Telugu + English'
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        const replyText = data.reply || data.content || "I've updated your call script steps based on your instruction.";
+        const replyText = data.reply || data.content || "Swara has updated your call script steps based on your instruction.";
         setSwaraFeedback(replyText);
 
         if (data.updatedSteps && Array.isArray(data.updatedSteps) && data.updatedSteps.length > 0) {
           setScriptSteps(data.updatedSteps);
+          if (data.openingGreeting && typeof data.openingGreeting === 'string' && data.openingGreeting.trim()) {
+            setOpeningGreeting(data.openingGreeting);
+          }
+          if (data.expectedCustomerAction) {
+            setQ2Selection(data.expectedCustomerAction);
+          }
+          if (data.suggestedNextQuestion) {
+            setSwaraSuggestedQuestion(data.suggestedNextQuestion);
+          }
+          if ((employeeId || initialData?.id) && typeof onSaveEmployee === 'function') {
+            onSaveEmployee({
+              id: employeeId || initialData?.id,
+              name: employeeName,
+              business: businessName,
+              role: employeeRole,
+              language: employeeLanguage,
+              voice: selectedVoiceId,
+              opening_greeting: data.openingGreeting || openingGreeting,
+              scriptSteps: data.updatedSteps,
+              call_steps: data.updatedSteps,
+              prompt_text: promptText,
+              status: initialData?.status || 'ready'
+            }).catch(e => console.warn('Auto-save notice:', e.message));
+          }
         } else {
-          // Intelligently enhance scriptSteps based on instruction
+          // Robust client-side step targeting
           setScriptSteps((prev) => {
-            const next = [...prev];
+            const next = Array.isArray(prev) ? JSON.parse(JSON.stringify(prev)) : [];
             const lower = instruction.toLowerCase();
-            if (lower.includes('friendlier') || lower.includes('warm') || lower.includes('polite')) {
-              if (next[0]) {
-                next[0].body = `Greet warmly with high energy and genuine Indian courtesy. State you are ${employeeName} from ${businessName}. Greet with: 'Namaskaram! Hope you are having a wonderful day! I am ${employeeName} from ${businessName} calling regarding your recent enquiry...'`;
-              }
-            } else if (lower.includes('objection') || lower.includes('expensive') || lower.includes('discount') || lower.includes('price')) {
-              const objStep = next.find((s) => s.title.toLowerCase().includes('pitch') || s.title.toLowerCase().includes('queries') || s.title.toLowerCase().includes('qualify'));
-              if (objStep) {
-                objStep.body += `\n[Swara Rule]: Overcome price objections by offering flexible zero-interest payment options and highlight a direct 10% first-order discount code.`;
-              }
-            } else if (lower.includes('urgency') || lower.includes('today') || lower.includes('close')) {
-              const closeStep = next.find((s) => s.title.toLowerCase().includes('close') || s.title.toLowerCase().includes('book'));
-              if (closeStep) {
-                closeStep.body += `\n[Swara Rule]: Create immediate urgency by mentioning this seasonal offer expires within 48 hours.`;
-              }
+
+            if (lower.includes('greeting') || lower.includes('hello') || lower.includes('warm') || lower.includes('friendlier')) {
+              const s1 = next.find(s => (s.title && s.title.toLowerCase().includes('open')) || s.id === 1);
+              if (s1) s1.body += `\n[Swara Rule]: Greet with extra warmth. ${instruction}`;
+            }
+
+            if (lower.includes('objection') || lower.includes('expensive') || lower.includes('discount') || lower.includes('price')) {
+              const s4 = next.find(s => (s.title && s.title.toLowerCase().includes('objection')) || s.id === 4);
+              if (s4) s4.body += `\n[Swara Rule]: Offer approved discount and handle price concern: ${instruction}`;
+            }
+
+            if (lower.includes('visit') || lower.includes('store') || lower.includes('showroom')) {
+              const s5 = next.find(s => (s.title && s.title.toLowerCase().includes('next step')) || s.id === 5);
+              if (s5) s5.body = `Ask permission before offering this next step: Schedule a showroom or store visit. Details: ${instruction}`;
+              const s6 = next.find(s => (s.title && s.title.toLowerCase().includes('close')) || s.id === 6);
+              if (s6) s6.body = `Briefly recap caller's interest, confirm the scheduled visit time, ask if they have any other questions, and thank them warmly.`;
+            } else if (lower.includes('order') || lower.includes('book') || lower.includes('buy')) {
+              const s5 = next.find(s => (s.title && s.title.toLowerCase().includes('next step')) || s.id === 5);
+              if (s5) s5.body = `Ask permission before offering this next step: Confirm the order / booking. Details: ${instruction}`;
             } else if (lower.includes('whatsapp') || lower.includes('catalog') || lower.includes('brochure')) {
-              const closeStep = next.find((s) => s.title.toLowerCase().includes('close') || s.title.toLowerCase().includes('book'));
-              if (closeStep) {
-                closeStep.body += `\n[Swara Rule]: Confirm automated delivery of digital catalog and location link directly to their WhatsApp number.`;
-              }
+              const s5 = next.find(s => (s.title && s.title.toLowerCase().includes('next step')) || s.id === 5);
+              if (s5) s5.body = `Ask permission before offering this next step: Send catalog and pricing directly to WhatsApp. Details: ${instruction}`;
             } else {
-              if (next[1]) {
-                next[1].body += `\n[Swara Update]: ${instruction}`;
-              }
+              const s4 = next.find(s => (s.title && s.title.toLowerCase().includes('objection')) || s.id === 4) || next[1];
+              if (s4) s4.body += `\n[Swara Update]: ${instruction}`;
             }
             return next;
           });
@@ -1103,7 +1140,7 @@ export default function NewEmployeeView({
     } finally {
       setIsSwaraThinking(false);
       setSwaraInput('');
-      setTimeout(() => setSwaraFeedback(''), 10000);
+      setTimeout(() => setSwaraFeedback(''), 12000);
     }
   };
 
@@ -3729,6 +3766,30 @@ export default function NewEmployeeView({
                   </div>
                 </div>
 
+                {/* Customer Expectation Pills */}
+                <div className="flex items-center gap-2 flex-wrap text-[11px] text-white/90">
+                  <span className="font-bold text-amber-300 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    Caller expectation:
+                  </span>
+                  {[
+                    { label: '🗓️ Schedule visit', text: 'Ask customer to schedule a showroom visit to see products in person' },
+                    { label: '🛍️ 10% discount & order', text: 'Offer 10% discount on today\'s booking and guide caller to place their order' },
+                    { label: '💬 WhatsApp catalog', text: 'Offer to send complete catalog and price list directly to their WhatsApp' },
+                    { label: '📞 Callback', text: 'Schedule a callback from a senior specialist at a convenient time' }
+                  ].map((pill) => (
+                    <button
+                      key={pill.label}
+                      type="button"
+                      onClick={() => handleSwaraSubmit(pill.text)}
+                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/25 text-white border border-white/20 hover:border-amber-300/60 transition-all cursor-pointer text-[11px] font-medium"
+                      title={pill.text}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Voice Input Prompt Bar */}
                 <div className="flex items-center gap-2 bg-white/10 rounded-2xl p-2 border border-white/15">
                   <input
@@ -4090,6 +4151,32 @@ export default function NewEmployeeView({
                     ✨ {swaraFeedback}
                   </div>
                 )}
+
+                {/* Customer Expectation & Next Action Section */}
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500/10 to-amber-500/10 border border-purple-200/80 space-y-2">
+                  <div className="text-[12px] font-bold text-[#4c1d95] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#7a50dc]" />
+                    <span>{swaraSuggestedQuestion || 'What are you expecting from the customer?'}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '🗓️ Schedule showroom visit', text: 'Ask customer to schedule a showroom visit to see products in person' },
+                      { label: '🛍️ Book with 10% discount', text: 'Offer 10% discount on today\'s booking and guide caller to place their order' },
+                      { label: '💬 Send catalog on WhatsApp', text: 'Offer to send complete catalog, photos, and price list directly to their WhatsApp' },
+                      { label: '📞 Request callback', text: 'Schedule a callback from a senior specialist at a convenient time' }
+                    ].map((pill) => (
+                      <button
+                        key={pill.label}
+                        type="button"
+                        onClick={() => handleSwaraSubmit(pill.text)}
+                        className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-purple-100/70 text-[#6d28d9] text-[11px] font-bold border border-purple-300/80 shadow-2xs hover:border-[#7a50dc] transition-all cursor-pointer flex items-center gap-1"
+                        title={pill.text}
+                      >
+                        <span>{pill.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Quick Prompts */}
                 <div className="text-[11px] text-[#6c6b7e] space-y-1 pt-1">

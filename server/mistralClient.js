@@ -1,3 +1,4 @@
+import { buildSwaraPrompt, parseSwaraResponse } from './swaraCopilot.js';
 /**
  * Mistral AI Ultra-Fast LLM Client for Swara AI Script Synthesis
  * Primary Model: ministral-3b-latest (Sub-second latency)
@@ -282,25 +283,26 @@ Output strictly valid JSON matching this schema:
     return result ? { ...result, modelUsed: response.modelUsed } : null;
   }
 
-  async swaraChatCopilot({ currentScript, userInstruction }) {
+  async swaraChatCopilot(params = {}) {
     if (!this.apiKey) return null;
+    const { currentScript, userInstruction } = params;
 
     const res = await this._callMistralChat({
       messages: [
-        { role: 'system', content: 'You are Swara AI Copilot. Assist in refining call scripts with short, actionable Telugu/English advice.' },
-        { role: 'user', content: `Script: ${JSON.stringify(currentScript)}\nInstruction: ${userInstruction}` }
+        { role: 'system', content: 'You are Swara AI Copilot for Indian Voice Agents. The business owner has explicitly approved the new instructions (such as discounts, offers, or scheduling visits). Apply their instructions to the script. Return ONLY a valid JSON object matching the requested schema.' },
+        { role: 'user', content: buildSwaraPrompt(params) }
       ],
-      temperature: 0.3,
-      maxTokens: 400,
-      jsonFormat: false,
-      timeoutMs: 8000
+      temperature: 0.2,
+      maxTokens: 850,
+      jsonFormat: true,
+      timeoutMs: 10000
     });
 
     if (!res || !res.content) return null;
+    const parsed = parseSwaraResponse(res.content, currentScript, userInstruction);
     return {
-      success: true,
-      modelUsed: `Mistral AI (${res.modelUsed})`,
-      reply: res.content.trim()
+      ...parsed,
+      modelUsed: `Mistral AI (${res.modelUsed || 'mistral'})`
     };
   }
 }

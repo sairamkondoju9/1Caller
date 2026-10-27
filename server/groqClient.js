@@ -1,3 +1,4 @@
+import { buildSwaraPrompt, parseSwaraResponse } from './swaraCopilot.js';
 /**
  * Groq LPU Ultra-Fast LLM Client for Swara AI Script Synthesis
  * Primary Model: meta-llama/llama-4-scout-17b-16e-instruct
@@ -266,30 +267,31 @@ Output strictly valid JSON matching this schema:
     }
   }
 
-  async swaraChatCopilot({ currentScript, userInstruction }) {
+  async swaraChatCopilot(params = {}) {
     if (!this.apiKey) return null;
+    const { currentScript, userInstruction } = params;
 
     const res = await this._callGroqChat({
       messages: [
         {
           role: 'system',
-          content: 'You are Swara AI Copilot. Assist in refining call scripts with short, actionable Telugu/English guidance.'
+          content: 'You are Swara AI Copilot for Indian Voice Agents. The business owner has explicitly approved the new instructions (such as discounts, offers, or scheduling visits). Apply their instructions to the script. Return ONLY a valid JSON object matching the requested schema.'
         },
         {
           role: 'user',
-          content: `Script: ${JSON.stringify(currentScript)}\nInstruction: ${userInstruction}`
+          content: buildSwaraPrompt(params)
         }
       ],
-      temperature: 0.3,
-      maxTokens: 350,
-      jsonFormat: false
+      temperature: 0.2,
+      maxTokens: 850,
+      jsonFormat: true
     });
 
     if (!res || !res.content) return null;
+    const parsed = parseSwaraResponse(res.content, currentScript, userInstruction);
     return {
-      success: true,
-      modelUsed: res.modelUsed,
-      reply: res.content
+      ...parsed,
+      modelUsed: `Groq (${res.modelUsed || 'groq'})`
     };
   }
 }

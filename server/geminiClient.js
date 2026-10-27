@@ -1,3 +1,4 @@
+import { buildSwaraPrompt, parseSwaraResponse } from './swaraCopilot.js';
 /**
  * Google Gemini Multi-Provider Client for Swara AI Script Synthesis
  * Primary Model: gemini-3.5-flash
@@ -257,21 +258,23 @@ Output strictly valid JSON matching this schema:
     }
   }
 
-  async swaraChatCopilot({ currentScript, userInstruction }) {
+  async swaraChatCopilot(params = {}) {
     if (!this.apiKey) return null;
+    const { currentScript, userInstruction } = params;
 
-    const systemPrompt = 'You are Swara AI Copilot. Assist in refining call scripts with short, actionable Telugu/English advice.';
     const res = await this._generateContent({
-      systemPrompt,
-      userPrompt: `Current Script: ${JSON.stringify(currentScript)}\nUser Instruction: ${userInstruction}`,
-      jsonFormat: false
+      systemPrompt: 'You are Swara AI Copilot for Indian Voice Agents. The business owner has explicitly approved the new instructions (such as discounts, offers, or scheduling visits). Apply their instructions to the script. Return ONLY a valid JSON object matching the requested schema.',
+      userPrompt: buildSwaraPrompt(params),
+      jsonFormat: true,
+      maxOutputTokens: 900,
+      timeoutMs: 12000
     });
 
     if (!res || !res.text) return null;
+    const parsed = parseSwaraResponse(res.text, currentScript, userInstruction);
     return {
-      success: true,
-      modelUsed: `Google Gemini (${res.modelUsed})`,
-      reply: res.text.trim()
+      ...parsed,
+      modelUsed: `Google Gemini (${res.modelUsed || 'gemini'})`
     };
   }
 }

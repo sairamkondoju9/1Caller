@@ -1,3 +1,4 @@
+import { parseSwaraResponse } from './swaraCopilot.js';
 /**
  * Unified Multi-Provider LLM Orchestrator for Swara AI
  * 
@@ -340,12 +341,13 @@ export class LLMManager {
     throw new Error(`Could not create validated employee setup guidance. ${detail}`);
   }
 
-  async swaraChatCopilot({ currentScript, userInstruction }) {
+  async swaraChatCopilot(params = {}) {
+    const { currentScript, userInstruction } = params;
     // 1. Try Groq
     if (process.env.GROQ_API_KEY && Date.now() >= groqCooldownUntil) {
       try {
-        const reply = await groqClient.swaraChatCopilot({ currentScript, userInstruction });
-        if (reply) {
+        const reply = await groqClient.swaraChatCopilot(params);
+        if (reply && reply.steps) {
           recordLLMCall({ provider: 'groq', model: reply.modelUsed || 'groq', latencyMs: 450, status: 'success' });
           return reply;
         }
@@ -354,24 +356,11 @@ export class LLMManager {
       }
     }
 
-    // 2. Try Mistral
-    if (process.env.MISTRAL_API_KEY && Date.now() >= mistralCooldownUntil) {
-      try {
-        const reply = await mistralClient.swaraChatCopilot({ currentScript, userInstruction });
-        if (reply) {
-          recordLLMCall({ provider: 'mistral', model: reply.modelUsed || 'mistral', latencyMs: 1200, status: 'success' });
-          return reply;
-        }
-      } catch (e) {
-        mistralCooldownUntil = Date.now() + 60000;
-      }
-    }
-
-    // 3. Try Gemini
+    // 2. Try Gemini
     if (process.env.GEMINI_API_KEY && Date.now() >= geminiCooldownUntil) {
       try {
-        const reply = await geminiClient.swaraChatCopilot({ currentScript, userInstruction });
-        if (reply) {
+        const reply = await geminiClient.swaraChatCopilot(params);
+        if (reply && reply.steps) {
           recordLLMCall({ provider: 'gemini', model: reply.modelUsed || 'gemini', latencyMs: 1800, status: 'success' });
           return reply;
         }
@@ -380,10 +369,20 @@ export class LLMManager {
       }
     }
 
-    return {
-      success: true,
-      reply: "I've reviewed your instruction and optimized your script steps accordingly (offline local copilot)."
-    };
+    // 3. Try Mistral
+    if (process.env.MISTRAL_API_KEY && Date.now() >= mistralCooldownUntil) {
+      try {
+        const reply = await mistralClient.swaraChatCopilot(params);
+        if (reply && reply.steps) {
+          recordLLMCall({ provider: 'mistral', model: reply.modelUsed || 'mistral', latencyMs: 1200, status: 'success' });
+          return reply;
+        }
+      } catch (e) {
+        mistralCooldownUntil = Date.now() + 60000;
+      }
+    }
+
+    return parseSwaraResponse(null, currentScript, userInstruction);
   }
 }
 
