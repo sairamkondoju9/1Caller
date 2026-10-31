@@ -1038,12 +1038,12 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
     if (employee_id && !employee) {
       if (turso) {
         const empRes = await turso.execute({
-          sql: 'SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = "default")',
+          sql: 'SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = \'default\')',
           args: [employee_id, tenantId]
         });
         employee = empRes.rows && empRes.rows[0];
       } else {
-        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = "default")').get(employee_id, tenantId);
+        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = \'default\')').get(employee_id, tenantId);
       }
     }
 
@@ -1053,14 +1053,14 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       try {
         if (turso) {
           const settingRes = await turso.execute({
-            sql: 'SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = "default") AND key = ?',
+            sql: 'SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = \'default\') AND key = ?',
             args: [tenantId, 'sarvam_app_id']
           });
           if (settingRes.rows && settingRes.rows[0]) {
             resolvedAppId = settingRes.rows[0].value;
           }
         } else {
-          const row = db.prepare('SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = "default") AND key = ?').get(tenantId, 'sarvam_app_id');
+          const row = db.prepare('SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = \'default\') AND key = ?').get(tenantId, 'sarvam_app_id');
           if (row) resolvedAppId = row.value;
         }
       } catch (e) {

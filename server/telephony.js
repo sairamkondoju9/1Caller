@@ -40,7 +40,7 @@ export class SarvamTelephonyService {
   }
 
   get appId() {
-    return this.config.appId || process.env.SARVAM_APP_ID;
+    return this.config.appId || process.env.SARVAM_APP_ID || 'Conversatio-480a9c78-14c1';
   }
 
   get connectionId() {
