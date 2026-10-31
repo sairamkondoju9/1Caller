@@ -1,6 +1,23 @@
 // Sarvam Samvaad Telephony Service
 // Connects to Sarvam Voice Agents Instant Outbound API for live PSTN calling
 
+export function formatPhoneNumber(phone) {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/[^\d+]/g, '');
+  if (!cleaned.startsWith('+')) {
+    if (cleaned.startsWith('0') && cleaned.length === 11) {
+      cleaned = '+91' + cleaned.slice(1);
+    } else if (cleaned.length === 10) {
+      cleaned = '+91' + cleaned;
+    } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      cleaned = '+' + cleaned;
+    } else {
+      cleaned = '+' + cleaned;
+    }
+  }
+  return cleaned;
+}
+
 export class SarvamTelephonyService {
   constructor(config = {}) {
     this.config = config;
@@ -34,7 +51,7 @@ export class SarvamTelephonyService {
     return Boolean(this.apiKey && this.primaryCli);
   }
 
-  async dialCall({ to, employee, message, language = 'Telugu', appVersion = 1, webhookUrl = null }) {
+  async dialCall({ to, employee, message, language = 'Telugu', appVersion = 1, appId = null, webhookUrl = null }) {
     if (!this.apiKey) {
       throw new Error('SARVAM_TELEPHONY_API_KEY is not configured. Set your Sarvam Telephony API key to place calls.');
     }
@@ -42,8 +59,12 @@ export class SarvamTelephonyService {
       throw new Error('Destination phone number is required.');
     }
 
-    const cleanTo = String(to).replace(/\s+/g, '');
+    const cleanTo = formatPhoneNumber(to);
     const cleanFrom = String(this.primaryCli).replace(/\s+/g, '');
+
+    if (!cleanTo || cleanTo.length < 10) {
+      throw new Error(`Invalid phone number: ${to}. Please provide a valid 10-digit mobile number.`);
+    }
 
     if (!this.orgId || !this.workspaceId) {
       throw new Error(
@@ -51,6 +72,8 @@ export class SarvamTelephonyService {
         `You can find these in your Sarvam dashboard URL at https://apps.sarvam.ai/ (e.g. https://apps.sarvam.ai/orgs/<org_id>/workspaces/<workspace_id>).`
       );
     }
+
+    const resolvedAppId = appId || employee?.sarvam_app_id || this.appId || employee?.id || 'agent-default';
 
     // Extract rich script steps and variables from the employee
     let parsedSteps = [];
@@ -87,7 +110,7 @@ export class SarvamTelephonyService {
 
     const payload = {
       app_config: {
-        app_id: this.appId || employee?.id || 'agent-default',
+        app_id: resolvedAppId,
         app_version: appVersion,
         app_type: 'agent',
         connection_config: {
@@ -124,7 +147,14 @@ export class SarvamTelephonyService {
 
     if (!response.ok) {
       const errDetail = data?.error?.data?.details || data?.detail || data?.error?.message || response.statusText;
-      throw new Error(`Sarvam Outbound Call failed (${response.status}): ${typeof errDetail === 'object' ? JSON.stringify(errDetail) : errDetail}`);
+      const errStr = typeof errDetail === 'object' ? JSON.stringify(errDetail) : String(errDetail);
+      if (errStr.includes('not found') || response.status === 404) {
+        throw new Error(
+          `Sarvam Agent '${resolvedAppId}' was not found in your Sarvam Workspace. ` +
+          `Please provide your Sarvam Voice Agent ID (found at apps.sarvam.ai → Build → Agents → click ··· → 'Copy agent ID').`
+        );
+      }
+      throw new Error(`Sarvam Outbound Call failed (${response.status}): ${errStr}`);
     }
 
     return {
@@ -132,6 +162,7 @@ export class SarvamTelephonyService {
       attemptId: data.attempt_id,
       from: cleanFrom,
       to: cleanTo,
+      appId: resolvedAppId,
       status: 'initiated'
     };
   }

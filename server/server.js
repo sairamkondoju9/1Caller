@@ -1028,22 +1028,59 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
 // Outbound Telephony Dispatch via Sarvam Samvaad
 app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
   try {
-    const { phone, employee_id, custom_message, language } = req.body;
+    const { phone, employee_id, custom_message, language, app_id, employee: inlineEmployee } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'Phone number is required.' });
     }
 
-    const tenantId = req.user.tenant_id;
-    let employee = null;
-    if (employee_id) {
+    const tenantId = req.user.tenant_id || req.user.id || 'default';
+    let employee = inlineEmployee || null;
+    if (employee_id && !employee) {
       if (turso) {
         const empRes = await turso.execute({
-          sql: 'SELECT * FROM employees WHERE id = ? AND tenant_id = ?',
+          sql: 'SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = "default")',
           args: [employee_id, tenantId]
         });
         employee = empRes.rows && empRes.rows[0];
       } else {
-        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND tenant_id = ?').get(employee_id, tenantId);
+        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = "default")').get(employee_id, tenantId);
+      }
+    }
+
+    // Check if tenant has a saved Sarvam App ID in tenant_settings
+    let resolvedAppId = app_id || employee?.sarvam_app_id || process.env.SARVAM_APP_ID;
+    if (!resolvedAppId) {
+      try {
+        if (turso) {
+          const settingRes = await turso.execute({
+            sql: 'SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = "default") AND key = ?',
+            args: [tenantId, 'sarvam_app_id']
+          });
+          if (settingRes.rows && settingRes.rows[0]) {
+            resolvedAppId = settingRes.rows[0].value;
+          }
+        } else {
+          const row = db.prepare('SELECT value FROM tenant_settings WHERE (tenant_id = ? OR tenant_id = "default") AND key = ?').get(tenantId, 'sarvam_app_id');
+          if (row) resolvedAppId = row.value;
+        }
+      } catch (e) {
+        // Ignore settings lookup error
+      }
+    }
+
+    // Persist sarvam_app_id if provided explicitly
+    if (app_id) {
+      try {
+        if (turso) {
+          await turso.execute({
+            sql: 'INSERT INTO tenant_settings (tenant_id, key, value) VALUES (?, ?, ?) ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value',
+            args: [tenantId, 'sarvam_app_id', app_id]
+          });
+        } else {
+          db.prepare('INSERT OR REPLACE INTO tenant_settings (tenant_id, key, value) VALUES (?, ?, ?)').run(tenantId, 'sarvam_app_id', app_id);
+        }
+      } catch (e) {
+        // Ignore settings save error
       }
     }
 
@@ -1051,7 +1088,8 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       to: phone,
       employee,
       message: custom_message || employee?.opening_greeting,
-      language: language || employee?.primary_language || 'Telugu'
+      language: language || employee?.primary_language || 'Telugu',
+      appId: resolvedAppId
     });
 
     const callId = `call_${crypto.randomUUID()}`;
@@ -1062,10 +1100,10 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
     if (turso) {
       await turso.execute({
         sql: insertSql,
-        args: [callId, tenantId, phone, employee_id || null]
+        args: [callId, tenantId, result.to, employee_id || null]
       });
     } else {
-      db.prepare(insertSql).run(callId, tenantId, phone, employee_id || null);
+      db.prepare(insertSql).run(callId, tenantId, result.to, employee_id || null);
     }
 
     return res.json({
@@ -1074,7 +1112,8 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       attempt_id: result.attemptId,
       status: 'initiated',
       from: result.from,
-      to: result.to
+      to: result.to,
+      app_id: result.appId
     });
   } catch (error) {
     console.error('[Call Dispatch Error]:', error.message);
@@ -1739,7 +1778,7 @@ app.post('/api/developers/test-webhook', authenticateToken, (req, res) => {
 
 // Settings & Profile
 app.get('/api/settings', authenticateToken, (req, res) => {
-  const tenantId = req.user.tenant_id;
+  const tenantId = req.user.tenant_id || req.user.id || 'default';
   if (turso) return turso.execute({ sql: 'SELECT key, value FROM tenant_settings WHERE tenant_id = ?', args: [tenantId] })
     .then(result => res.json(Object.fromEntries(result.rows.map(row => [row.key, row.value]))))
     .catch(() => res.status(503).json({ error: 'Settings are temporarily unavailable.' }));
@@ -1752,7 +1791,7 @@ app.get('/api/settings', authenticateToken, (req, res) => {
 });
 
 app.post('/api/settings', authenticateToken, async (req, res) => {
-  const tenantId = req.user.tenant_id;
+  const tenantId = req.user.tenant_id || req.user.id || 'default';
   const updates = req.body;
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return res.status(400).json({ error: 'Settings object is required.' });
   if (turso) {

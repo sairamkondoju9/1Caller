@@ -1,4 +1,5 @@
 import { getAuthHeaders } from '../utils/api';
+import TrialCallModal from '../components/TrialCallModal';
 import React, { useState, useEffect, useRef } from 'react';
 import { pickAutoNameAndVoice } from './DashboardView';
 import { INDUSTRY_TEMPLATES, getIndustryDefaults } from '../utils/industryData';
@@ -441,6 +442,10 @@ export default function NewEmployeeView({
 
   // Step 3 (Hear & refine) State
   const [showLeadForm, setShowLeadForm] = useState(false);
+  const [showStudioTrialModal, setShowStudioTrialModal] = useState(false);
+  const [trialCallAttemptId, setTrialCallAttemptId] = useState('');
+  const [trialCallError, setTrialCallError] = useState('');
+  const [isDispatchingCall, setIsDispatchingCall] = useState(false);
   const [leadName, setLeadName] = useState('Sairam');
   const [leadPhone, setLeadPhone] = useState('+918919112039');
   const [showPreCallModal, setShowPreCallModal] = useState(false);
@@ -709,16 +714,61 @@ export default function NewEmployeeView({
     }
   };
 
-  const startIncomingCall = () => {
+  const startIncomingCall = async () => {
     setShowPreCallModal(false);
     setCallState('ringing');
+    setTrialCallError('');
+    setTrialCallAttemptId('');
+    setIsDispatchingCall(true);
+
+    try {
+      const token = localStorage.getItem('token') || '';
+      const currentEmployee = {
+        id: employeeId || initialData?.id,
+        name: employeeName,
+        business: businessName,
+        industry: employeeIndustry || selectedIndustry,
+        role: employeeRole,
+        primary_language: primaryLanguage,
+        opening_greeting: greeting,
+        call_steps: steps,
+        variables: offerings
+      };
+
+      const res = await fetch('/api/calls/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          phone: leadPhone,
+          employee_id: employeeId || initialData?.id,
+          employee: currentEmployee,
+          language: primaryLanguage || 'Telugu'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to dispatch call to phone');
+      }
+
+      setTrialCallAttemptId(data.attempt_id || '');
+    } catch (err) {
+      console.warn('[Live Outbound Call Notice]:', err.message);
+      setTrialCallError(err.message);
+    } finally {
+      setIsDispatchingCall(false);
+    }
+
     setTimeout(() => {
       setCallState('connected');
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().then(() => setIsPlayingAudio(true)).catch(() => setIsPlayingAudio(true));
       }
-    }, 2400);
+    }, 2800);
   };
 
   const endCallToSummary = () => {
@@ -3030,9 +3080,19 @@ export default function NewEmployeeView({
                             <div className="text-[13px] text-[#a78bfa] font-medium">
                               {businessName || 'Sairam Jewellers'} AI {employeeRole}
                             </div>
-                            <div className="text-[11px] text-emerald-400 font-mono mt-1 animate-pulse">
-                              Incoming call...
-                            </div>
+                            {trialCallAttemptId ? (
+                              <div className="text-[11px] text-emerald-300 font-mono mt-1 animate-pulse px-3 py-1 bg-emerald-950/40 rounded-lg">
+                                📞 Dialing {leadPhone} from +917965481367 (Attempt: {trialCallAttemptId.slice(0, 10)}...)
+                              </div>
+                            ) : trialCallError ? (
+                              <div className="text-[10.5px] text-amber-300 font-mono mt-1 px-3 py-1 bg-amber-950/40 rounded-lg">
+                                Telephony note: {trialCallError}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-emerald-400 font-mono mt-1 animate-pulse">
+                                Incoming call to {leadPhone}...
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -3923,6 +3983,14 @@ export default function NewEmployeeView({
                   </div>
 
                   <div className="flex items-center gap-4 text-[12px] text-[#6c6b7e]">
+                    <button
+                      type="button"
+                      onClick={() => setShowStudioTrialModal(true)}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-[12px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5" />
+                      <span>Trial Call to Phone</span>
+                    </button>
                     <span className="font-mono">5 steps · 2,802 / 40,000</span>
                     <label className="flex items-center gap-1.5 cursor-pointer text-[#0f0e17] font-medium">
                       <input

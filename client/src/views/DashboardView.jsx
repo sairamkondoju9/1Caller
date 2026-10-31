@@ -37,6 +37,7 @@ export function pickAutoNameAndVoice(langStr) {
 }
 
 import React, { useState, useEffect, useCallback } from 'react';
+import TrialCallModal from '../components/TrialCallModal';
 import { INDUSTRY_TEMPLATES, getIndustryDefaults } from '../utils/industryData';
 import { getAuthHeaders } from '../utils/api';
 import {
@@ -514,16 +515,29 @@ export default function DashboardView({
 
               <div className="pt-3 border-t border-[#f0f2f8] flex items-center justify-between text-xs text-[#6c6b7e]">
                 <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">{emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                    else if (onNavigate) onNavigate('employee-studio');
-                  }}
-                  className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
-                >
-                  Open Call Script &rarr;
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTrialCallEmployee(emp);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-[11.5px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <PhoneCall className="w-3 h-3" />
+                    <span>Trial Call</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                      else if (onNavigate) onNavigate('employee-studio');
+                    }}
+                    className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                  >
+                    Script &rarr;
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -1845,16 +1859,29 @@ export default function DashboardView({
                   <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">
                     {emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                      else if (onNavigate) onNavigate('employee-studio');
-                    }}
-                    className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
-                  >
-                    Open Call Script &rarr;
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTrialCallEmployee(emp);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-[11.5px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <PhoneCall className="w-3 h-3" />
+                      <span>Trial Call</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                        else if (onNavigate) onNavigate('employee-studio');
+                      }}
+                      className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                    >
+                      Script &rarr;
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
