@@ -51,7 +51,7 @@ export class SarvamTelephonyService {
     return Boolean(this.apiKey && this.primaryCli);
   }
 
-  async dialCall({ to, employee, message, language = 'Telugu', appVersion = 1, appId = null, webhookUrl = null }) {
+  async dialCall({ to, employee, message, language = 'Telugu', appVersion = 2, appId = null, webhookUrl = null }) {
     if (!this.apiKey) {
       throw new Error('SARVAM_TELEPHONY_API_KEY is not configured. Set your Sarvam Telephony API key to place calls.');
     }
@@ -73,7 +73,7 @@ export class SarvamTelephonyService {
       );
     }
 
-    const resolvedAppId = appId || employee?.sarvam_app_id || this.appId || employee?.id || 'agent-default';
+    const resolvedAppId = appId || employee?.sarvam_app_id || this.appId || 'Conversatio-480a9c78-14c1';
 
     // Extract rich script steps and variables from the employee
     let parsedSteps = [];
@@ -88,30 +88,35 @@ export class SarvamTelephonyService {
       ? parsedSteps.map((s, idx) => `${idx + 1}. ${s.title || s.step || ''}: ${s.body || s.detail || ''}`).join('\n')
       : '';
 
-    let parsedVars = {};
+    let parsedVars = [];
     if (employee?.variables) {
       try {
         parsedVars = typeof employee.variables === 'string' ? JSON.parse(employee.variables) : employee.variables;
       } catch (e) {
-        parsedVars = {};
+        parsedVars = [];
       }
     }
 
+    const offeringsText = Array.isArray(parsedVars)
+      ? parsedVars.join(', ')
+      : (typeof parsedVars === 'object' && parsedVars !== null ? Object.values(parsedVars).join(', ') : String(parsedVars || 'All Products & Services'));
+
+    // Strictly match defined input variables in Sarvam Master Agent:
+    // business_name, employee_name, industry, language, prompt_context, call_script, offerings
     const agentVariables = {
-      business_name: employee?.business || employee?.name || 'Our Business',
-      employee_name: employee?.name || 'AI Assistant',
-      role: employee?.role || 'Customer Representative',
-      industry: employee?.industry || 'General Business',
-      language: language,
-      prompt_context: employee?.prompt_text || '',
-      call_script: stepsText,
-      ...(Array.isArray(parsedVars) ? { offerings: parsedVars.join(', ') } : (typeof parsedVars === 'object' ? parsedVars : {}))
+      business_name: String(employee?.business || employee?.name || 'Our Business'),
+      employee_name: String(employee?.name || 'AI Assistant'),
+      industry: String(employee?.industry || 'General Business'),
+      language: String(language || employee?.primary_language || 'Telugu'),
+      prompt_context: String(employee?.prompt_text || ''),
+      call_script: String(stepsText || ''),
+      offerings: String(offeringsText || 'All Products & Services')
     };
 
     const payload = {
       app_config: {
         app_id: resolvedAppId,
-        app_version: appVersion,
+        app_version: appVersion || 2,
         app_type: 'agent',
         connection_config: {
           connection_id: this.connectionId,
@@ -120,7 +125,7 @@ export class SarvamTelephonyService {
         agent_variables: agentVariables,
         app_overrides: {
           initial_bot_message: message || employee?.opening_greeting || undefined,
-          initial_language_name: language
+          initial_language_name: language || employee?.primary_language || 'Telugu'
         }
       },
       user_config: {
@@ -148,7 +153,7 @@ export class SarvamTelephonyService {
     if (!response.ok) {
       const errDetail = data?.error?.data?.details || data?.detail || data?.error?.message || response.statusText;
       const errStr = typeof errDetail === 'object' ? JSON.stringify(errDetail) : String(errDetail);
-      if (errStr.includes('not found') || response.status === 404) {
+      if (response.status === 404 && errStr.toLowerCase().includes('app') && errStr.toLowerCase().includes('not found')) {
         throw new Error(
           `Sarvam Agent '${resolvedAppId}' was not found in your Sarvam Workspace. ` +
           `Please provide your Sarvam Voice Agent ID (found at apps.sarvam.ai → Build → Agents → click ··· → 'Copy agent ID').`
