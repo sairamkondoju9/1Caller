@@ -420,6 +420,15 @@ export default function NewEmployeeView({
         const langName = initialData.language;
         setEmployeeLanguage(langName === 'English' ? 'English (Indian & Global)' : `${langName} + English`);
       }
+      if (initialData.ambient_sound_enabled !== undefined) {
+        setAmbientSoundEnabled(Boolean(initialData.ambient_sound_enabled));
+      }
+      if (initialData.ambient_volume !== undefined) {
+        setAmbientVolume(Number(initialData.ambient_volume));
+      }
+      if (initialData.selected_ambience) {
+        setSelectedAmbience(initialData.selected_ambience);
+      }
     }
   }, [initialData]);
 
@@ -496,9 +505,113 @@ export default function NewEmployeeView({
   const [voiceSearchQuery, setVoiceSearchQuery] = useState('');
   const [moodFilter, setMoodFilter] = useState('Any mood');
   const [genderFilter, setGenderFilter] = useState('Any gender');
-  const [ambientSoundEnabled, setAmbientSoundEnabled] = useState(true);
-  const [ambientVolume, setAmbientVolume] = useState(0.40);
-  const [selectedAmbience, setSelectedAmbience] = useState('Call Center');
+  const [ambientSoundEnabled, setAmbientSoundEnabled] = useState(
+    initialData?.ambient_sound_enabled !== undefined ? Boolean(initialData.ambient_sound_enabled) : true
+  );
+  const [ambientVolume, setAmbientVolume] = useState(
+    initialData?.ambient_volume !== undefined ? Number(initialData.ambient_volume) : 0.40
+  );
+  const [selectedAmbience, setSelectedAmbience] = useState(
+    initialData?.selected_ambience || 'Call Center'
+  );
+  const [previewingAmbienceId, setPreviewingAmbienceId] = useState(null);
+  const ambienceAudioCtxRef = useRef(null);
+
+  const stopAmbiencePreview = () => {
+    if (ambienceAudioCtxRef.current) {
+      try {
+        ambienceAudioCtxRef.current.close();
+      } catch (e) {}
+      ambienceAudioCtxRef.current = null;
+    }
+    setPreviewingAmbienceId(null);
+  };
+
+  const playAmbiencePreview = (type) => {
+    if (previewingAmbienceId === type) {
+      stopAmbiencePreview();
+      return;
+    }
+    stopAmbiencePreview();
+
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      ambienceAudioCtxRef.current = ctx;
+
+      const bufferSize = ctx.sampleRate * 4;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        if (type === 'City Traffic') {
+          lastOut = (lastOut + 0.02 * white) / 1.02;
+          data[i] = lastOut * 3.5;
+        } else if (type === 'Quiet Office') {
+          lastOut = (lastOut + 0.08 * white) / 1.08;
+          const click = Math.random() > 0.993 ? (Math.random() * 0.3 - 0.15) : 0;
+          data[i] = (lastOut * 1.5) + click;
+        } else if (type === 'Call Center') {
+          lastOut = (lastOut + 0.12 * white) / 1.12;
+          const murmur = Math.sin(i / 130) * 0.06 + Math.cos(i / 220) * 0.04;
+          data[i] = (lastOut * 1.8) + murmur;
+        } else {
+          lastOut = (lastOut + 0.01 * white) / 1.01;
+          data[i] = lastOut * 0.5;
+        }
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      if (type === 'City Traffic') {
+        filter.type = 'lowpass';
+        filter.frequency.value = 320;
+      } else if (type === 'Quiet Office') {
+        filter.type = 'bandpass';
+        filter.frequency.value = 1100;
+        filter.Q.value = 0.8;
+      } else if (type === 'Call Center') {
+        filter.type = 'bandpass';
+        filter.frequency.value = 850;
+        filter.Q.value = 1.2;
+      } else {
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+      }
+
+      const gainNode = ctx.createGain();
+      const targetGain = Math.max(0.04, Math.min(0.6, ambientVolume * 0.4));
+      gainNode.gain.setValueAtTime(targetGain, ctx.currentTime);
+
+      noise.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      noise.start();
+      setPreviewingAmbienceId(type);
+
+      setTimeout(() => {
+        if (ambienceAudioCtxRef.current === ctx) {
+          stopAmbiencePreview();
+        }
+      }, 5000);
+    } catch (err) {
+      console.warn('Ambience audio preview notice:', err);
+      setPreviewingAmbienceId(null);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopAmbiencePreview();
+    };
+  }, []);
 
   // Actions Tab State (Screenshot 5)
   const [apiActionsEnabled, setApiActionsEnabled] = useState(false);
@@ -1107,6 +1220,9 @@ export default function NewEmployeeView({
       scriptSteps: finalScriptSteps,
       call_steps: finalScriptSteps,
       variables: effectiveCategories,
+      ambient_sound_enabled: ambientSoundEnabled,
+      ambient_volume: ambientVolume,
+      selected_ambience: selectedAmbience,
       status: employeePurpose === 'support' ? 'draft' : 'ready',
       created_at: new Date().toISOString()
     };
@@ -4986,33 +5102,29 @@ export default function NewEmployeeView({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         {
-                          id: 'Office Ambience',
+                          id: 'Quiet Office',
                           icon: Building2,
-                          desc: 'Phone, typing, quiet paperwork'
+                          desc: 'Keyboard typing, paperwork & gentle room tone'
                         },
                         {
                           id: 'Call Center',
                           icon: Headphones,
-                          desc: 'Busy floor, murmur of agents'
+                          desc: 'Active floor, subtle distant murmur of agents'
                         },
                         {
-                          id: 'Restaurant / Cafe',
-                          icon: Coffee,
-                          desc: 'Chatter, clinking plates'
+                          id: 'City Traffic',
+                          icon: Car,
+                          desc: 'Distant road ambience, natural outdoor warmth'
                         },
                         {
                           id: 'Quiet Room',
                           icon: VolumeX,
-                          desc: 'Calm room tone, no chatter'
-                        },
-                        {
-                          id: 'Retail Store',
-                          icon: Store,
-                          desc: 'Store floor, distant voices'
+                          desc: 'Clean studio tone, zero background chatter'
                         }
                       ].map((item) => {
                         const isSelected = selectedAmbience === item.id;
                         const Icon = item.icon;
+                        const isPreviewing = previewingAmbienceId === item.id;
                         return (
                           <div
                             key={item.id}
@@ -5045,11 +5157,24 @@ export default function NewEmployeeView({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  alert(`Playing preview of ${item.id}`);
+                                  if (isPreviewing) {
+                                    stopAmbiencePreview();
+                                  } else {
+                                    playAmbiencePreview(item.id);
+                                  }
                                 }}
-                                className="w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
+                                className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                                  isPreviewing
+                                    ? 'bg-[#7a50dc] text-white shadow-sm'
+                                    : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
+                                }`}
+                                title={isPreviewing ? 'Stop audio preview' : `Listen to ${item.id} preview`}
                               >
-                                <Play className="w-3 h-3 fill-current ml-0.5" />
+                                {isPreviewing ? (
+                                  <Square className="w-2.5 h-2.5 fill-current" />
+                                ) : (
+                                  <Play className="w-3 h-3 fill-current ml-0.5" />
+                                )}
                               </button>
                             </div>
                           </div>
