@@ -1028,7 +1028,7 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
 // Outbound Telephony Dispatch via Sarvam Samvaad
 app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
   try {
-    const { phone, employee_id, custom_message, language, app_id, employee: inlineEmployee } = req.body;
+    const { phone, employee_id, custom_message, language, app_id, employee: inlineEmployee, voice_tier = 'standard' } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'Phone number is required.' });
     }
@@ -1092,18 +1092,20 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       appId: resolvedAppId
     });
 
+    const isPremium = voice_tier === 'premium';
+    const tierBadge = isPremium ? 'PREMIUM (₹6.80/m)' : 'STANDARD (₹5.00/m)';
     const callId = `call_${crypto.randomUUID()}`;
     const insertSql = `
-      INSERT INTO calls (id, tenant_id, phone, employee_id, status, duration_seconds, cost, created_at)
-      VALUES (?, ?, ?, ?, 'ringing', 0, 0, CURRENT_TIMESTAMP)
+      INSERT INTO calls (id, tenant_id, phone, employee_id, status, duration_seconds, cost, badge, created_at)
+      VALUES (?, ?, ?, ?, 'ringing', 0, 0, ?, CURRENT_TIMESTAMP)
     `;
     if (turso) {
       await turso.execute({
         sql: insertSql,
-        args: [callId, tenantId, result.to, employee_id || null]
+        args: [callId, tenantId, result.to, employee_id || null, tierBadge]
       });
     } else {
-      db.prepare(insertSql).run(callId, tenantId, result.to, employee_id || null);
+      db.prepare(insertSql).run(callId, tenantId, result.to, employee_id || null, tierBadge);
     }
 
     return res.json({
@@ -1113,7 +1115,10 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       status: 'initiated',
       from: result.from,
       to: result.to,
-      app_id: result.appId
+      app_id: result.appId,
+      voice_tier: isPremium ? 'premium' : 'standard',
+      billing_rate: isPremium ? '₹6.80/min' : '₹5.00/min',
+      engine: isPremium ? 'Cartesia Sonic-2 / Expressive' : 'Sarvam Bulbul'
     });
   } catch (error) {
     console.error('[Call Dispatch Error]:', error.message);

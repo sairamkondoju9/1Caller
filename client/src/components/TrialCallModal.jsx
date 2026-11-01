@@ -3,6 +3,7 @@ import { PhoneCall, Phone, CheckCircle2, AlertCircle, Loader2, X, Sparkles, Buil
 
 export default function TrialCallModal({ isOpen, onClose, employee, initialPhone = '' }) {
   const [phoneNumber, setPhoneNumber] = useState(initialPhone || localStorage.getItem('last_trial_phone') || '+91');
+  const [selectedTier, setSelectedTier] = useState('standard'); // 'standard' (₹5.00/min - Sarvam) | 'premium' (₹6.80/min - Cartesia)
   const [sarvamAppId, setSarvamAppId] = useState(
     employee?.sarvam_app_id || localStorage.getItem('sarvam_master_app_id') || ''
   );
@@ -64,7 +65,8 @@ export default function TrialCallModal({ isOpen, onClose, employee, initialPhone
           employee_id: employee?.id,
           employee: employee,
           app_id: sarvamAppId?.trim() || undefined,
-          language: employee?.primary_language || 'Telugu'
+          language: employee?.primary_language || 'Telugu',
+          voice_tier: selectedTier
         })
       });
 
@@ -192,6 +194,65 @@ export default function TrialCallModal({ isOpen, onClose, employee, initialPhone
               )}
             </div>
           )}
+
+          {/* Voice Tier Experience Selector */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-[#0f0e17] flex items-center justify-between">
+              <span>Select Voice Experience</span>
+              <span className="text-[11px] text-[#7a50dc] font-semibold">Tier &amp; Billing Rate</span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Standard: Sarvam Bulbul */}
+              <div
+                onClick={() => setSelectedTier('standard')}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
+                  selectedTier === 'standard'
+                    ? 'bg-[#f5f3ff] border-[#7a50dc] ring-2 ring-[#7a50dc]/30 shadow-xs'
+                    : 'bg-white border-zinc-200 hover:border-zinc-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#eee8fc] text-[#7a50dc] font-mono">
+                    ₹5.00 / min
+                  </span>
+                  {selectedTier === 'standard' && (
+                    <CheckCircle2 className="w-4 h-4 text-[#7a50dc]" />
+                  )}
+                </div>
+                <div className="text-xs font-bold text-zinc-900">Standard Voice</div>
+                <div className="text-[10.5px] text-zinc-500 mt-0.5 leading-snug">
+                  Sarvam Bulbul — Best for Telugu, everyday sales &amp; support
+                </div>
+              </div>
+
+              {/* Premium: Cartesia Sonic-2 / Expressive */}
+              <div
+                onClick={() => setSelectedTier('premium')}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
+                  selectedTier === 'premium'
+                    ? 'bg-[#fffbeb] border-amber-500 ring-2 ring-amber-500/30 shadow-xs'
+                    : 'bg-white border-zinc-200 hover:border-zinc-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-mono">
+                    ₹6.80 / min
+                  </span>
+                  {selectedTier === 'premium' && (
+                    <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                  )}
+                </div>
+                <div className="text-xs font-bold text-zinc-900 flex items-center gap-1">
+                  <span>Premium Voice</span>
+                  <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
+                </div>
+                <div className="text-[10.5px] text-zinc-500 mt-0.5 leading-snug">
+                  Cartesia Sonic-2 / Expressive — Ultra-lifelike brand voice (&lt;90ms)
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Destination Phone Input */}
           <div className="space-y-1.5">

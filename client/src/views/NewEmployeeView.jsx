@@ -4886,14 +4886,14 @@ export default function NewEmployeeView({
 
             {/* 2-COLUMN VOICE GRID (Matching Screenshot 2 & 3) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Premium Voices Column (₹6.8/min) */}
+              {/* Premium Voices Column (₹6.80/min) */}
               <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#f0f2f8]">
                   <div className="text-[15px] font-bold text-[#0f0e17]">
-                    Premium voices <span className="text-zinc-400 font-normal text-xs">&bull; 32 · most natural-sounding</span>
+                    Premium voices <span className="text-zinc-400 font-normal text-xs">&bull; Cartesia Sonic-2 / Expressive</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-[#f2ecfd] text-[#7a50dc] font-mono text-[11px] font-bold">
-                    ₹6.8/min
+                    ₹6.80/min
                   </span>
                 </div>
 
@@ -4965,14 +4965,14 @@ export default function NewEmployeeView({
                 </div>
               </div>
 
-              {/* Standard Voices Column (₹5/min) */}
+              {/* Standard Voices Column (₹5.00/min) */}
               <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#f0f2f8]">
                   <div className="text-[15px] font-bold text-[#0f0e17]">
-                    Standard voices <span className="text-zinc-400 font-normal text-xs">&bull; 23 · great everyday quality</span>
+                    Standard voices <span className="text-zinc-400 font-normal text-xs">&bull; Sarvam Bulbul Everyday Quality</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 font-mono text-[11px] font-bold">
-                    ₹5/min
+                    ₹5.00/min
                   </span>
                 </div>
 
