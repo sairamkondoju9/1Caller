@@ -1936,10 +1936,11 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
 app.post('/api/voice/test-sarvam', authenticateToken, async (req, res) => {
   if (!sarvam.apiKey) return res.status(503).json({ error: 'Sarvam speech is not configured.' });
   try {
-    const { text, language } = req.body;
+    const { text, language, speaker } = req.body;
     const result = await sarvam.synthesizeSpeech({
       text: text || 'Namaskaram! Nenu Sai Meadows nunchi matladutunnanu.',
-      targetLanguageCode: language ? `${language}-IN` : 'te-IN'
+      targetLanguageCode: language ? (language.includes('-') ? language : `${language}-IN`) : 'te-IN',
+      speaker: speaker || undefined
     });
     res.json(result);
   } catch (err) {
