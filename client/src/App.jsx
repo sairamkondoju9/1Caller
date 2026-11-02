@@ -51,6 +51,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [sessionError, setSessionError] = useState('');
   const [pendingTab, setPendingTab] = useState(null);
+  const [pendingPrompt, setPendingPrompt] = useState(null);
   const [workflowNotice, setWorkflowNotice] = useState('');
 
   const [stats, setStats] = useState({
@@ -382,12 +383,14 @@ export default function App() {
         )}
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
           <LandingPageView
-            onLaunchConsole={() => {
+            onLaunchConsole={(promptText) => {
+              if (promptText) setPendingPrompt(promptText);
               const token = localStorage.getItem('auth_token');
               if (!token || !currentUser) {
+                setPendingTab('new-employee');
                 setIsAuthModalOpen(true);
               } else {
-                setActiveTab('dashboard');
+                setActiveTab('new-employee');
               }
             }}
             onTalkToAgent={() => {
@@ -543,13 +546,16 @@ export default function App() {
           {activeTab === 'new-employee' && (
             <NewEmployeeView
               initialStep={2}
-              initialData={null}
+              initialData={pendingPrompt ? { prompt: pendingPrompt } : null}
               onSaveEmployee={handleSaveEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
                 setSelectedEmployee({ ...emp, initialTab: targetTab });
                 setActiveTab('employee-studio');
               }}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => {
+                setPendingPrompt(null);
+                setActiveTab(tab);
+              }}
             />
           )}
 

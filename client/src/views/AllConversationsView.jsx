@@ -100,7 +100,7 @@ export default function AllConversationsView({ calls = [] }) {
     } else {
       if (audioObj) audioObj.pause();
       const sound = new Audio(call.audioUrl);
-      sound.play();
+      sound.play().catch(err => console.warn("Audio playback notice:", err.message));
       sound.onended = () => setPlayingId(null);
       setAudioObj(sound);
       setPlayingId(call.id);

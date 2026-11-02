@@ -2,38 +2,38 @@
 export function pickAutoNameAndVoice(langStr) {
   const l = (langStr || '').toLowerCase();
   if (l.includes('telugu') || l.includes('te')) {
-    const list = ['కావ్య', 'లక్ష్మి', 'సిరి', 'వందన', 'అనన్య'];
+    const list = ['Priya', 'Kavya', 'Sravani', 'Ananya', 'Harika'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'P09', label: 'P09 • Warm Telugu Voice' };
+    return { name, voice: 'P09', label: 'P09 · Warm Telugu Voice' };
   }
   if (l.includes('hindi') || l.includes('hi')) {
     const list = ['Imran', 'Pooja', 'Aarav', 'Rohan', 'Neha'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'H01', label: 'H01 • Fluent Hindi Professional' };
+    return { name, voice: 'H01', label: 'H01 · Fluent Hindi Professional' };
   }
   if (l.includes('tamil') || l.includes('ta')) {
     const list = ['Priya', 'Deepa', 'Karthik', 'Anitha'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'T01', label: 'T01 • Expressive Tamil Specialist' };
+    return { name, voice: 'T01', label: 'T01 · Expressive Tamil Specialist' };
   }
   if (l.includes('kannada') || l.includes('kn')) {
     const list = ['Sahana', 'Varun', 'Deepa', 'Kiran'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'K01', label: 'K01 • Natural Kannada Voice' };
+    return { name, voice: 'K01', label: 'K01 · Natural Kannada Voice' };
   }
   if (l.includes('malayalam') || l.includes('ml')) {
     const list = ['Anjali', 'Rahul', 'Reshma'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'M01', label: 'M01 • Clear Malayalam Advisor' };
+    return { name, voice: 'M01', label: 'M01 · Clear Malayalam Advisor' };
   }
   if (l.includes('marathi') || l.includes('mr')) {
     const list = ['Swati', 'Omkar', 'Pooja', 'Tanvi'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'MR01', label: 'MR01 • Polished Marathi Executive' };
+    return { name, voice: 'MR01', label: 'MR01 · Polished Marathi Executive' };
   }
   const list = ['Lakshmi', 'Sarah', 'Alex', 'Rohan'];
   const name = list[Math.floor(Math.random() * list.length)];
-  return { name, voice: 'E01', label: 'E01 • Global English Professional' };
+  return { name, voice: 'E01', label: 'E01 · Global English Professional' };
 }
 
 import React, { useState, useEffect, useCallback } from 'react';

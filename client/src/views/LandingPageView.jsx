@@ -1848,7 +1848,7 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
               Sign in
             </button>
             <button
-              onClick={onLaunchConsole}
+              onClick={() => onLaunchConsole?.(promptText)}
               className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-all select-none btn-fill magnet hover:shadow-[0_14px_30px_-12px_rgba(15,14,23,0.3)] bg-brand-600 text-white hover:bg-brand-700 shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-8px_rgba(15,14,23,0.25)] text-[13px] gap-1.5 h-10 px-4.5 rounded-full cursor-pointer"
             >
               Start free
