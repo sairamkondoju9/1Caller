@@ -152,6 +152,66 @@ export default function Sidebar({
             <span>Telephony Gateways</span>
             <span className="text-[#16a34a] font-bold">Online · 100%</span>
           </div>
+
+          {/* Quick Compliance & Resource Links (Identical to app.outpero.com) */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pt-3 mt-3 border-t border-[#e2e4ed]/70 text-[10.5px] text-[#6c6b7e]">
+            <a
+              href="https://docs.outpero.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#0f0e17] transition-colors"
+            >
+              Help &amp; Docs
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectTab) onSelectTab('terms');
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="hover:text-[#0f0e17] transition-colors cursor-pointer"
+            >
+              Terms
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectTab) onSelectTab('privacy');
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="hover:text-[#0f0e17] transition-colors cursor-pointer"
+            >
+              Privacy
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectTab) onSelectTab('refunds');
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="hover:text-[#0f0e17] transition-colors cursor-pointer"
+            >
+              Refund
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectTab) onSelectTab('contact');
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="hover:text-[#0f0e17] transition-colors cursor-pointer"
+            >
+              Contact
+            </button>
+            <a
+              href="https://www.outpero.com/ai-employee"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#0f0e17] transition-colors font-medium text-[#7a50dc]"
+            >
+              outpero.com
+            </a>
+          </div>
         </div>
       </aside>
     </>

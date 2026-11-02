@@ -199,6 +199,7 @@ export default function App() {
         'privacy-policy': 'privacy',
         'terms': 'terms',
         'terms-and-conditions': 'terms',
+        'refund': 'refunds',
         'refunds': 'refunds',
         'refund-policy': 'refunds',
         'cancellation-and-refund-policy': 'refunds',
@@ -212,7 +213,7 @@ export default function App() {
       };
 
       const validTabs = [
-        'privacy', 'privacy-policy', 'terms', 'terms-and-conditions', 'refunds', 'refund-policy',
+        'privacy', 'privacy-policy', 'terms', 'terms-and-conditions', 'refund', 'refunds', 'refund-policy',
         'cancellation-and-refund-policy', 'shipping', 'shipping-policy', 'shipping-and-delivery',
         'delivery-policy', 'contact', 'contact-us',
         'owner-admin', 'dashboard', 'my-employees', 'employee-studio',

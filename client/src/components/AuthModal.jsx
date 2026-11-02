@@ -306,6 +306,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <div className="pt-2 text-center text-[11px] text-[#5f6368]">
             Secured with 256-bit JWT authentication &bull; Turso serverless storage
           </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-2 border-t border-[#e2e4ed]/60 text-[10.5px] text-[#6c6b7e]">
+            <a href="https://docs.outpero.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Help &amp; Docs</a>
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Terms</a>
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Privacy</a>
+            <a href="/refund" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Refund</a>
+            <a href="/contact" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Contact</a>
+            <a href="https://www.outpero.com/ai-employee" target="_blank" rel="noopener noreferrer" className="text-[#7a50dc] font-medium hover:underline">outpero.com</a>
+          </div>
         </div>
       </div>
     </div>
