@@ -147,6 +147,7 @@ export default function NewEmployeeView({
 
   // Within Step 2 (Describe): 'brief' -> 'analyzing' -> 'quick-details'
   const [step2Mode, setStep2Mode] = useState('brief');
+  const [callingChannel, setCallingChannel] = useState('instant');
 
   // Brief prompt text (starts clean or from initialData)
   const [promptText, setPromptText] = useState(initialData?.prompt || '');
@@ -173,13 +174,13 @@ export default function NewEmployeeView({
   const factSpeech = useSpeechRecognition();
 
   const PRIMARY_LANGUAGES = [
+    { code: 'en', langCode: 'en-IN', label: 'English', name: 'English' },
     { code: 'te', langCode: 'te-IN', label: 'తెలుగు', name: 'Telugu' },
     { code: 'hi', langCode: 'hi-IN', label: 'हिन्दी', name: 'Hindi' },
     { code: 'ta', langCode: 'ta-IN', label: 'தமிழ்', name: 'Tamil' },
     { code: 'kn', langCode: 'kn-IN', label: 'ಕನ್ನಡ', name: 'Kannada' },
     { code: 'ml', langCode: 'ml-IN', label: 'മലയാളം', name: 'Malayalam' },
-    { code: 'mr', langCode: 'mr-IN', label: 'मराठी', name: 'Marathi' },
-    { code: 'en', langCode: 'en-IN', label: 'English', name: 'English' }
+    { code: 'mr', langCode: 'mr-IN', label: 'मराठी', name: 'Marathi' }
   ];
 
   const getSpeechLangCode = (langStr) => {
@@ -1729,31 +1730,68 @@ export default function NewEmployeeView({
                   background: 'radial-gradient(130% 120% at 85% 0%, #2A174E 0%, #150F2B 55%, #0B0818 100%)'
                 }}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[11px] font-bold tracking-wider uppercase font-mono text-[#a78bfa] flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    DESCRIBE THE JOB
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#cbd0df] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#cbd0df]" />
+                    DESCRIBE THE JOB &bull; WE BUILD THE EMPLOYEE
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white/80 uppercase">
-                    FREE
+                  <span className="text-[10px] font-bold text-[#16a34a] bg-[#16a34a]/15 px-2.5 py-0.5 rounded-full border border-[#16a34a]/30 font-mono">
+                    BUILD &amp; TEST
                   </span>
                 </div>
 
-                <h1 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-white font-display mb-2">
-                  What should your employee do on calls?
+                <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight mb-1 text-white font-display">
+                  Build your AI employee
                 </h1>
-                <p className="text-[14px] text-white/70 max-w-[640px] leading-relaxed mb-4">
-                  A few sentences in your own words. We&apos;ll ask about anything a caller would need that&apos;s missing.
+                <p className="text-xs sm:text-sm text-white/70 mb-5 font-sans">
+                  Describe the job in a few sentences. You only pay for the calls they make.
                 </p>
 
-                <div className="mb-4">
-                  <div className="text-xs font-mono uppercase font-bold text-[#a78bfa] tracking-wider mb-2">
-                    EMPLOYEE GOAL
+                {/* Mode Selector & Goal Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setCallingChannel('instant')}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                        callingChannel === 'instant'
+                          ? 'bg-[#0f0e17] text-white border border-amber-400/50 shadow-md ring-1 ring-amber-400/40'
+                          : 'bg-white/10 text-white/80 hover:bg-white/15 border border-transparent'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-300" />
+                      Instant Lead Calling
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCallingChannel('bulk')}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        callingChannel === 'bulk'
+                          ? 'bg-[#0f0e17] text-white border border-amber-400/50 shadow-md ring-1 ring-amber-400/40'
+                          : 'bg-white/10 text-white/80 hover:bg-white/15 border border-transparent'
+                      }`}
+                    >
+                      <Megaphone className="w-3.5 h-3.5" />
+                      Bulk Calling
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCallingChannel('inbound')}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        callingChannel === 'inbound'
+                          ? 'bg-[#0f0e17] text-white border border-amber-400/50 shadow-md ring-1 ring-amber-400/40'
+                          : 'bg-white/10 text-white/80 hover:bg-white/15 border border-transparent'
+                      }`}
+                    >
+                      <PhoneIncoming className="w-3.5 h-3.5" />
+                      Inbound Calling
+                    </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+
+                  <div className="flex items-center gap-2">
                     {[
-                      { id: 'support', label: 'Customer support' },
-                      { id: 'sales', label: 'Sales & enquiries' }
+                      { id: 'sales', label: 'Sales & enquiries' },
+                      { id: 'support', label: 'Customer support' }
                     ].map(option => (
                       <button
                         key={option.id}
@@ -1768,10 +1806,10 @@ export default function NewEmployeeView({
                             setQ2Selection('Escalate to a human');
                           }
                         }}
-                        className={`px-3 py-2 rounded-lg border text-sm font-semibold ${
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                           employeePurpose === option.id
-                            ? 'bg-[#D99A2B] border-[#D99A2B] text-[#130e26]'
-                            : 'bg-white/5 border-white/15 text-white/80'
+                            ? 'bg-amber-400 text-black font-extrabold shadow-sm ring-1 ring-white/60'
+                            : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
                         }`}
                       >
                         {option.label}
@@ -1779,6 +1817,8 @@ export default function NewEmployeeView({
                     ))}
                   </div>
                 </div>
+
+                
 
                 {/* PRIMARY LANGUAGE SELECTOR (CHOOSE ANY ONE) */}
                 <div className="mb-4 space-y-2">
@@ -1816,6 +1856,24 @@ export default function NewEmployeeView({
                   </div>
                 </div>
 
+                {/* Live Bilingual Banner */}
+                <div className="mb-4 flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-amber-200">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                    <span>
+                      Your employee talks in{' '}
+                      <strong className="text-white underline decoration-amber-400 decoration-2">
+                        {employeeLanguage}
+                      </strong>
+                      {!employeeLanguage.toLowerCase().startsWith('english') && (
+                        <span className="text-white/70 ml-1.5 hidden sm:inline">
+                          &mdash; English is mandated and automatically supported for natural code-switching.
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Main Prompt Textarea */}
                 <div className="relative rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xs p-4 sm:p-5 focus-within:border-[#a78bfa] transition-all">
                   <textarea
@@ -1825,6 +1883,50 @@ export default function NewEmployeeView({
                     placeholder="Describe what your employee should say, ask, and handle..."
                     className="w-full bg-transparent text-white placeholder-white/40 text-[14.5px] leading-relaxed resize-none focus:outline-hidden"
                   />
+
+                  {/* Quick Industry Pills Bar inside card */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mt-3 mb-2 scrollbar-none">
+                    {templates.map((tpl) => {
+                      const Icon = tpl.icon;
+                      const isSelected = selectedCategory === tpl.label;
+                      return (
+                        <button
+                          key={tpl.label}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedCategory(null);
+                            } else {
+                              setSelectedCategory(tpl.label);
+                              if (tpl.text) setPromptText(tpl.text);
+                              const def = getIndustryDefaults(tpl.label, employeeLanguage);
+                              if (def) {
+                                setBusinessName(def.businessName);
+                                setPriceRange(def.priceRange);
+                                setEmployeeName(def.employeeName);
+                                setEmployeeRole(def.role);
+                                setSelectedVoiceId(def.voice);
+                                setQuickQuestions(def.questions);
+                                setJewelleryOptions(def.questions[2].options);
+                                setSelectedJewelleryTypes(def.questions[2].defaultSelected);
+                                setActionOptions(def.questions[3].options);
+                                setQ2Selection(def.questions[3].defaultSelected[0]);
+                                setScriptSteps(def.scriptSteps);
+                              }
+                            }
+                          }}
+                          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#0f0e17] text-white border border-amber-400/40 shadow-xs font-bold ring-1 ring-amber-400/50'
+                              : 'bg-white/10 text-white/80 hover:bg-white/15 border border-transparent'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 text-[#cbd0df]" />
+                          <span>{tpl.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                   {employeePurpose === 'support' && (
                     <div className="grid gap-3 mt-3">
                       <label className="text-xs font-semibold text-white/80">
@@ -1955,100 +2057,22 @@ export default function NewEmployeeView({
                 </div>
               </div>
 
-              {/* Optional Category Shortcuts */}
-              <div className="space-y-2.5 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-[12px] font-bold text-[#6c6b7e] uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <span>SUGGESTED INDUSTRY SHORTCUTS (OPTIONAL)</span>
-                  </div>
-                  {selectedCategory && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCategory(null)}
-                      className="text-xs text-[#7a50dc] hover:underline font-semibold cursor-pointer"
-                    >
-                      Clear category &times;
-                    </button>
-                  )}
+              {selectedCategory === 'Other' && (
+                <div className="mt-3 p-3.5 rounded-2xl bg-white border border-[#7a50dc] shadow-xs animate-in fade-in duration-200">
+                  <label className="text-[12px] font-bold text-[#7a50dc] flex items-center gap-1.5 mb-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Enter your custom business or industry:</span>
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={customCategoryText}
+                    onChange={(e) => setCustomCategoryText(e.target.value)}
+                    placeholder="e.g. Jewellery & Gold, Rooftop Solar, Salon & Spa, Chartered Accountant, Fitness Gym..."
+                    className="w-full p-2.5 rounded-xl border border-zinc-200 text-[13px] text-zinc-900 focus:outline-none focus:border-[#7a50dc]"
+                  />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {templates.map((tpl) => {
-                    const Icon = tpl.icon;
-                    const isSelected = selectedCategory === tpl.label;
-                    return (
-                      <button
-                        key={tpl.label}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedCategory(null);
-                          } else {
-                            setSelectedCategory(tpl.label);
-                            if (tpl.text) setPromptText(tpl.text);
-                            const def = getIndustryDefaults(tpl.label, employeeLanguage);
-                            if (def) {
-                              setBusinessName(def.businessName);
-                              setPriceRange(def.priceRange);
-                              setEmployeeName(def.employeeName);
-                              setEmployeeRole(def.role);
-                              setSelectedVoiceId(def.voice);
-                              setQuickQuestions(def.questions);
-                              setJewelleryOptions(def.questions[2].options);
-                              setSelectedJewelleryTypes(def.questions[2].defaultSelected);
-                              setActionOptions(def.questions[3].options);
-                              setQ2Selection(def.questions[3].defaultSelected[0]);
-                              setScriptSteps(def.scriptSteps);
-                            }
-                          }
-                        }}
-                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer group flex items-start gap-3 ${
-                          isSelected
-                            ? 'bg-[#f4effe] border-[#7a50dc] shadow-md ring-2 ring-[#7a50dc]/30'
-                            : 'bg-white border-[#e2e4ed] hover:border-[#7a50dc] hover:shadow-xs'
-                        }`}
-                      >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
-                          isSelected ? 'bg-[#7a50dc] text-white scale-105' : 'bg-[#f2ecfd] text-[#7a50dc] group-hover:scale-105'
-                        }`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[13px] font-bold ${isSelected ? 'text-[#7a50dc]' : 'text-[#0f0e17] group-hover:text-[#7a50dc]'}`}>
-                              {tpl.label}
-                            </span>
-                            {isSelected && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#7a50dc] text-white">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-[#6c6b7e] line-clamp-2 mt-0.5">
-                            {tpl.text || 'Enter custom industry / business'}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedCategory === 'Other' && (
-                  <div className="mt-3 p-3.5 rounded-2xl bg-white border border-[#7a50dc] shadow-xs animate-in fade-in duration-200">
-                    <label className="text-[12px] font-bold text-[#7a50dc] flex items-center gap-1.5 mb-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Enter your custom business or industry:</span>
-                    </label>
-                    <input
-                      type="text"
-                      autoFocus
-                      value={customCategoryText}
-                      onChange={(e) => setCustomCategoryText(e.target.value)}
-                      placeholder="e.g. Jewellery & Gold, Rooftop Solar, Salon & Spa, Chartered Accountant, Fitness Gym..."
-                      className="w-full p-2.5 rounded-xl border border-zinc-200 text-[13px] text-zinc-900 focus:outline-none focus:border-[#7a50dc]"
-                    />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
 

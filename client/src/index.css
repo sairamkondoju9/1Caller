@@ -109,10 +109,15 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Headings use Sarvam AI's Season Mix */
+/* Headings use Sarvam AI's Season Mix - preserve utility classes like text-white on dark cards */
 h1, h2, h3, .font-season-mix, .font-display, .t-display {
   font-family: 'Season Mix', 'Matter', Georgia, serif !important;
   letter-spacing: -0.025em;
+}
+
+h1:not([class*="text-"]),
+h2:not([class*="text-"]),
+h3:not([class*="text-"]) {
   color: #0f0e17;
 }
 
