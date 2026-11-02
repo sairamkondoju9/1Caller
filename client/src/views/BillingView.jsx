@@ -128,13 +128,18 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
       }
 
       // 3. Launch official Razorpay Checkout popup
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sarvam-eta-rose.vercel.app';
+      const cleanContact = currentUser?.phone
+        ? currentUser.phone.replace(/[^0-9]/g, '').slice(-10)
+        : '';
+
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'Sarvam Voice AI',
         description: `${selectedPlan.name} (${selectedPlan.credits.toLocaleString()} Calling Credits)`,
-        image: '/favicon.svg',
+        image: `${origin}/favicon.svg`,
         order_id: orderData.orderId,
         handler: async function (response) {
           try {
@@ -177,9 +182,9 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
           }
         },
         prefill: {
-          name: currentUser?.name || 'Sairam',
-          email: currentUser?.email || 'sairamkondoju9@gmail.com',
-          contact: currentUser?.phone || '+919876543210'
+          name: currentUser?.name || 'Customer',
+          email: currentUser?.email || '',
+          contact: cleanContact
         },
         notes: {
           platform: 'Sarvam Voice AI Engine',
@@ -197,7 +202,14 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (resp) {
-        alert('Payment failed: ' + (resp.error?.description || 'Transaction declined'));
+        console.error('[Razorpay Payment Failed]:', resp.error);
+        const desc = resp.error?.description || '';
+        const reason = resp.error?.reason || '';
+        if (desc.includes('does not match registered website') || reason === 'payment_risk_check_failed') {
+          alert('Razorpay Live Payment Notice:\n\nThis domain (' + window.location.hostname + ') needs to be added in your Razorpay Dashboard under Account & Settings -> Business Website Details to accept live payments.\n\nOnce added, live payments will be enabled immediately.');
+        } else {
+          alert('Payment failed: ' + (desc || 'Transaction declined'));
+        }
         setProcessing(false);
       });
       rzp.open();

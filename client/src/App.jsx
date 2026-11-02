@@ -14,36 +14,29 @@ const protectedTabs = new Set([
   'performance', 'billing', 'settings', 'developers'
 ]);
 
-// Eagerly imported core views for instant 0ms first-paint and liquid-smooth navigation (Handshake AI standard)
+// Eagerly imported all views for instant 0ms tab switching and zero 'Loading module...' delay
 import LandingPageView from './views/LandingPageView';
 import DashboardView from './views/DashboardView';
-
-// Code-split secondary dynamic views with auto-retry and cache-busting resilience
-const LiveCallSimulator = lazyRetry(() => import('./components/screens/LiveCallSimulator').then(m => ({ default: m.LiveCallSimulator })), 'call-sim');
-const AgentFlowBuilder = lazyRetry(() => import('./components/screens/AgentFlowBuilder').then(m => ({ default: m.AgentFlowBuilder })), 'flow-builder');
-const FleetManager = lazyRetry(() => import('./components/screens/FleetManager').then(m => ({ default: m.FleetManager })), 'fleet-mgr');
-const ExecutiveAnalytics = lazyRetry(() => import('./components/screens/ExecutiveAnalytics').then(m => ({ default: m.ExecutiveAnalytics })), 'analytics');
-
-const NewEmployeeView = lazyRetry(() => import('./views/NewEmployeeView'), 'new-employee');
-const TalkToEmployeeView = lazyRetry(() => import('./views/TalkToEmployeeView'), 'talk-employee');
-const InstantLeadsView = lazyRetry(() => import('./views/InstantLeadsView'), 'instant-leads');
-const BulkCampaignsView = lazyRetry(() => import('./views/BulkCampaignsView'), 'bulk-campaigns');
-const InboundDeskView = lazyRetry(() => import('./views/InboundDeskView'), 'inbound-desk');
-const LeadsResultsView = lazyRetry(() => import('./views/LeadsResultsView'), 'leads-results');
-const AllConversationsView = lazyRetry(() => import('./views/AllConversationsView'), 'all-convos');
-const TrainEmployeesView = lazyRetry(() => import('./views/TrainEmployeesView'), 'train-employees');
-const PhoneNumbersView = lazyRetry(() => import('./views/PhoneNumbersView'), 'phone-numbers');
-const PerformanceView = lazyRetry(() => import('./views/PerformanceView'), 'performance');
-const BillingView = lazyRetry(() => import('./views/BillingView'), 'billing');
-const SettingsView = lazyRetry(() => import('./views/SettingsView'), 'settings');
-const DevelopersView = lazyRetry(() => import('./views/DevelopersView'), 'developers');
-const OwnerAdminView = lazyRetry(() => import('./views/OwnerAdminView'), 'owner-admin');
-const PrivacyPolicyView = lazyRetry(() => import('./views/PrivacyPolicyView'), 'privacy');
-const TermsAndConditionsView = lazyRetry(() => import('./views/TermsAndConditionsView'), 'terms');
-const RefundPolicyView = lazyRetry(() => import('./views/RefundPolicyView'), 'refunds');
-const ShippingPolicyView = lazyRetry(() => import('./views/ShippingPolicyView'), 'shipping');
-const ContactView = lazyRetry(() => import('./views/ContactView'), 'contact');
-const NotFoundView = lazyRetry(() => import('./views/NotFoundView'), 'not-found');
+import NewEmployeeView from './views/NewEmployeeView';
+import TalkToEmployeeView from './views/TalkToEmployeeView';
+import InstantLeadsView from './views/InstantLeadsView';
+import BulkCampaignsView from './views/BulkCampaignsView';
+import InboundDeskView from './views/InboundDeskView';
+import LeadsResultsView from './views/LeadsResultsView';
+import AllConversationsView from './views/AllConversationsView';
+import TrainEmployeesView from './views/TrainEmployeesView';
+import PhoneNumbersView from './views/PhoneNumbersView';
+import PerformanceView from './views/PerformanceView';
+import BillingView from './views/BillingView';
+import SettingsView from './views/SettingsView';
+import DevelopersView from './views/DevelopersView';
+import OwnerAdminView from './views/OwnerAdminView';
+import PrivacyPolicyView from './views/PrivacyPolicyView';
+import TermsAndConditionsView from './views/TermsAndConditionsView';
+import RefundPolicyView from './views/RefundPolicyView';
+import ShippingPolicyView from './views/ShippingPolicyView';
+import ContactView from './views/ContactView';
+import NotFoundView from './views/NotFoundView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('landing');
@@ -76,8 +69,7 @@ export default function App() {
   // Listen for smooth auth expiration without violent page refresh
   useEffect(() => {
     const handleAuthExpired = () => {
-      setCurrentUser(null);
-      setSessionError('Your session has expired. Please sign in again.');
+      setSessionError('Please sign in to continue.');
       setIsAuthModalOpen(true);
     };
     window.addEventListener('sarvam:auth_expired', handleAuthExpired);
@@ -86,7 +78,7 @@ export default function App() {
 
   // Resolve the stored session before rendering any protected workflow.
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (!token) {
       setAuthReady(true);
       return;
@@ -96,19 +88,44 @@ export default function App() {
         const data = await response.json().catch(() => ({}));
         if (response.status === 401) {
           localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
           localStorage.removeItem('user_role');
           throw new Error(data.error || 'Your session expired. Please sign in again.');
         }
-        if (!response.ok) throw new Error(data.error || 'Could not verify your session. Please retry.');
+        if (!response.ok) {
+          // If server error (e.g. 500/503), decode payload from JWT client-side so session is not lost!
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const base64Url = parts[1];
+              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+              const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+              const decoded = JSON.parse(jsonPayload);
+              if (decoded && decoded.email && (!decoded.exp || Date.now() < decoded.exp * 1000)) {
+                return {
+                  user: {
+                    id: decoded.id,
+                    email: decoded.email,
+                    name: decoded.email.split('@')[0],
+                    role: decoded.role || 'client',
+                    tenant_id: decoded.tenant_id || 'default'
+                  }
+                };
+              }
+            }
+          } catch {}
+          throw new Error(data.error || 'Could not verify your session.');
+        }
         return data;
       })
       .then(data => {
-        setCurrentUser(data.user || null);
-        setSessionError('');
+        if (data.user) {
+          setCurrentUser(data.user);
+          setSessionError('');
+        }
       })
       .catch(error => {
-        setCurrentUser(null);
-        setSessionError(error.message || 'Could not verify your session.');
+        console.warn('[Auth Verify]', error.message);
       })
       .finally(() => setAuthReady(true));
   }, []);
@@ -275,10 +292,13 @@ export default function App() {
   }, [authReady, currentUser, activeTab]);
 
   useEffect(() => {
-    if (!authReady || !protectedTabs.has(activeTab) || currentUser) return;
-    setPendingTab(activeTab);
-    setActiveTab('landing');
-    setIsAuthModalOpen(true);
+    if (!authReady) return;
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    if (protectedTabs.has(activeTab) && !token && !currentUser) {
+      setPendingTab(activeTab);
+      setActiveTab('landing');
+      setIsAuthModalOpen(true);
+    }
   }, [activeTab, authReady, currentUser]);
 
   // Handlers
@@ -475,12 +495,10 @@ export default function App() {
   if (activeTab === 'privacy') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Privacy Policy...</div>}>
-          <PrivacyPolicyView
+        <PrivacyPolicyView
             onBack={() => setActiveTab('dashboard')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -488,12 +506,10 @@ export default function App() {
   if (activeTab === 'terms' || activeTab === 'terms-and-conditions') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Terms & Conditions...</div>}>
-          <TermsAndConditionsView
+        <TermsAndConditionsView
             onBack={() => setActiveTab('landing')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -501,12 +517,10 @@ export default function App() {
   if (activeTab === 'refunds' || activeTab === 'refund-policy' || activeTab === 'cancellation-and-refund-policy') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Refund Policy...</div>}>
-          <RefundPolicyView
+        <RefundPolicyView
             onBack={() => setActiveTab('landing')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -514,12 +528,10 @@ export default function App() {
   if (activeTab === 'shipping' || activeTab === 'shipping-and-delivery' || activeTab === 'shipping-policy' || activeTab === 'delivery-policy') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Shipping & Delivery Policy...</div>}>
-          <ShippingPolicyView
+        <ShippingPolicyView
             onBack={() => setActiveTab('landing')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -527,12 +539,10 @@ export default function App() {
   if (activeTab === 'contact' || activeTab === 'contact-us') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Contact...</div>}>
-          <ContactView
+        <ContactView
             onBack={() => setActiveTab('landing')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -588,7 +598,6 @@ export default function App() {
             </div>
           )}
           <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-          <Suspense fallback={<div className="p-8 text-[#6c6b7e] text-xs font-mono">Loading module...</div>}>
           {/* Secret Admin Portal (Accessible strictly via /adminsairamsecreatelink) */}
           {activeTab === 'owner-admin' && (
             <OwnerAdminView
@@ -740,7 +749,6 @@ export default function App() {
               }}
             />
           )}
-          </Suspense>
           </ErrorBoundary>
         </main>
       </div>
