@@ -32,7 +32,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpenAuth }) {
+export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpenAuth, onNavigate }) {
   // Rotating word state in Hero
   const rotatingWords = [
     { word: 'नमस्ते', lang: 'hi' },
@@ -1681,6 +1681,17 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
   const [voiceProgress, setVoiceProgress] = useState(0);
   const [currentTimeSec, setCurrentTimeSec] = useState(0);
   const audioPlayerRef = useRef(null);
+  const currentClipRef = useRef(null);
+
+  // Pause audio when unmounting
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.src = '';
+      }
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1707,6 +1718,8 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
       return;
     }
 
+    currentClipRef.current = vc;
+
     if (!audioPlayerRef.current) {
       audioPlayerRef.current = new Audio();
       audioPlayerRef.current.addEventListener('timeupdate', () => {
@@ -1722,8 +1735,9 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
         setCurrentTimeSec(0);
       });
       audioPlayerRef.current.addEventListener('error', () => {
-        if (audioPlayerRef.current && vc.fallbackSrc && !audioPlayerRef.current.src.includes('outpero.com')) {
-          audioPlayerRef.current.src = vc.fallbackSrc;
+        const activeClip = currentClipRef.current;
+        if (audioPlayerRef.current && activeClip?.fallbackSrc && !audioPlayerRef.current.src.includes('outpero.com')) {
+          audioPlayerRef.current.src = activeClip.fallbackSrc;
           audioPlayerRef.current.play().catch(() => setPlayingVoiceId(null));
         } else {
           setPlayingVoiceId(null);
@@ -1788,14 +1802,16 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
               </button>
             </div>
             <a
-              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 relative z-[1] h-9 px-3 font-medium rounded-full hover:bg-transparent hover:translate-y-0 hover:text-brand-600"
+              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 relative z-[1] h-9 px-3 font-medium rounded-full hover:bg-transparent hover:translate-y-0 hover:text-brand-600 cursor-pointer"
               href="#hear"
+              onClick={(e) => { e.preventDefault(); document.getElementById('hear')?.scrollIntoView({ behavior: 'smooth' }); }}
             >
               Voices
             </a>
             <a
-              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 relative z-[1] h-9 px-3 font-medium rounded-full hover:bg-transparent hover:translate-y-0 hover:text-brand-600"
+              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 relative z-[1] h-9 px-3 font-medium rounded-full hover:bg-transparent hover:translate-y-0 hover:text-brand-600 cursor-pointer"
               href="#pricing"
+              onClick={(e) => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
             >
               Pricing
             </a>
@@ -1861,8 +1877,8 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="pointer-events-auto lg:hidden mx-3 mt-2 p-4 rounded-2xl bg-paper border border-line shadow-card space-y-2 text-[14px]">
-            <a href="#hear" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-ink-2">Voices</a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-ink-2">Pricing</a>
+            <a href="#hear" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); document.getElementById('hear')?.scrollIntoView({ behavior: 'smooth' }); }} className="block py-2 text-ink-2">Voices</a>
+            <a href="#pricing" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }} className="block py-2 text-ink-2">Pricing</a>
             <button onClick={() => { setMobileMenuOpen(false); onOpenAuth(); }} className="block w-full text-left py-2 text-ink-2">Sign in</button>
             <button onClick={() => { setMobileMenuOpen(false); onLaunchConsole(); }} className="block w-full py-2.5 rounded-xl bg-brand-600 text-white font-medium text-center">Open Console</button>
           </div>
@@ -1906,7 +1922,20 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
                 </span>
                 <a
                   href="#hear"
-                  className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-700 hover:text-brand-800 border-l border-line pl-3 whitespace-nowrap"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById('hear');
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    const clips = voiceClipsData[activeVoiceLang] || voiceClipsData.en;
+                    if (clips && clips[0] && !playingVoiceId) {
+                      setTimeout(() => {
+                        handleTogglePlayVoice(clips[0]);
+                      }, 350);
+                    }
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-700 hover:text-brand-800 border-l border-line pl-3 whitespace-nowrap cursor-pointer"
                 >
                   <Play className="w-2.5 h-2.5 fill-current" />
                   Hear a call

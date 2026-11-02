@@ -149,15 +149,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    // URL and Secret Route Check: e.g. /privacy, /terms, /adminsairamsecreatelink
+    // URL, In-Page Anchors, and Secret Route Check: e.g. /privacy, /terms, #hear, #pricing
     const checkRoutes = () => {
       const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
       const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
-      const search = (window.location.search || '').toLowerCase();
-      const routeKey = path || hash;
-      if (!routeKey || routeKey === 'index.html') {
-        return;
-      }
 
       const validTabs = [
         'privacy', 'terms', 'owner-admin', 'dashboard', 'my-employees', 'employee-studio',
@@ -166,8 +161,40 @@ export default function App() {
         'billing', 'settings', 'developers'
       ];
 
-      if (validTabs.includes(routeKey)) {
-        setActiveTab(routeKey);
+      const inPageSections = ['hear', 'pricing', 'contact', 'channels', 'brief', 'features', 'how-it-works'];
+
+      // Root path '/' or 'index.html'
+      if (!path || path === 'index.html') {
+        // In-page section anchors like #hear, #pricing, or empty hash stay on landing page
+        if (!hash || inPageSections.includes(hash)) {
+          setActiveTab('landing');
+          if (hash) {
+            setTimeout(() => {
+              const el = document.getElementById(hash);
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 60);
+          }
+          return;
+        }
+
+        // Hash-based app tab routing like #/dashboard or #dashboard
+        if (validTabs.includes(hash)) {
+          setActiveTab(hash);
+          return;
+        }
+
+        // Unknown hash on root domain: stay on landing page, scroll if element exists
+        setActiveTab('landing');
+        const targetEl = document.getElementById(hash);
+        if (targetEl) {
+          setTimeout(() => targetEl.scrollIntoView({ behavior: 'smooth' }), 60);
+        }
+        return;
+      }
+
+      // Real pathname routes like /privacy, /terms, /dashboard
+      if (validTabs.includes(path)) {
+        setActiveTab(path);
       } else {
         setActiveTab('404');
       }
