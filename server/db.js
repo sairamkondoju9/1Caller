@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@libsql/client';
+import { createClient } from '@libsql/client/web';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
