@@ -45,7 +45,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', async (req, res, next) => {
-  if (req.path === '/config' || req.path === '/health') return next();
+  if (req.path === '/config' || req.path === '/health' || req.path === '/contact') return next();
   if (process.env.VERCEL && process.env.NODE_ENV === 'production' && !turso) {
     return res.status(503).json({ error: 'Persistent business data storage is not configured. Add Turso credentials and redeploy.' });
   }
