@@ -21,7 +21,7 @@ import {
   Receipt
 } from 'lucide-react';
 
-export default function BillingView({ onBalanceUpdate }) {
+export default function BillingView({ currentUser, onBalanceUpdate }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'statements' | 'invoicing'
   const [billing, setBilling] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -177,9 +177,9 @@ export default function BillingView({ onBalanceUpdate }) {
           }
         },
         prefill: {
-          name: 'Sairam',
-          email: 'sairamkondoju9@gmail.com',
-          contact: '+919876543210'
+          name: currentUser?.name || 'Sairam',
+          email: currentUser?.email || 'sairamkondoju9@gmail.com',
+          contact: currentUser?.phone || '+919876543210'
         },
         notes: {
           platform: 'Sarvam Voice AI Engine',

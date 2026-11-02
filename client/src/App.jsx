@@ -671,6 +671,7 @@ export default function App() {
 
           {activeTab === 'billing' && (
             <BillingView
+              currentUser={currentUser}
               onBalanceUpdate={refreshStats}
             />
           )}
