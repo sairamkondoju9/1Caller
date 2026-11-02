@@ -13,6 +13,7 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS billing (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL UNIQUE, balance_credits REAL NOT NULL DEFAULT 0, balance_inr REAL NOT NULL DEFAULT 0, rate_standard REAL DEFAULT 5.00, rate_premium REAL DEFAULT 6.80, rate_enterprise REAL DEFAULT 3.50)`,
   `CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, type TEXT NOT NULL, amount REAL NOT NULL, credits REAL NOT NULL, description TEXT, invoice_id TEXT, status TEXT DEFAULT 'success', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE TABLE IF NOT EXISTS tenant_settings (tenant_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT, PRIMARY KEY (tenant_id, key))`,
+  `CREATE TABLE IF NOT EXISTS email_verifications (email TEXT PRIMARY KEY, code TEXT, expires_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS payment_orders (order_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, amount_paise INTEGER NOT NULL, base_amount REAL NOT NULL, credits REAL NOT NULL, bonus_credits REAL NOT NULL DEFAULT 0, plan_id TEXT, status TEXT NOT NULL DEFAULT 'created', payment_id TEXT UNIQUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
   `CREATE INDEX IF NOT EXISTS idx_turso_employees_tenant ON employees(tenant_id, created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_turso_campaigns_tenant ON campaigns(tenant_id, created_at DESC)`,

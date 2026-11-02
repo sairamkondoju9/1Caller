@@ -60,11 +60,47 @@ function purgeKnownDemoData() {
   }
 }
 
-export const turso = (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN)
+const rawTurso = (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN)
   ? createClient({
       url: process.env.TURSO_DATABASE_URL,
       authToken: process.env.TURSO_AUTH_TOKEN
     })
+  : null;
+
+function wrapWithRetry(fn) {
+  return async function (...args) {
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await fn(...args);
+      } catch (err) {
+        lastErr = err;
+        const msg = String(err?.message || '');
+        if (
+          msg.includes('connections limit exceeded') ||
+          msg.includes('fetch failed') ||
+          msg.includes('ECONNRESET') ||
+          msg.includes('ETIMEDOUT') ||
+          msg.includes('network timeout') ||
+          msg.includes('SQLITE_UNKNOWN')
+        ) {
+          await new Promise(r => setTimeout(r, 40 * (attempt + 1) + Math.floor(Math.random() * 30)));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr;
+  };
+}
+
+export const turso = rawTurso
+  ? {
+      ...rawTurso,
+      execute: wrapWithRetry(rawTurso.execute.bind(rawTurso)),
+      batch: wrapWithRetry(rawTurso.batch.bind(rawTurso)),
+      transaction: rawTurso.transaction ? rawTurso.transaction.bind(rawTurso) : undefined
+    }
   : null;
 
 export function initDatabase() {
@@ -77,6 +113,12 @@ export function initDatabase() {
       plan TEXT DEFAULT 'growth',
       status TEXT DEFAULT 'active',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      email TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS users (

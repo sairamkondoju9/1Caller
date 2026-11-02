@@ -13,6 +13,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [codeSent, setCodeSent] = useState(false);
   const [suggestedCode, setSuggestedCode] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+  const [otpToken, setOtpToken] = useState('');
 
   const handleGoogleCredential = async (credential) => {
     setLoading(true);
@@ -59,6 +60,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setCodeSent(true);
+      if (data.otpToken) {
+        setOtpToken(data.otpToken);
+      }
       if (data.code) {
         setSuggestedCode(data.code);
         setCode(data.code); // Auto-fill for friction-free sign-in
@@ -82,7 +86,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       const res = await fetch('/api/auth/email/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: code.trim() })
+        body: JSON.stringify({ email, code: code.trim(), otpToken })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
