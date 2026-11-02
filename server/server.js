@@ -2014,6 +2014,25 @@ app.post('/api/voice/test-cartesia', authenticateToken, async (req, res) => {
   }
 });
 
+// Contact Lead & Enterprise Inquiry submission endpoint
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, businessName, email, phone, requirements } = req.body || {};
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required.' });
+    }
+    console.log('[Contact Inquiry] ' + name + ' (' + (businessName || 'Business') + ') - Email: ' + email + ', Phone: ' + (phone || 'N/A'));
+    console.log('[Contact Inquiry Requirements] ' + (requirements || 'N/A'));
+    return res.json({
+      ok: true,
+      message: 'Inquiry received. Our enterprise calling specialist will reach out within 2 hours.'
+    });
+  } catch (err) {
+    console.error('[Contact Error]', err);
+    return res.status(500).json({ error: 'Failed to submit inquiry.' });
+  }
+});
+
 // SPA Fallback: send index.html for non-API GET requests with cache-busting
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/ws')) {

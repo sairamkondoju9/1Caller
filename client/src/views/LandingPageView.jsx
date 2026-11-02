@@ -3014,7 +3014,8 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
             <div>
               <div className="font-mono text-[12px] uppercase tracking-[0.08em] font-semibold text-ink mb-1 sm:mb-4">Company</div>
               <ul className="grid gap-0 sm:gap-2.5">
-                <li><span className="inline-flex items-center text-[14px] text-muted">Contact</span></li>
+                <li><button type="button" onClick={() => onNavigate?.('contact')} className="inline-flex items-center text-[14px] text-muted hover:text-brand-600 transition-colors cursor-pointer">Contact Us</button></li>
+                <li><button type="button" onClick={() => onNavigate?.('shipping-and-delivery')} className="inline-flex items-center text-[14px] text-muted hover:text-brand-600 transition-colors cursor-pointer">Shipping &amp; Delivery</button></li>
                 <li><span className="inline-flex items-center text-[14px] text-muted">Agency services</span></li>
               </ul>
             </div>
@@ -3023,10 +3024,12 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
           {/* Bottom Bar: Copyright & Supported By (Sarvam + Cartesia) */}
           <div className="mt-10 sm:mt-16 pt-6 border-t border-line flex flex-col-reverse gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted">
-              <span>© 2026 Sarvam Telephony &amp; Voice AI. All rights reserved.</span>
-              <button type="button" onClick={() => onNavigate?.('terms')} className="hover:text-ink cursor-pointer">Terms</button>
-              <button type="button" onClick={() => onNavigate?.('privacy')} className="hover:text-ink cursor-pointer">Privacy</button>
-              <button type="button" onClick={() => onNavigate?.('terms')} className="hover:text-ink cursor-pointer">Refunds</button>
+              <span>© 2026 Outpero &bull; OpenDG Private Limited. All rights reserved.</span>
+              <button type="button" onClick={() => onNavigate?.('terms-and-conditions')} className="hover:text-ink cursor-pointer">Terms</button>
+              <button type="button" onClick={() => onNavigate?.('privacy-policy')} className="hover:text-ink cursor-pointer">Privacy</button>
+              <button type="button" onClick={() => onNavigate?.('refund-policy')} className="hover:text-ink cursor-pointer">Refund Policy</button>
+              <button type="button" onClick={() => onNavigate?.('shipping-and-delivery')} className="hover:text-ink cursor-pointer">Shipping &amp; Delivery</button>
+              <button type="button" onClick={() => onNavigate?.('contact')} className="hover:text-ink cursor-pointer">Contact</button>
             </div>
 
             {/* Supported By Logos */}

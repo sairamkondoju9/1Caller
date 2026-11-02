@@ -40,6 +40,9 @@ const DevelopersView = lazyRetry(() => import('./views/DevelopersView'), 'develo
 const OwnerAdminView = lazyRetry(() => import('./views/OwnerAdminView'), 'owner-admin');
 const PrivacyPolicyView = lazyRetry(() => import('./views/PrivacyPolicyView'), 'privacy');
 const TermsAndConditionsView = lazyRetry(() => import('./views/TermsAndConditionsView'), 'terms');
+const RefundPolicyView = lazyRetry(() => import('./views/RefundPolicyView'), 'refunds');
+const ShippingPolicyView = lazyRetry(() => import('./views/ShippingPolicyView'), 'shipping');
+const ContactView = lazyRetry(() => import('./views/ContactView'), 'contact');
 const NotFoundView = lazyRetry(() => import('./views/NotFoundView'), 'not-found');
 
 export default function App() {
@@ -155,14 +158,33 @@ export default function App() {
       const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
       const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
 
+      const routeAliasMap = {
+        'privacy': 'privacy',
+        'privacy-policy': 'privacy',
+        'terms': 'terms',
+        'terms-and-conditions': 'terms',
+        'refunds': 'refunds',
+        'refund-policy': 'refunds',
+        'cancellation-and-refund-policy': 'refunds',
+        'shipping': 'shipping',
+        'shipping-policy': 'shipping',
+        'shipping-and-delivery': 'shipping',
+        'delivery-policy': 'shipping',
+        'contact': 'contact',
+        'contact-us': 'contact'
+      };
+
       const validTabs = [
-        'privacy', 'terms', 'owner-admin', 'dashboard', 'my-employees', 'employee-studio',
+        'privacy', 'privacy-policy', 'terms', 'terms-and-conditions', 'refunds', 'refund-policy',
+        'cancellation-and-refund-policy', 'shipping', 'shipping-policy', 'shipping-and-delivery',
+        'delivery-policy', 'contact', 'contact-us',
+        'owner-admin', 'dashboard', 'my-employees', 'employee-studio',
         'new-employee', 'talk-to-employee', 'instant-leads', 'bulk-campaigns', 'inbound-desk',
         'leads-results', 'all-conversations', 'train-employees', 'phone-numbers', 'performance',
         'billing', 'settings', 'developers'
       ];
 
-      const inPageSections = ['hear', 'pricing', 'contact', 'channels', 'brief', 'features', 'how-it-works'];
+      const inPageSections = ['hear', 'pricing', 'channels', 'brief', 'features', 'how-it-works'];
 
       // Root path '/' or 'index.html'
       if (!path || path === 'index.html') {
@@ -180,7 +202,7 @@ export default function App() {
 
         // Hash-based app tab routing like #/dashboard or #dashboard
         if (validTabs.includes(hash)) {
-          setActiveTab(hash);
+          setActiveTab(routeAliasMap[hash] || hash);
           return;
         }
 
@@ -193,9 +215,9 @@ export default function App() {
         return;
       }
 
-      // Real pathname routes like /privacy, /terms, /dashboard
+      // Real pathname routes like /privacy, /terms, /refund-policy, /shipping-and-delivery, /contact
       if (validTabs.includes(path)) {
-        setActiveTab(path);
+        setActiveTab(routeAliasMap[path] || path);
       } else {
         setActiveTab('404');
       }
@@ -430,12 +452,51 @@ export default function App() {
     );
   }
 
-  if (activeTab === 'terms') {
+  if (activeTab === 'terms' || activeTab === 'terms-and-conditions') {
     return (
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Terms & Conditions...</div>}>
           <TermsAndConditionsView
-            onBack={() => setActiveTab('dashboard')}
+            onBack={() => setActiveTab('landing')}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeTab === 'refunds' || activeTab === 'refund-policy' || activeTab === 'cancellation-and-refund-policy') {
+    return (
+      <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Refund Policy...</div>}>
+          <RefundPolicyView
+            onBack={() => setActiveTab('landing')}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeTab === 'shipping' || activeTab === 'shipping-and-delivery' || activeTab === 'shipping-policy' || activeTab === 'delivery-policy') {
+    return (
+      <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Shipping & Delivery Policy...</div>}>
+          <ShippingPolicyView
+            onBack={() => setActiveTab('landing')}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (activeTab === 'contact' || activeTab === 'contact-us') {
+    return (
+      <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Contact...</div>}>
+          <ContactView
+            onBack={() => setActiveTab('landing')}
             onNavigate={(tab) => setActiveTab(tab)}
           />
         </Suspense>
