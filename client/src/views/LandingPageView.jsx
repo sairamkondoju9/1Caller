@@ -67,13 +67,23 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
 
   // Section 2: "How it works" language state & transcripts
   const languagesList = [
-    { id: 'hi', label: 'हिन्दी', name: 'Hindi' },
+    { id: 'en', label: 'English', name: 'English' },
     { id: 'te', label: 'తెలుగు', name: 'Telugu' },
+    { id: 'hi', label: 'हिन्दी', name: 'Hindi' },
     { id: 'ta', label: 'தமிழ்', name: 'Tamil' },
     { id: 'kn', label: 'ಕನ್ನಡ', name: 'Kannada' },
     { id: 'ml', label: 'മലയാളം', name: 'Malayalam' },
-    { id: 'mr', label: 'मराठी', name: 'Marathi' },
-    { id: 'en', label: 'English', name: 'English' }
+    { id: 'mr', label: 'मराठी', name: 'Marathi' }
+  ];
+
+  const voiceLanguagesList = [
+    { id: 'en', label: 'English', name: 'English' },
+    { id: 'te', label: 'తెలుగు', name: 'Telugu' },
+    { id: 'hi', label: 'हिन्दी', name: 'Hindi' },
+    { id: 'ta', label: 'தமிழ்', name: 'Tamil' },
+    { id: 'kn', label: 'ಕನ್ನಡ', name: 'Kannada' },
+    { id: 'ml', label: 'മലയാളം', name: 'Malayalam' },
+    { id: 'mr', label: 'मराठी', name: 'Marathi' }
   ];
   const [activeHowLang, setActiveHowLang] = useState('hi');
 
@@ -1666,7 +1676,7 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
   ]
 };
 
-  const [activeVoiceLang, setActiveVoiceLang] = useState('hi');
+  const [activeVoiceLang, setActiveVoiceLang] = useState('en');
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
   const [voiceProgress, setVoiceProgress] = useState(0);
   const [currentTimeSec, setCurrentTimeSec] = useState(0);
@@ -2321,7 +2331,7 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
           {/* Language Tabs */}
           <div className="flex justify-start mb-5 sm:mb-6">
             <div role="tablist" aria-label="Language" className="flex items-center gap-1 p-1 rounded-2xl bg-paper border border-line shadow-card max-w-full overflow-x-auto">
-              {languagesList.map((lang) => (
+              {voiceLanguagesList.map((lang) => (
                 <button
                   key={lang.id}
                   role="tab"
@@ -2341,7 +2351,7 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
 
           {/* 4 Real Conversational Voice Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {(voiceClipsData[activeVoiceLang] || voiceClipsData.hi).map((vc) => {
+            {(voiceClipsData[activeVoiceLang] || voiceClipsData.en).map((vc) => {
               const isPlaying = playingVoiceId === vc.id;
               return (
                 <button
