@@ -1,7 +1,7 @@
 import React from 'react';
-import { Compass, Home, LayoutDashboard, PlusCircle, ArrowLeft, PhoneCall } from 'lucide-react';
+import { Compass, Home, LayoutDashboard, PlusCircle, ShieldCheck } from 'lucide-react';
 
-export default function NotFoundView({ onNavigate }) {
+export default function NotFoundView({ onNavigate, onOpenAuth }) {
   return (
     <div className="min-h-screen bg-[#0c0a17] text-white flex flex-col items-center justify-center p-6 text-center font-sans antialiased selection:bg-amber-400 selection:text-[#130e26]">
       {/* Background radial glow */}
@@ -24,7 +24,7 @@ export default function NotFoundView({ onNavigate }) {
             Lost in Autonomous Space?
           </h1>
           <p className="text-sm sm:text-base text-white/60 leading-relaxed max-w-md mx-auto">
-            The page or voice agent route you are looking for has moved, expired, or doesn&apos;t exist. Let&apos;s get you back on track.
+            The page or route you are looking for has moved, expired, or doesn&apos;t exist. Let&apos;s get you back on track.
           </p>
         </div>
 
@@ -59,8 +59,8 @@ export default function NotFoundView({ onNavigate }) {
           </button>
         </div>
 
-        {/* Primary CTA */}
-        <div className="pt-4 flex items-center justify-center gap-3">
+        {/* Primary CTAs */}
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={() => onNavigate?.('landing')}
@@ -68,6 +68,18 @@ export default function NotFoundView({ onNavigate }) {
           >
             <Home className="w-4 h-4" />
             Back to Home
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenAuth) onOpenAuth();
+              else onNavigate?.('login');
+            }}
+            className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm flex items-center gap-2 border border-white/15 active:scale-95 transition-all cursor-pointer"
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            Sign in to Console
           </button>
         </div>
       </div>

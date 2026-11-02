@@ -43,7 +43,7 @@ export class CartesiaClient {
     text,
     voiceId = 'a0e99841-438c-4a64-b679-ae501e7d6091',
     language = 'en',
-    modelId = 'sonic-2',
+    modelId = 'sonic-3.5',
     encoding = 'pcm_s16le',
     sampleRate = 16000
   }) {

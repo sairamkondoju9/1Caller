@@ -73,6 +73,17 @@ export default function App() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Listen for smooth auth expiration without violent page refresh
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setCurrentUser(null);
+      setSessionError('Your session has expired. Please sign in again.');
+      setIsAuthModalOpen(true);
+    };
+    window.addEventListener('sarvam:auth_expired', handleAuthExpired);
+    return () => window.removeEventListener('sarvam:auth_expired', handleAuthExpired);
+  }, []);
+
   // Resolve the stored session before rendering any protected workflow.
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -158,6 +169,14 @@ export default function App() {
       const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
       const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
 
+      // Auth routes: /login, /signin, /sign-in, /auth
+      const authRoutes = ['login', 'signin', 'sign-in', 'auth'];
+      if (authRoutes.includes(path) || authRoutes.includes(hash)) {
+        setActiveTab('landing');
+        setIsAuthModalOpen(true);
+        return;
+      }
+
       const routeAliasMap = {
         'privacy': 'privacy',
         'privacy-policy': 'privacy',
@@ -171,7 +190,8 @@ export default function App() {
         'shipping-and-delivery': 'shipping',
         'delivery-policy': 'shipping',
         'contact': 'contact',
-        'contact-us': 'contact'
+        'contact-us': 'contact',
+        'app': 'dashboard'
       };
 
       const validTabs = [
@@ -188,7 +208,6 @@ export default function App() {
 
       // Root path '/' or 'index.html'
       if (!path || path === 'index.html') {
-        // In-page section anchors like #hear, #pricing, or empty hash stay on landing page
         if (!hash || inPageSections.includes(hash)) {
           setActiveTab('landing');
           if (hash) {
@@ -200,13 +219,19 @@ export default function App() {
           return;
         }
 
-        // Hash-based app tab routing like #/dashboard or #dashboard
-        if (validTabs.includes(hash)) {
-          setActiveTab(routeAliasMap[hash] || hash);
+        const resolvedHash = routeAliasMap[hash] || hash;
+        if (validTabs.includes(resolvedHash)) {
+          const token = localStorage.getItem('auth_token');
+          if (protectedTabs.has(resolvedHash) && !token) {
+            setPendingTab(resolvedHash);
+            setActiveTab('landing');
+            setIsAuthModalOpen(true);
+          } else {
+            setActiveTab(resolvedHash);
+          }
           return;
         }
 
-        // Unknown hash on root domain: stay on landing page, scroll if element exists
         setActiveTab('landing');
         const targetEl = document.getElementById(hash);
         if (targetEl) {
@@ -215,9 +240,17 @@ export default function App() {
         return;
       }
 
-      // Real pathname routes like /privacy, /terms, /refund-policy, /shipping-and-delivery, /contact
-      if (validTabs.includes(path)) {
-        setActiveTab(routeAliasMap[path] || path);
+      const resolvedPath = routeAliasMap[path] || path;
+      if (validTabs.includes(resolvedPath) || validTabs.includes(path)) {
+        const targetTab = validTabs.includes(resolvedPath) ? resolvedPath : path;
+        const token = localStorage.getItem('auth_token');
+        if (protectedTabs.has(targetTab) && !token) {
+          setPendingTab(targetTab);
+          setActiveTab('landing');
+          setIsAuthModalOpen(true);
+        } else {
+          setActiveTab(targetTab);
+        }
       } else {
         setActiveTab('404');
       }
@@ -692,7 +725,20 @@ export default function App() {
             'leads-results', 'all-conversations', 'train-employees', 'phone-numbers',
             'performance', 'billing', 'settings', 'developers'
           ].includes(activeTab) && (
-            <NotFoundView onNavigate={(tab) => setActiveTab(tab)} />
+            <NotFoundView
+              onOpenAuth={() => {
+                setActiveTab('landing');
+                setIsAuthModalOpen(true);
+              }}
+              onNavigate={(tab) => {
+                if (['login', 'signin', 'sign-in', 'auth'].includes(tab)) {
+                  setActiveTab('landing');
+                  setIsAuthModalOpen(true);
+                } else {
+                  setActiveTab(tab);
+                }
+              }}
+            />
           )}
           </Suspense>
           </ErrorBoundary>

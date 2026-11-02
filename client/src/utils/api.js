@@ -26,10 +26,12 @@ export async function apiFetch(url, options = {}) {
   const response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
-    // Token expired or invalid — force re-login
+    // Token expired or invalid — dispatch event without destroying page state
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_role');
-    window.location.reload();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sarvam:auth_expired'));
+    }
   }
 
   return response;

@@ -516,14 +516,52 @@ export default function NewEmployeeView({
     initialData?.selected_ambience || 'Call Center'
   );
   const [previewingAmbienceId, setPreviewingAmbienceId] = useState(null);
-  const ambienceAudioCtxRef = useRef(null);
+  const [playingVoiceId, setPlayingVoiceId] = useState(null);
+  const voiceAudioRef = useRef(null);
+  const ambienceAudioRef = useRef(null);
+
+  const stopVoicePreview = () => {
+    if (voiceAudioRef.current) {
+      try {
+        voiceAudioRef.current.pause();
+        voiceAudioRef.current = null;
+      } catch (e) {}
+    }
+    setPlayingVoiceId(null);
+  };
+
+  const handleToggleVoicePreview = (voiceId) => {
+    if (playingVoiceId === voiceId) {
+      stopVoicePreview();
+      return;
+    }
+    stopVoicePreview();
+    stopAmbiencePreview();
+
+    try {
+      const audio = new Audio(`/audio/voices/${voiceId}.wav`);
+      voiceAudioRef.current = audio;
+      setPlayingVoiceId(voiceId);
+      audio.play().catch(err => {
+        console.warn('Voice preview error:', err);
+        setPlayingVoiceId(null);
+      });
+      audio.onended = () => {
+        setPlayingVoiceId(null);
+        voiceAudioRef.current = null;
+      };
+    } catch (err) {
+      console.warn('Voice preview audio setup notice:', err);
+      setPlayingVoiceId(null);
+    }
+  };
 
   const stopAmbiencePreview = () => {
-    if (ambienceAudioCtxRef.current) {
+    if (ambienceAudioRef.current) {
       try {
-        ambienceAudioCtxRef.current.close();
+        ambienceAudioRef.current.pause();
+        ambienceAudioRef.current = null;
       } catch (e) {}
-      ambienceAudioCtxRef.current = null;
     }
     setPreviewingAmbienceId(null);
   };
@@ -534,79 +572,46 @@ export default function NewEmployeeView({
       return;
     }
     stopAmbiencePreview();
+    stopVoicePreview();
+
+    const ambienceFiles = {
+      'Quiet Office': '/audio/ambience/quiet-office.wav',
+      'Call Center': '/audio/ambience/call-center.wav',
+      'City Traffic': '/audio/ambience/city-traffic.wav',
+      'Quiet Room': '/audio/ambience/quiet-room.wav'
+    };
+
+    const src = ambienceFiles[type];
+    if (!src) return;
 
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      ambienceAudioCtxRef.current = ctx;
-
-      const bufferSize = ctx.sampleRate * 4;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-
-      let lastOut = 0.0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        if (type === 'City Traffic') {
-          lastOut = (lastOut + 0.02 * white) / 1.02;
-          data[i] = lastOut * 3.5;
-        } else if (type === 'Quiet Office') {
-          lastOut = (lastOut + 0.08 * white) / 1.08;
-          const click = Math.random() > 0.993 ? (Math.random() * 0.3 - 0.15) : 0;
-          data[i] = (lastOut * 1.5) + click;
-        } else if (type === 'Call Center') {
-          lastOut = (lastOut + 0.12 * white) / 1.12;
-          const murmur = Math.sin(i / 130) * 0.06 + Math.cos(i / 220) * 0.04;
-          data[i] = (lastOut * 1.8) + murmur;
-        } else {
-          lastOut = (lastOut + 0.01 * white) / 1.01;
-          data[i] = lastOut * 0.5;
-        }
-      }
-
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
-
-      const filter = ctx.createBiquadFilter();
-      if (type === 'City Traffic') {
-        filter.type = 'lowpass';
-        filter.frequency.value = 320;
-      } else if (type === 'Quiet Office') {
-        filter.type = 'bandpass';
-        filter.frequency.value = 1100;
-        filter.Q.value = 0.8;
-      } else if (type === 'Call Center') {
-        filter.type = 'bandpass';
-        filter.frequency.value = 850;
-        filter.Q.value = 1.2;
-      } else {
-        filter.type = 'lowpass';
-        filter.frequency.value = 200;
-      }
-
-      const gainNode = ctx.createGain();
-      const targetGain = Math.max(0.04, Math.min(0.6, ambientVolume * 0.4));
-      gainNode.gain.setValueAtTime(targetGain, ctx.currentTime);
-
-      noise.connect(filter);
-      filter.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      noise.start();
+      const audio = new Audio(src);
+      audio.loop = true;
+      audio.volume = Math.max(0.05, Math.min(1.0, ambientVolume));
+      ambienceAudioRef.current = audio;
       setPreviewingAmbienceId(type);
-
-      setTimeout(() => {
-        if (ambienceAudioCtxRef.current === ctx) {
-          stopAmbiencePreview();
-        }
-      }, 5000);
+      audio.play().catch(err => {
+        console.warn('Ambience playback error:', err);
+        setPreviewingAmbienceId(null);
+      });
     } catch (err) {
-      console.warn('Ambience audio preview notice:', err);
+      console.warn('Ambience audio setup notice:', err);
       setPreviewingAmbienceId(null);
     }
   };
+
+  useEffect(() => {
+    if (ambienceAudioRef.current) {
+      ambienceAudioRef.current.volume = Math.max(0.05, Math.min(1.0, ambientVolume));
+    }
+  }, [ambientVolume]);
+
+  useEffect(() => {
+    return () => {
+      stopVoicePreview();
+      stopAmbiencePreview();
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -836,7 +841,7 @@ export default function NewEmployeeView({
     setIsDispatchingCall(true);
 
     try {
-      const token = localStorage.getItem('token') || '';
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
       const currentEmployee = {
         id: employeeId || initialData?.id,
         name: employeeName,
@@ -4946,11 +4951,16 @@ export default function NewEmployeeView({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleAudioPlay();
+                                handleToggleVoicePreview(v.id);
                               }}
-                              className="w-8 h-8 rounded-full bg-[#f2ecfd] text-[#7a50dc] flex items-center justify-center hover:scale-105 transition-transform"
+                              className="w-8 h-8 rounded-full bg-[#f2ecfd] text-[#7a50dc] flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                              title={playingVoiceId === v.id ? 'Pause voice preview' : `Listen to ${v.id} sample`}
                             >
-                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              {playingVoiceId === v.id ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              )}
                             </button>
                             <div>
                               <div className="flex items-center gap-2">
@@ -5025,11 +5035,16 @@ export default function NewEmployeeView({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleAudioPlay();
+                                handleToggleVoicePreview(v.id);
                               }}
-                              className="w-8 h-8 rounded-full bg-zinc-100 text-zinc-700 flex items-center justify-center hover:scale-105 transition-transform"
+                              className="w-8 h-8 rounded-full bg-zinc-100 text-zinc-700 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                              title={playingVoiceId === v.id ? 'Pause voice preview' : `Listen to ${v.id} sample`}
                             >
-                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              {playingVoiceId === v.id ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              )}
                             </button>
                             <div>
                               <div className="flex items-center gap-2">
