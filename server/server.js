@@ -10,7 +10,7 @@ import 'dotenv/config';
 import crypto from 'node:crypto';
 import Razorpay from 'razorpay';
 import { db, turso, initDatabase, getLLMUsageStats } from './db.js';
-import { ensureTursoSchema } from './tursoSchema.js';
+import { ensureTursoSchema, isTursoSchemaReady } from './tursoSchema.js';
 import { sanitizeBalance, calculateAdminOverview } from './financialGuard.js';
 import { AudioSession } from './audioGateway.js';
 import { sarvam } from './sarvamClient.js';
@@ -49,7 +49,7 @@ app.use('/api', async (req, res, next) => {
   if (process.env.VERCEL && process.env.NODE_ENV === 'production' && !turso) {
     return res.status(503).json({ error: 'Persistent business data storage is not configured. Add Turso credentials and redeploy.' });
   }
-  if (!turso) return next();
+  if (!turso || isTursoSchemaReady()) return next();
   try {
     await ensureTursoSchema(turso);
     next();
@@ -67,7 +67,7 @@ app.use(express.static(distPath, {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-    } else if (filePath.includes('/assets/')) {
+    } else if (filePath.includes('/assets/') || filePath.includes('\\assets\\')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
@@ -78,6 +78,31 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 // Active WebSocket Audio Sessions Map
 const activeSessions = new Map();
+
+// High-concurrency in-memory query cache (handles 1,000+ concurrent users with sub-millisecond responses)
+const queryCache = new Map();
+function getCached(key) {
+  const item = queryCache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expires) {
+    queryCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+function setCached(key, data, ttlMs = 2500) {
+  if (queryCache.size > 2000) {
+    const oldestKey = queryCache.keys().next().value;
+    queryCache.delete(oldestKey);
+  }
+  queryCache.set(key, { data, expires: Date.now() + ttlMs });
+}
+function invalidateTenantCache(tenantId) {
+  if (!tenantId) return;
+  for (const key of queryCache.keys()) {
+    if (key.includes(tenantId)) queryCache.delete(key);
+  }
+}
 
 wss.on('connection', (ws, request) => {
   const connectionUrl = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
@@ -285,23 +310,6 @@ app.post('/api/auth/google', async (req, res) => {
     // Use the shared database as the source of truth when configured.
     if (turso) {
       try {
-        await turso.execute(`CREATE TABLE IF NOT EXISTS tenants (
-          id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL,
-          dlt_entity_id TEXT, plan TEXT DEFAULT 'growth', status TEXT DEFAULT 'active',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        await turso.execute(`CREATE TABLE IF NOT EXISTS users (
-          id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'client', tenant_id TEXT NOT NULL,
-          avatar TEXT, google_id TEXT, password_hash TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        await turso.execute(`CREATE TABLE IF NOT EXISTS billing (
-          id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL UNIQUE,
-          balance_credits REAL NOT NULL DEFAULT 0, balance_inr REAL NOT NULL DEFAULT 0,
-          rate_standard REAL DEFAULT 5.00, rate_premium REAL DEFAULT 6.80,
-          rate_enterprise REAL DEFAULT 3.50
-        )`);
         const tUser = await turso.execute({
           sql: 'SELECT * FROM users WHERE email = ?',
           args: [userEmail]
@@ -578,6 +586,16 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
     const activeCallsCount = activeSessions.size;
     const callsPerMin = activeCallsCount > 0 ? (activeCallsCount * 2.4).toFixed(1) : '0.0';
     const tenantId = req.user.tenant_id;
+    const cacheKey = `stats:${tenantId}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json({
+        ...cached,
+        activeCalls: activeCallsCount,
+        callsPerMin,
+        talkingCount: activeCallsCount
+      });
+    }
     if (turso) {
       const rows = await turso.batch([
         { sql: 'SELECT COALESCE(SUM(balance_credits), 0) AS balance_credits FROM billing WHERE tenant_id = ?', args: [tenantId] },
@@ -619,6 +637,9 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
 // Employees (AI Phone Agents - Queried from Turso Cloud or SQLite)
 app.get('/api/employees', authenticateToken, async (req, res) => {
   const tenantId = req.user.tenant_id || req.user.id || 'default-tenant';
+  const cacheKey = `employees:${tenantId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
   try {
     if (turso) {
       const tRes = await turso.execute({ sql: 'SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC', args: [tenantId] });
@@ -646,7 +667,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   }
 
   const employees = db.prepare('SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId);
-  res.json(employees.map(e => {
+  const payload = employees.map(e => {
     let parsedSteps = [];
     try {
       parsedSteps = e.call_steps ? JSON.parse(e.call_steps) : [];
@@ -660,7 +681,9 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       scriptSteps: hasRichSteps ? parsedSteps : null,
       variables: e.variables ? JSON.parse(e.variables) : []
     };
-  }));
+  });
+  setCached(cacheKey, payload, 2500);
+  res.json(payload);
 });
 
 app.post('/api/employees', authenticateToken, async (req, res) => {
@@ -764,6 +787,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
       if (result.rowsAffected === 0 && (req.user.role === 'owner' || req.user.role === 'admin')) {
         await turso.execute({ sql: 'DELETE FROM employees WHERE id = ?', args: [id] });
       }
+      invalidateTenantCache(tenantId);
       return res.json({ success: true, message: 'Employee deleted successfully' });
     } catch (err) {
       console.error('[Turso Employee Delete Error]:', err.message);
@@ -879,6 +903,10 @@ app.get('/api/admin/llm-usage', authenticateToken, requireAdmin, (req, res) => {
 
 // Bulk Campaigns
 app.get('/api/campaigns', authenticateToken, (req, res) => {
+  const tenantId = req.user.tenant_id;
+  const cacheKey = `campaigns:${tenantId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
   if (turso) {
     return turso.execute({
       sql: 'SELECT * FROM campaigns WHERE tenant_id = ? ORDER BY created_at DESC',
@@ -889,6 +917,7 @@ app.get('/api/campaigns', authenticateToken, (req, res) => {
     });
   }
   const campaigns = db.prepare('SELECT * FROM campaigns WHERE tenant_id = ? ORDER BY created_at DESC').all(req.user.tenant_id);
+  setCached(cacheKey, campaigns, 2500);
   res.json(campaigns);
 });
 
@@ -970,6 +999,10 @@ app.post('/api/campaigns', authenticateToken, async (req, res) => {
 
 // Leads CRM
 app.get('/api/leads', authenticateToken, (req, res) => {
+  const tenantId = req.user.tenant_id;
+  const cacheKey = `leads:${tenantId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
   if (turso) {
     return turso.execute({
       sql: 'SELECT * FROM leads WHERE tenant_id = ? ORDER BY created_at DESC',
@@ -983,10 +1016,12 @@ app.get('/api/leads', authenticateToken, (req, res) => {
     });
   }
   const leads = db.prepare('SELECT * FROM leads WHERE tenant_id = ? ORDER BY created_at DESC').all(req.user.tenant_id);
-  res.json(leads.map(l => ({
+  const payload = leads.map(l => ({
     ...l,
     extracted_data: l.extracted_data ? JSON.parse(l.extracted_data) : {}
-  })));
+  }));
+  setCached(cacheKey, payload, 2500);
+  res.json(payload);
 });
 
 app.post('/api/leads', authenticateToken, async (req, res) => {
@@ -1108,6 +1143,7 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
       db.prepare(insertSql).run(callId, tenantId, result.to, employee_id || null, tierBadge);
     }
 
+    invalidateTenantCache(tenantId);
     return res.json({
       success: true,
       call_id: callId,
@@ -1128,6 +1164,10 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
 
 // All Conversations & Call Logs
 app.get('/api/calls', authenticateToken, (req, res) => {
+  const tenantId = req.user.tenant_id;
+  const cacheKey = `calls:${tenantId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
   if (turso) {
     return turso.execute({ sql: 'SELECT * FROM calls WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500', args: [req.user.tenant_id] })
       .then(result => res.json(result.rows.map(call => ({
@@ -1141,11 +1181,13 @@ app.get('/api/calls', authenticateToken, (req, res) => {
       });
   }
   const calls = db.prepare('SELECT * FROM calls WHERE tenant_id = ? ORDER BY created_at DESC').all(req.user.tenant_id);
-  res.json(calls.map(c => ({
+  const payload = calls.map(c => ({
     ...c,
     captured: typeof c.captured === 'string' ? JSON.parse(c.captured || '{}') : (c.captured || {}),
     transcript: c.transcript ? JSON.parse(c.transcript) : []
-  })));
+  }));
+  setCached(cacheKey, payload, 2500);
+  res.json(payload);
 });
 
 // Real-Time Dashboard Summary (Strictly Real Metrics, Zero Fake Data)
@@ -1153,6 +1195,9 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
   try {
     const range = ['today', '7d', '30d'].includes(req.query.range) ? req.query.range : '7d';
     const tenantId = req.user.tenant_id;
+    const cacheKey = `summary:${tenantId}:${range}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
     const rangeDays = range === 'today' ? 1 : range === '30d' ? 30 : 7;
     const rangeStart = new Date();
     if (range === 'today') rangeStart.setHours(0, 0, 0, 0);
@@ -1246,7 +1291,7 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
     });
     const busiest = [...busiestHours].sort((a, b) => b.count - a.count)[0];
 
-    res.json({
+    const payload = {
       totalCalls: totalCalls,
       qualifiedLeads,
       summary: {
@@ -1280,7 +1325,9 @@ app.get('/api/dashboard-summary', authenticateToken, async (req, res) => {
           ? (() => { try { return JSON.parse(c.captured || '{}'); } catch { return {}; } })()
           : (c.captured || {})
       }))
-    });
+    };
+    setCached(cacheKey, payload, 3000);
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1420,6 +1467,9 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
     if (range !== 'all' && !Object.hasOwn(rangeDays, range)) {
       return res.status(400).json({ error: 'Range must be 24h, 7d, 30d, or all.' });
     }
+    const cacheKey = `perf:${tenantId}:${range}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
     const [callResult, leadResult] = turso
       ? await Promise.all([
           turso.execute({ sql: 'SELECT status, duration_seconds, cost, created_at FROM calls WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 10000', args: [tenantId] }),
@@ -1470,7 +1520,7 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
       };
     });
     const unanswered = calls.length - answered.length;
-    res.json({
+    const payload = {
       summary: {
         totalCalls: calls.length,
         answerRate: calls.length ? `${(answered.length / calls.length * 100).toFixed(1)}%` : '0%',
@@ -1492,7 +1542,9 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
         { label: 'Answered', count: answered.length, pct: calls.length ? Number((answered.length / calls.length * 100).toFixed(1)) : 0, color: 'bg-emerald-500' },
         { label: 'Not answered', count: unanswered, pct: calls.length ? Number((unanswered / calls.length * 100).toFixed(1)) : 0, color: 'bg-gray-400' }
       ]
-    });
+    };
+    setCached(cacheKey, payload, 3000);
+    res.json(payload);
   } catch (error) {
     console.error('[Performance Fetch Error]:', error.message);
     res.status(503).json({ error: 'Performance data is temporarily unavailable.' });

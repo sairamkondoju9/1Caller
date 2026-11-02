@@ -276,6 +276,8 @@ export function initDatabase() {
   try { db.exec("PRAGMA synchronous = NORMAL;"); } catch (e) {}
   try { db.exec("PRAGMA busy_timeout = 5000;"); } catch (e) {}
   try { db.exec("PRAGMA cache_size = -64000;"); } catch (e) {}
+  try { db.exec("PRAGMA temp_store = MEMORY;"); } catch (e) {}
+  try { db.exec("PRAGMA mmap_size = 268435456;"); } catch (e) {}
 
   // Safe migrations for existing SQLite databases
   try { db.exec("ALTER TABLE tenants ADD COLUMN plan TEXT DEFAULT 'growth'"); } catch (e) {}

@@ -23,12 +23,23 @@ const schemaStatements = [
 ];
 
 let schemaInitialization;
+let isSchemaReady = false;
+
+export function isTursoSchemaReady() {
+  return isSchemaReady;
+}
 
 export function ensureTursoSchema(turso) {
+  if (isSchemaReady) return Promise.resolve();
   if (!turso) throw new Error('Turso is not configured');
   if (!schemaInitialization) {
     schemaInitialization = (async () => {
-      for (const sql of schemaStatements) await turso.execute(sql);
+      try {
+        await turso.batch(schemaStatements.map(sql => ({ sql })), 'write');
+      } catch {
+        // Fallback to sequential execution if batch is unsupported
+        for (const sql of schemaStatements) await turso.execute(sql);
+      }
       const migrations = [
         "ALTER TABLE calls ADD COLUMN outcome TEXT DEFAULT 'completed'",
         "ALTER TABLE calls ADD COLUMN channel TEXT DEFAULT 'Instant'",
@@ -44,8 +55,10 @@ export function ensureTursoSchema(turso) {
           if (!/duplicate column|already exists/i.test(error.message || '')) throw error;
         }
       }
+      isSchemaReady = true;
     })().catch(error => {
       schemaInitialization = undefined;
+      isSchemaReady = false;
       throw error;
     });
   }

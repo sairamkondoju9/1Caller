@@ -7,47 +7,6 @@
  * - Primary Voice Engine for Antigravity Voice Platform
  */
 
-// Helper: Generates a valid 16kHz 16-bit mono PCM WAV buffer for audible browser playback
-function generateSampleWavBuffer(durationSec = 1.0, baseFreq = 440) {
-  const sampleRate = 16000;
-  const numSamples = Math.floor(sampleRate * durationSec);
-  const dataByteLength = numSamples * 2;
-  const buffer = Buffer.alloc(44 + dataByteLength);
-
-  // RIFF header
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataByteLength, 4);
-  buffer.write('WAVE', 8);
-
-  // fmt chunk
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16); // Subchunk1Size
-  buffer.writeUInt16LE(1, 20);  // AudioFormat (PCM = 1)
-  buffer.writeUInt16LE(1, 22);  // NumChannels (Mono = 1)
-  buffer.writeUInt32LE(sampleRate, 24); // SampleRate
-  buffer.writeUInt32LE(sampleRate * 2, 28); // ByteRate
-  buffer.writeUInt16LE(2, 32);  // BlockAlign
-  buffer.writeUInt16LE(16, 34); // BitsPerSample
-
-  // data chunk
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataByteLength, 40);
-
-  // Generate pleasant harmonic speech-like tone envelope
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    // Envelope: smooth fade-in and fade-out
-    const envelope = Math.sin((Math.PI * i) / numSamples);
-    const sample = Math.sin(2 * Math.PI * baseFreq * t) * 0.4 +
-                   Math.sin(2 * Math.PI * (baseFreq * 1.5) * t) * 0.2 +
-                   Math.sin(2 * Math.PI * (baseFreq * 2.0) * t) * 0.1;
-    const intSample = Math.max(-32768, Math.min(32767, Math.floor(sample * envelope * 16000)));
-    buffer.writeInt16LE(intSample, 44 + i * 2);
-  }
-
-  return buffer;
-}
-
 export class CartesiaClient {
   constructor(apiKey = process.env.CARTESIA_API_KEY) {
     this.apiKey = apiKey;
