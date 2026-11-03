@@ -106,38 +106,53 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         setShowSuccessModal(true);
         setIsAwaitingConfirmation(true);
 
-        fetch('/api/billing/verify-order-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({
-            orderId: orderIdParam,
-            paymentId: paymentIdParam,
-            paymentLinkId: paymentLinkIdParam
+        let attempts = 0;
+        const maxAttempts = 6;
+        const checkStatus = () => {
+          attempts++;
+          fetch('/api/billing/verify-order-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({
+              orderId: orderIdParam,
+              paymentId: paymentIdParam,
+              paymentLinkId: paymentLinkIdParam
+            })
           })
-        })
-          .then(r => r.json())
-          .then(data => {
-            setIsAwaitingConfirmation(false);
-            if (data.success && data.status === 'paid') {
-              setPaymentSuccess(true);
-              setLastPaymentDetails({
-                paymentId: data.paymentId || paymentIdParam || 'rzp_verified',
-                orderId: data.orderId || orderIdParam || 'order_verified',
-                invoiceId: data.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
-                credits: data.creditsAdded || 100,
-                amount: data.baseAmount || 100,
-                totalPaid: ((data.baseAmount || 100) * 1.18).toFixed(2),
-                date: new Date().toLocaleString('en-IN')
-              });
-              fetchBillingData();
-              if (onBalanceUpdate) onBalanceUpdate();
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
-          })
-          .catch(err => {
-            console.error('[Payment Verification Network Error]:', err);
-            setIsAwaitingConfirmation(false);
-          });
+            .then(r => r.json())
+            .then(data => {
+              if (data.success && data.status === 'paid') {
+                setIsAwaitingConfirmation(false);
+                setPaymentSuccess(true);
+                setLastPaymentDetails({
+                  paymentId: data.paymentId || paymentIdParam || 'rzp_verified',
+                  orderId: data.orderId || orderIdParam || 'order_verified',
+                  invoiceId: data.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
+                  credits: data.creditsAdded || 100,
+                  amount: data.baseAmount || 100,
+                  totalPaid: ((data.baseAmount || 100) * 1.18).toFixed(2),
+                  date: new Date().toLocaleString('en-IN')
+                });
+                fetchBillingData();
+                if (onBalanceUpdate) onBalanceUpdate();
+                window.history.replaceState({}, document.title, window.location.pathname);
+              } else if (attempts < maxAttempts) {
+                setTimeout(checkStatus, 2000);
+              } else {
+                setIsAwaitingConfirmation(false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }
+            })
+            .catch(err => {
+              console.error('[Payment Verification Network Error]:', err);
+              if (attempts < maxAttempts) {
+                setTimeout(checkStatus, 2000);
+              } else {
+                setIsAwaitingConfirmation(false);
+              }
+            });
+        };
+        checkStatus();
       }
     }
   }, []);
@@ -214,7 +229,14 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         throw new Error(orderData.error || orderData.details || 'Failed to initialize payment order');
       }
 
-      // 3. Open Official Razorpay Checkout Popup Modal Directly Here
+      // 3. Open Official Razorpay Live Gateway (rzp.io)
+      // This is the official Razorpay payment page where dynamic UPI QR is 100% sharp, unblurred, and scannable by all UPI apps (GPay, PhonePe, Paytm, CRED)
+      if (orderData.paymentLinkUrl) {
+        window.location.href = orderData.paymentLinkUrl;
+        return;
+      }
+
+      // 4. Fallback to standard checkout modal if link not available
       if (window.Razorpay) {
         const options = {
           key: orderData.keyId || 'rzp_live_TvJ7YXfy027Dyd',
@@ -227,7 +249,7 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
           prefill: {
             name: currentUser?.name || companyName || 'Customer',
             email: currentUser?.email || 'billing@sarvam.ai',
-            contact: ''
+            contact: (currentUser?.phone || '+918919112039').replace(/[^\d+]/g, '')
           },
           theme: {
             color: '#7a50dc'
@@ -291,9 +313,6 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
           alert('Payment Failed: ' + (resp.error?.description || 'Transaction cancelled'));
         });
         rzpInstance.open();
-      } else if (orderData.paymentLinkUrl) {
-        // Fallback if SDK is blocked by extreme browser extension
-        window.location.href = orderData.paymentLinkUrl;
       }
     } catch (err) {
       console.error('[Razorpay Launch Error]:', err);
@@ -528,12 +547,12 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                       {isPackLoading ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Opening Razorpay...</span>
+                          <span>Connecting to Razorpay...</span>
                         </>
                       ) : (
                         <>
                           <Lock className="w-3 h-3" />
-                          <span>Pay ₹{(pack.price * 1.18).toFixed(2)}</span>
+                          <span>Pay ₹{(pack.price * 1.18).toFixed(2)} &rarr;</span>
                         </>
                       )}
                     </button>
@@ -553,7 +572,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                 </p>
               </div>
               <span className="text-xs text-[#6c6b7e] flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a]" /> Official Razorpay Checkout Popup
+                <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a]" /> Official Razorpay Live Gateway (UPI, QR, Cards, Netbanking)
               </span>
             </div>
 
@@ -604,12 +623,12 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                 {loadingPlanId === 'custom' ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Opening Razorpay...</span>
+                    <span>Connecting to Razorpay...</span>
                   </>
                 ) : (
                   <>
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Pay via Razorpay Checkout &rarr;</span>
+                    <span>Pay via Official Razorpay Gateway &rarr;</span>
                   </>
                 )}
               </button>

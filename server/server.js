@@ -2136,6 +2136,7 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
     const clientOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || 'https://sarvam-eta-rose.vercel.app';
     const customerEmail = (req.user?.email && req.user.email.includes('@')) ? req.user.email : 'billing@sarvam.ai';
     try {
+      const customerContact = (req.user?.phone || '+918919112039').replace(/[^\d+]/g, '');
       const plink = await razorpay.paymentLink.create({
         amount: amountInPaise,
         currency: 'INR',
@@ -2144,10 +2145,12 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
         description: `Credits Top-Up: ${baseAmount} Calling Credits`,
         customer: {
           name: req.user?.name || req.user?.email?.split('@')[0] || 'Customer',
-          email: customerEmail
+          email: customerEmail,
+          contact: customerContact
         },
         notify: { sms: false, email: false },
         reminder_enable: false,
+        upi_link: true,
         notes: {
           order_id: order.id,
           tenant_id: tenantId,
