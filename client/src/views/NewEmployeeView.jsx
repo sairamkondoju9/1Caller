@@ -72,6 +72,8 @@ import {
   Store,
   Crown,
   Trash2,
+  Megaphone,
+  PhoneIncoming,
 } from 'lucide-react';
 import { useSpeechRecognition } from '../lib/useSpeechRecognition';
 

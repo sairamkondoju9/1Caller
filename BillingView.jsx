@@ -23,7 +23,7 @@ import {
   Receipt
 } from 'lucide-react';
 
-export default function BillingView({ onBalanceUpdate }) {
+export default function BillingView({ currentUser, onBalanceUpdate }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'statements' | 'invoicing'
   const [billing, setBilling] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -245,6 +245,10 @@ export default function BillingView({ onBalanceUpdate }) {
 
   const handleDirectGatewayPay = async () => {
     if (!selectedPlan) return;
+    if (livePaymentLink) {
+      window.location.href = livePaymentLink;
+      return;
+    }
     setProcessing(true);
     try {
       const orderRes = await fetch('/api/billing/create-order', {
@@ -264,8 +268,7 @@ export default function BillingView({ onBalanceUpdate }) {
         throw new Error(orderData.error || orderData.details || 'Failed to initialize payment gateway');
       }
 
-      // Direct navigation to official Razorpay Checkout Gateway
-      // Works 100% on all mobile devices & browsers without popup block or domain mismatch!
+      setLivePaymentLink(orderData.paymentLinkUrl);
       window.location.href = orderData.paymentLinkUrl;
     } catch (err) {
       console.error('[Payment Gateway Error]:', err);
@@ -275,149 +278,7 @@ export default function BillingView({ onBalanceUpdate }) {
   };
 
   const handleProcessTopup = async () => {
-    if (!selectedPlan) return;
-    setProcessing(true);
-
-    try {
-      // 1. Create official order and Live Payment Link on server
-      const orderRes = await fetch('/api/billing/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({
-          amount: selectedPlan.price,
-          credits: selectedPlan.credits,
-          bonusCredits: selectedPlan.bonus,
-          planId: selectedPlan.id,
-          planName: selectedPlan.name
-        })
-      });
-
-      const orderData = await orderRes.json();
-      if (!orderData.success || !orderData.orderId) {
-        throw new Error(orderData.error || orderData.details || 'Failed to initialize Razorpay payment order');
-      }
-
-      setActiveOrderId(orderData.orderId);
-      if (orderData.paymentLinkUrl) {
-        setLivePaymentLink(orderData.paymentLinkUrl);
-      }
-
-      // Start automatic polling for payment completion
-      startStatusPoller(orderData.orderId, selectedPlan);
-
-      // 2. Load Razorpay Checkout SDK for in-app popup
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded || !window.Razorpay) {
-        // If SDK blocked, open official live payment link directly!
-        if (orderData.paymentLinkUrl) {
-          window.open(orderData.paymentLinkUrl, '_blank');
-          setProcessing(false);
-          return;
-        }
-        alert('Razorpay Checkout SDK could not be loaded. Please check your internet connection.');
-        setProcessing(false);
-        return;
-      }
-
-      // 3. Launch official Razorpay Checkout popup with sanitized prefill
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sarvam-eta-rose.vercel.app';
-      const cleanContact = currentUser?.phone
-        ? currentUser.phone.replace(/[^0-9]/g, '').slice(-10)
-        : '';
-
-      const prefill = {};
-      if (currentUser?.name && currentUser.name.trim()) {
-        prefill.name = currentUser.name.trim();
-      }
-      if (currentUser?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentUser.email.trim())) {
-        prefill.email = currentUser.email.trim();
-      }
-      if (cleanContact && cleanContact.length === 10) {
-        prefill.contact = cleanContact;
-      }
-
-      const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency || 'INR',
-        name: 'Sarvam Voice AI',
-        description: `${selectedPlan.name} (${selectedPlan.credits.toLocaleString()} Calling Credits)`,
-        image: `${origin}/sarvam-logo.png`,
-        order_id: orderData.orderId,
-        handler: async function (response) {
-          try {
-            setProcessing(true);
-            const verifyRes = await fetch('/api/billing/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                planName: selectedPlan.name
-              })
-            });
-
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              setProcessing(false);
-              setPaymentSuccess(true);
-              setLastPaymentDetails({
-                paymentId: response.razorpay_payment_id,
-                orderId: response.razorpay_order_id,
-                invoiceId: verifyData.invoiceId,
-                credits: verifyData.creditsAdded,
-                amount: selectedPlan.price,
-                totalPaid: (orderData.amount / 100).toFixed(2),
-                date: new Date().toLocaleString('en-IN')
-              });
-              fetchBillingData();
-              if (onBalanceUpdate) onBalanceUpdate();
-            } else {
-              alert('Payment verification failed: ' + (verifyData.error || 'Invalid signature'));
-              setProcessing(false);
-            }
-          } catch (verifyErr) {
-            console.error('Verification error:', verifyErr);
-            alert('Error verifying payment with server.');
-            setProcessing(false);
-          }
-        },
-        one_click_checkout: false,
-        send_sms_hash: false,
-        prefill,
-        notes: {
-          platform: 'Sarvam Voice AI Engine',
-          plan_name: selectedPlan.name
-        },
-        theme: {
-          color: '#0f0e17'
-        },
-        modal: {
-          ondismiss: function () {
-            setProcessing(false);
-          }
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (resp) {
-        console.warn('[Razorpay Payment Notice]:', resp.error);
-        // Automatically seamless navigation to Razorpay Official Hosted Gateway
-        if (orderData.paymentLinkUrl) {
-          window.location.href = orderData.paymentLinkUrl;
-          return;
-        }
-        const desc = resp.error?.description || '';
-        alert('Payment notice: ' + (desc || 'Please complete checkout on the Razorpay gateway'));
-        setProcessing(false);
-      });
-      rzp.open();
-    } catch (err) {
-      console.error('[Razorpay Checkout Error]:', err);
-      setProcessing(false);
-      alert('Unable to launch Razorpay checkout: ' + err.message);
-    }
+    return handleDirectGatewayPay();
   };
 
   const downloadTaxInvoice = () => {
@@ -949,14 +810,16 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                     <Lock className="w-4 h-4" />
                     {processing ? 'Connecting to Razorpay Gateway...' : `Pay ₹${(selectedPlan.price * 1.18).toFixed(2)} via Razorpay Live Gateway`}
                   </button>
-                  <button
-                    type="button"
-                    disabled={processing}
-                    onClick={handleProcessTopup}
-                    className="w-full text-center text-xs text-[#6c6b7e] hover:text-[#0f0e17] py-1 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <span>Prefer inline popup? Open Razorpay Modal</span>
-                  </button>
+                  {livePaymentLink && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(livePaymentLink, '_blank')}
+                      className="w-full text-center text-xs text-[#6c6b7e] hover:text-[#0f0e17] py-1.5 transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Live Gateway in New Tab</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
