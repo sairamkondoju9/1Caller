@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, KeyRound, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2 } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [useOtp, setUseOtp] = useState(false);
   const googleButtonRef = useRef(null);
 
-  // Email OTP state
+  // Form states
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [suggestedCode, setSuggestedCode] = useState('');
-  const [emailLoading, setEmailLoading] = useState(false);
   const [otpToken, setOtpToken] = useState('');
 
   const handleGoogleCredential = async (credential) => {
@@ -42,13 +43,56 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     }
   };
 
-  const handleSendEmailCode = async (e) => {
+  const handleEmailAuth = async (e) => {
     e?.preventDefault();
     if (!email || !email.includes('@')) {
       setError('Please enter a valid work or personal email');
       return;
     }
-    setEmailLoading(true);
+
+    if (useOtp) {
+      if (!codeSent) {
+        // Send OTP
+        return handleSendEmailCode();
+      }
+      // Verify OTP
+      return handleVerifyEmailCode();
+    }
+
+    // Direct password authentication
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/email/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to sign in. Please verify your credentials.');
+        return;
+      }
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user_role', data.user.role || 'client');
+      onLoginSuccess(data.user);
+      onClose();
+    } catch {
+      setError('Connection failed. Please check your internet connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendEmailCode = async () => {
+    setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/auth/email/send-code', {
@@ -62,27 +106,24 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setCodeSent(true);
-      if (data.otpToken) {
-        setOtpToken(data.otpToken);
-      }
+      if (data.otpToken) setOtpToken(data.otpToken);
       if (data.code) {
         setSuggestedCode(data.code);
-        setCode(data.code); // Friction-free 1-click verify
+        setCode(data.code);
       }
     } catch {
-      setError('Unable to send code. Please check your internet connection.');
+      setError('Unable to send code. Please try again.');
     } finally {
-      setEmailLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleVerifyEmailCode = async (e) => {
-    e?.preventDefault();
+  const handleVerifyEmailCode = async () => {
     if (!code || code.trim().length < 4) {
       setError('Please enter the 6-digit verification code');
       return;
     }
-    setEmailLoading(true);
+    setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/auth/email/verify-code', {
@@ -102,22 +143,18 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess(data.user);
       onClose();
     } catch {
-      setError('Connection to verification service failed.');
+      setError('Unable to verify code.');
     } finally {
-      setEmailLoading(false);
+      setLoading(false);
     }
   };
 
+  // Google SDK integration
   useEffect(() => {
-    if (!isOpen) {
-      setCodeSent(false);
-      setCode('');
-      setError('');
-      return undefined;
-    }
-
+    if (!isOpen) return;
     let cancelled = false;
-    const setupGoogleSignIn = (clientId) => {
+
+    const setupGoogle = (clientId) => {
       if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
       try {
         window.google.accounts.id.initialize({
@@ -132,40 +169,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           width: 340
         });
       } catch (err) {
-        console.warn('Google sign-in render notice:', err);
+        console.warn('Google button init notice:', err);
       }
     };
 
-    const loadGoogleIdentity = () => new Promise((resolve) => {
-      if (window.google?.accounts?.id) {
-        resolve();
-        return;
-      }
-      let script = document.getElementById('google-identity-services');
-      if (!script) {
-        script = document.createElement('script');
-        script.id = 'google-identity-services';
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-      }
-      const timeout = window.setTimeout(() => resolve(), 3000);
-      script.addEventListener('load', () => {
-        window.clearTimeout(timeout);
-        resolve();
-      }, { once: true });
-      script.addEventListener('error', () => {
-        window.clearTimeout(timeout);
-        resolve();
-      }, { once: true });
-    });
-
     fetch('/api/config')
-      .then(response => response.ok ? response.json() : {})
-      .then(config => {
-        if (config.googleClientId) {
-          return loadGoogleIdentity().then(() => setupGoogleSignIn(config.googleClientId));
+      .then(r => r.ok ? r.json() : {})
+      .then(cfg => {
+        if (cfg.googleClientId && window.google?.accounts?.id) {
+          setupGoogle(cfg.googleClientId);
         }
       })
       .catch(() => {});
@@ -179,44 +191,44 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn cursor-pointer"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen bg-[#fafafa] bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:24px_24px] p-4 sm:p-6 overflow-y-auto cursor-pointer animate-fadeIn font-sans"
     >
-      <div 
+      {/* Centered White Card (Pixel-perfect clone of app.outpero.com) */}
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[420px] overflow-hidden rounded-[24px] bg-white p-7 sm:p-8 shadow-2xl border border-[#e2e4ed] cursor-default font-sans"
+        className="w-full max-w-[420px] bg-white rounded-[28px] border border-zinc-200/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.07)] p-8 sm:p-9 text-left relative cursor-default transition-all"
       >
-        {/* Close Button */}
+        {/* Modal Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 w-8 h-8 rounded-full text-[#6c6b7e] hover:text-[#0f0e17] hover:bg-[#f6f7fb] flex items-center justify-center transition-colors cursor-pointer"
-          aria-label="Close dialog"
+          type="button"
+          className="absolute right-4 top-4 w-8 h-8 rounded-full text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Outpero Official Header */}
-        <div className="text-center mb-5">
-          <img
-            src="/outpero-wordmark-black.svg"
-            alt="Outpero"
-            className="h-7 w-auto mx-auto block mb-2.5"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = '/outpero-wordmark.png';
-            }}
-          />
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10.5px] font-bold tracking-[0.16em] uppercase text-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            AI phone employees
+        {/* OUTPERO Logo */}
+        <div className="flex flex-col items-center justify-center mb-6">
+          <div className="flex items-center text-[28px] font-black tracking-[-0.04em] text-zinc-900 font-display select-none">
+            <span>OUTPER</span>
+            <span className="text-[#8b5cf6] font-extrabold ml-[0.5px]">O</span>
           </div>
-          <div className="h-px bg-[#e2e4ed] my-4" />
-          <h2 className="font-display font-semibold text-[19px] tracking-tight text-[#0f0e17] mb-1 text-center">
+          <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-bold tracking-[0.2em] text-zinc-400 uppercase select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>AI PHONE EMPLOYEES</span>
+          </div>
+        </div>
+
+        {/* Title & Subtitle */}
+        <div className="text-center mb-6">
+          <h2 className="text-[19px] font-bold text-zinc-900 font-display tracking-tight">
             {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
           </h2>
-          <p className="text-[#6c6b7e] text-[13.5px] leading-relaxed text-center">
-            {mode === 'signin' ? 'Manage your AI employees and calls.' : 'Free trial credits included, no card needed to start.'}
+          <p className="text-[13px] text-zinc-500 mt-1">
+            {mode === 'signin' ? 'Manage your AI employees and calls.' : 'Free trial credits included, no card needed.'}
           </p>
         </div>
 
@@ -226,152 +238,149 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           </div>
         )}
 
+        {/* Continue with Google */}
         <div className="space-y-4">
-          {/* Google Sign-In Container */}
-          <div className="flex min-h-[44px] justify-center items-center" ref={googleButtonRef} aria-label="Continue with Google">
+          <div className="flex min-h-[44px] justify-center items-center" ref={googleButtonRef}>
             <button
               type="button"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl border border-[#dadce0] hover:bg-zinc-50 bg-white flex items-center justify-center gap-3 font-semibold text-xs text-zinc-800 shadow-xs transition-all cursor-pointer"
+              onClick={() => {
+                if (window.google?.accounts?.id) {
+                  window.google.accounts.id.prompt();
+                } else {
+                  setError('Google Sign-In is initializing. You can also sign in with email below.');
+                }
+              }}
+              className="w-full py-2.5 px-4 rounded-xl border border-zinc-200/90 bg-[#f3f4f6] hover:bg-[#e5e7eb] flex items-center justify-center gap-3 text-[13px] font-semibold text-zinc-800 transition-all cursor-pointer shadow-2xs"
             >
-              <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
                 <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 000 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.92-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.97 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              <span>{loading ? 'Redirecting…' : 'Continue with Google'}</span>
+              <span>Continue with Google</span>
             </button>
           </div>
 
-          <div className="relative flex items-center justify-center my-3">
-            <div className="border-t border-[#e2e4ed] w-full" />
-            <span className="bg-white px-3 text-[11.5px] font-semibold text-[#6c6b7e] uppercase tracking-wide shrink-0">
-              or use email
+          {/* OR USE EMAIL Divider */}
+          <div className="relative flex items-center justify-center my-5">
+            <div className="border-t border-zinc-200 w-full" />
+            <span className="bg-white px-3 text-[10.5px] font-semibold text-zinc-400 uppercase tracking-widest shrink-0">
+              OR USE EMAIL
             </span>
           </div>
 
-          {!codeSent ? (
-            <form onSubmit={handleSendEmailCode} className="space-y-3.5">
-              <div>
-                <label className="block text-[12px] font-semibold text-[#0f0e17] mb-1.5">
-                  Email
+          {/* Email + Password / OTP Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-4">
+            <div>
+              <label className="block text-[12.5px] font-medium text-zinc-800 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@business.com"
+                required
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[12.5px] font-medium text-zinc-800">
+                  {useOtp ? 'Verification Code' : 'Password'}
                 </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#9392a5] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@business.com"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#0f0e17] outline-none transition-all placeholder:text-[#9392a5]"
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseOtp(!useOtp);
+                    setError('');
+                    if (!useOtp && email && email.includes('@')) {
+                      handleSendEmailCode();
+                    }
+                  }}
+                  className="text-[12px] font-medium text-[#6e44ff] hover:underline cursor-pointer"
+                >
+                  {useOtp ? 'Use password instead' : 'Forgot password?'}
+                </button>
               </div>
 
-              <button
-                type="submit"
-                disabled={emailLoading}
-                className="w-full py-2.5 rounded-xl bg-[#0f0e17] hover:bg-zinc-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                {emailLoading ? 'Sending verification code…' : (mode === 'signup' ? 'Create free account' : 'Continue with Email')}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              <div className="text-center pt-1">
-                {mode === 'signin' ? (
-                  <p className="text-xs text-[#6c6b7e]">
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signup')}
-                      className="font-semibold text-[#7a50dc] hover:underline cursor-pointer"
-                    >
-                      Sign up
-                    </button>
-                  </p>
-                ) : (
-                  <p className="text-xs text-[#6c6b7e]">
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signin')}
-                      className="font-semibold text-[#7a50dc] hover:underline cursor-pointer"
-                    >
-                      Sign in
-                    </button>
-                  </p>
-                )}
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyEmailCode} className="space-y-3.5">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[12px] font-semibold text-[#0f0e17]">
-                    Enter Verification Code
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setCodeSent(false)}
-                    className="text-[11px] font-medium text-[#7a50dc] hover:underline"
-                  >
-                    Change email
-                  </button>
-                </div>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-[#9392a5] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              {useOtp ? (
+                <div>
                   <input
                     type="text"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="6-digit code"
+                    placeholder="6-digit verification code"
                     maxLength={6}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#0f0e17] font-mono tracking-widest outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 font-mono tracking-widest outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
                   />
+                  {suggestedCode && (
+                    <div
+                      onClick={() => setCode(suggestedCode)}
+                      className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center justify-between cursor-pointer hover:bg-emerald-100 transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Code: <strong className="font-mono tracking-wider">{suggestedCode}</strong>
+                      </span>
+                      <span className="text-[10px] uppercase font-bold text-emerald-700 bg-white/70 px-1.5 py-0.5 rounded">
+                        Auto-Filled
+                      </span>
+                    </div>
+                  )}
                 </div>
-                {suggestedCode && (
-                  <div
-                    onClick={() => setCode(suggestedCode)}
-                    className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center justify-between cursor-pointer hover:bg-emerald-100 transition-colors"
-                  >
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      Verification Code: <strong className="font-mono tracking-wider">{suggestedCode}</strong>
-                    </span>
-                    <span className="text-[10px] uppercase font-bold text-emerald-700 bg-white/70 px-1.5 py-0.5 rounded">
-                      Auto-Filled
-                    </span>
-                  </div>
-                )}
-              </div>
+              ) : (
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
+                />
+              )}
+            </div>
 
-              <button
-                type="submit"
-                disabled={emailLoading}
-                className="w-full py-2.5 rounded-xl bg-[#7a50dc] hover:bg-[#683cc9] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                {emailLoading ? 'Verifying session…' : 'Verify & Enter Workspace'}
-                <ShieldCheck className="w-3.5 h-3.5" />
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl bg-[#6e44ff] hover:bg-[#5f35eb] text-white font-semibold text-sm transition-all cursor-pointer shadow-md shadow-purple-500/25 active:scale-[0.99] disabled:opacity-50"
+            >
+              {loading ? 'Signing in…' : (mode === 'signup' ? 'Create an account' : 'Sign in')}
+            </button>
+          </form>
 
-          <div className="pt-2 text-center text-[11px] text-[#6c6b7e]">
-            Secured with 256-bit JWT authentication &bull; Turso serverless storage
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-3 border-t border-[#e2e4ed] text-[10.5px] text-[#6c6b7e]">
-            <a href="https://docs.outpero.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Help &amp; Docs</a>
-            <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Terms</a>
-            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Privacy</a>
-            <a href="/refund" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Refund</a>
-            <a href="/contact" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Contact</a>
-            <a href="https://www.outpero.com/ai-employee" target="_blank" rel="noopener noreferrer" className="text-[#7a50dc] font-medium hover:underline">outpero.com</a>
+          {/* New here? Create an account */}
+          <div className="text-center mt-5">
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'signin' ? 'signup' : 'signin');
+                setError('');
+              }}
+              className="text-[12.5px] text-zinc-600 hover:text-zinc-900 font-medium cursor-pointer"
+            >
+              {mode === 'signin' ? (
+                <>New here? <span className="font-semibold text-zinc-800 hover:underline">Create an account</span></>
+              ) : (
+                <>Already have an account? <span className="font-semibold text-zinc-800 hover:underline">Sign in</span></>
+              )}
+            </button>
           </div>
         </div>
+      </div>
+
+      {/* Footer Links outside the card (Exact match to app.outpero.com) */}
+      <div className="flex items-center justify-center gap-4 text-[11.5px] text-zinc-400 mt-8 select-none">
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 transition-colors">Terms</a>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 transition-colors">Privacy</a>
+        <a href="/refund" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 transition-colors">Refund</a>
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 transition-colors">Legal Centre</a>
+        <a href="/contact" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 transition-colors">Contact</a>
       </div>
     </div>
   );

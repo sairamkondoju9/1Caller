@@ -473,6 +473,93 @@ app.post('/api/auth/google', async (req, res) => {
 
 // One-Click Login & Role Switching
 // One-Click Login & Role Switching
+
+// Email + Password Direct Authentication (Outpero Unified Login)
+app.post('/api/auth/email/password', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Valid email address is required' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    let user = null;
+    if (turso) {
+      const result = await turso.execute({
+        sql: 'SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1',
+        args: [cleanEmail]
+      });
+      user = result.rows && result.rows.length > 0 ? result.rows[0] : null;
+    } else {
+      user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1').get(cleanEmail);
+    }
+
+    if (!user) {
+      const tenantId = `tenant_${crypto.randomBytes(6).toString('hex')}`;
+      const userId = `usr_${crypto.randomBytes(6).toString('hex')}`;
+      const userName = name || cleanEmail.split('@')[0];
+      const role = 'client';
+
+      if (turso) {
+        await turso.execute({
+          sql: 'INSERT INTO tenants (id, name, balance_credits) VALUES (?, ?, 50.0)',
+          args: [tenantId, `${userName}'s Workspace`]
+        });
+        await turso.execute({
+          sql: "INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id) VALUES (?, ?, ?, ?, ?, '', '')",
+          args: [userId, cleanEmail, userName, role, tenantId]
+        });
+      } else {
+        db.prepare('INSERT INTO tenants (id, name, balance_credits) VALUES (?, ?, 50.0)').run(tenantId, `${userName}'s Workspace`);
+        db.prepare("INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id) VALUES (?, ?, ?, ?, ?, '', '')").run(userId, cleanEmail, userName, role, tenantId);
+      }
+
+      user = {
+        id: userId,
+        email: cleanEmail,
+        name: userName,
+        role: role,
+        tenant_id: tenantId,
+        avatar: ''
+      };
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tenant_id: user.tenant_id
+      },
+      JWT_SECRET,
+      { expiresIn: '60d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenant_id,
+        avatar: user.avatar || ''
+      }
+    });
+  } catch (err) {
+    console.error('Password login error:', err);
+    res.status(500).json({ error: 'Authentication service encountered an error' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   return res.status(410).json({ error: 'Email-only sign-in has been disabled. Use verified Google sign-in.' });
 });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAuthHeaders } from '../utils/api';
 
 import {
+  RefreshCw,
   ExternalLink,
   CreditCard,
   Zap,

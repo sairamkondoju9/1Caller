@@ -42,6 +42,7 @@ import { INDUSTRY_TEMPLATES, getIndustryDefaults } from '../utils/industryData';
 import { getAuthHeaders } from '../utils/api';
 import {
   Sparkles,
+  X,
   Zap,
   Megaphone,
   PhoneIncoming,
