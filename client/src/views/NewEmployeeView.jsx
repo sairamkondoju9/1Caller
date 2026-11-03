@@ -784,14 +784,14 @@ export default function NewEmployeeView({
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
       const currentEmployee = {
         id: employeeId || initialData?.id,
-        name: employeeName,
-        business: businessName,
-        industry: employeeIndustry || selectedIndustry,
-        role: employeeRole,
-        primary_language: primaryLanguage,
-        opening_greeting: greeting,
-        call_steps: steps,
-        variables: offerings
+        name: employeeName || 'AI Telecaller',
+        business: businessName || 'Business',
+        industry: selectedCategory || initialData?.industry || 'Services',
+        role: employeeRole || 'Telecaller',
+        primary_language: primaryLanguage || 'Telugu',
+        opening_greeting: openingGreeting || '',
+        call_steps: scriptSteps || [],
+        variables: initialData?.variables || []
       };
 
       const res = await fetch('/api/calls/dispatch', {

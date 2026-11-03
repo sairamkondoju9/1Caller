@@ -182,6 +182,16 @@ export default function App() {
       }
     }
   };
+
+  const handleQuickAction = (action) => {
+    if (action === 'new-employee' || action === 'build') {
+      navigateTo('new-employee');
+    } else if (action === 'talk-to-employee') {
+      navigateTo('talk-to-employee');
+    } else if (action) {
+      navigateTo(action);
+    }
+  };
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);

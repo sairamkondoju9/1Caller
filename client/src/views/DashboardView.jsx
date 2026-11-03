@@ -108,6 +108,7 @@ export default function DashboardView({
   const [customIndustryText, setCustomIndustryText] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
   const [employeeBuildError, setEmployeeBuildError] = useState('');
+  const [trialCallEmployee, setTrialCallEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const [deleteEmployeeError, setDeleteEmployeeError] = useState('');
@@ -1957,6 +1958,14 @@ export default function DashboardView({
             </div>
           </div>
         </div>
+      )}
+    
+      {/* Trial Call Modal */}
+      {trialCallEmployee && (
+        <TrialCallModal
+          employee={trialCallEmployee}
+          onClose={() => setTrialCallEmployee(null)}
+        />
       )}
     </div>
   );
