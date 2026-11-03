@@ -143,14 +143,23 @@ export default function Sidebar({
         {/* Customer Workspace Status */}
         <div className="p-4 border-t border-[#e2e4ed] bg-[#f6f7fb]/80 backdrop-blur-md">
           <div className="flex items-center justify-between text-xs mb-2">
-            <span className="font-bold text-[#0f0e17]">AI Teammates</span>
-            <span className="text-[11px] font-bold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full border border-[#bbf7d0] font-mono">
-              {teamWorkingCount} Active
+            <span className="font-bold text-[#0f0e17] flex items-center gap-1.5">
+              <span>AI Teammates</span>
+            </span>
+            <span className="text-[11px] font-bold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full border border-[#bbf7d0] font-mono flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-beacon-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <span>{teamWorkingCount} Active</span>
             </span>
           </div>
           <div className="text-[11px] text-[#6c6b7e] flex items-center justify-between pt-1 font-mono">
             <span>Telephony Gateways</span>
-            <span className="text-[#16a34a] font-bold">Online · 100%</span>
+            <span className="text-[#16a34a] font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>Online · 100%</span>
+            </span>
           </div>
 
           {/* Quick Compliance & Resource Links (Identical to app.outpero.com) */}

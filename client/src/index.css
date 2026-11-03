@@ -390,6 +390,144 @@ input, select, textarea {
   transition: border-color 140ms var(--ease-out-expo), box-shadow 140ms var(--ease-out-expo), background-color 140ms var(--ease-out-expo);
 }
 
+/* ==============================================================================
+   5 VIBE CODER PLATFORMS SUITE (MOTION-PRIMITIVES, HAIKEI, REALTIMECOLORS, GODLY, REPLIT)
+   ============================================================================== */
+
+/* --- 1. REALTIMECOLORS (realtimecolors.com) 60-30-10 PALETTE HARMONY --- */
+:root {
+  --rc-bg: #ffffff;
+  --rc-surface: #ffffff;
+  --rc-subtle: #f8f9fc;
+  --rc-border: #e2e4ed;
+  --rc-border-hover: #cbd0df;
+  --rc-text-primary: #0f0e17;
+  --rc-text-secondary: #3a3f5c;
+  --rc-text-muted: #6c6b7e;
+  --rc-accent: #7a50dc;
+  --rc-accent-hover: #683ec2;
+  --rc-accent-soft: #f5f3ff;
+  --rc-success: #16a34a;
+  --rc-success-soft: #f0fdf4;
+  --rc-amber: #f59e0b;
+}
+
+/* --- 2. HAIKEI (haikei.app) BACKGROUND TEXTURES & MESH GRADIENTS --- */
+.haikei-dots {
+  background-image: radial-gradient(rgba(15, 14, 23, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.haikei-dots-subtle {
+  background-image: radial-gradient(rgba(15, 14, 23, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.haikei-mesh-stage {
+  background: 
+    radial-gradient(120% 120% at 20% 0%, #1e1b4b 0%, #0f0e26 60%, #070712 100%),
+    radial-gradient(60% 60% at 85% 85%, rgba(122, 80, 220, 0.25) 0%, transparent 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 20px 50px -12px rgba(15, 14, 38, 0.5),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+}
+
+/* --- 3. MOTION-PRIMITIVES (motion-primitives.com) MICRO-INTERACTIONS --- */
+@keyframes beaconPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-beacon-ping {
+  animation: beaconPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-150%);
+  }
+  50%, 100% {
+    transform: translateX(150%);
+  }
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 100%
+  );
+  animation: shimmerSweep 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* --- 4. GODLY (godly.website) REFINED SaaS SHADOWS & CARDS --- */
+.godly-card {
+  background: #ffffff;
+  border: 1px solid #e2e4ed;
+  border-radius: 16px;
+  box-shadow: 
+    0 1px 3px 0 rgba(15, 14, 23, 0.03),
+    0 8px 24px -4px rgba(15, 14, 23, 0.04);
+  transition: transform 160ms var(--ease-out-expo), box-shadow 160ms var(--ease-out-expo), border-color 160ms var(--ease-out-expo);
+}
+
+.godly-card:hover {
+  border-color: #cbd0df;
+  box-shadow: 
+    0 2px 6px 0 rgba(15, 14, 23, 0.04),
+    0 16px 36px -6px rgba(15, 14, 23, 0.07);
+  transform: translateY(-1.5px);
+}
+
+.godly-eyebrow {
+  font-family: 'Matter Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6c6b7e;
+}
+
+/* --- 5. REPLIT (replit.com) KEYBOARD SHORTCUTS & INTERACTION FEEDBACK --- */
+kbd, .replit-kbd {
+  font-family: 'Matter Mono', ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f8f9fc;
+  border: 1px solid #e2e4ed;
+  color: #6c6b7e;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* 7. Respect user accessibility settings */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {

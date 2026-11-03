@@ -1710,64 +1710,78 @@ export default function DashboardView({
         )}
       </div>
 
-            {/* 2. REAL METRICS STRIP (CLEAN & MINIMAL) */}
+            {/* 2. REAL METRICS STRIP (GODLY / REALTIMECOLORS / MOTION-PRIMITIVES) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white/90 backdrop-blur-md border border-[#e2e4ed] shadow-xs hover:shadow-md hover:border-[#7a50dc]/40 transition-all duration-150 space-y-1.5">
+        <div className="godly-card p-5 flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between text-[#6c6b7e]">
-            <span className="text-xs font-medium">Calls Handled</span>
-            <Phone className="w-4 h-4" />
-          </div>
-          <div className="text-2xl font-bold font-display text-[#0f0e17]">
-            {metrics.callsHandled}
-          </div>
-          <div className="text-[11px] text-[#6c6b7e]">
-            Real completed conversations
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between text-[#6c6b7e]">
-            <span className="text-xs font-medium">Active AI Employees</span>
-            <Users className="w-4 h-4 text-purple-600" />
-          </div>
-          <div className="text-2xl font-bold font-display text-[#7a50dc]">
-            {employees.filter(e => ['active', 'ready'].includes(e.status)).length || employees.length}
-          </div>
-          <div className="text-[11px] text-[#6c6b7e]">
-            Trained and on duty
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
-          <div className="flex items-center justify-between text-[#6c6b7e]">
-            <span className="text-xs font-medium">Total Talk Time</span>
-            <Clock className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-bold font-display text-[#0f0e17]">
-            {metrics.talkTimeFormatted || '0 min'}
-          </div>
-          <div className="text-[11px] text-[#6c6b7e]">
-            Customer call duration
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-[#6c6b7e]">
-              <span className="text-xs font-medium">Calling Balance</span>
-              <CreditCard className="w-4 h-4 text-amber-600" />
+            <span className="godly-eyebrow">Calls Handled</span>
+            <div className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center text-[#0f0e17]">
+              <Phone className="w-3.5 h-3.5" />
             </div>
-            <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17] mt-1.5">
+          </div>
+          <div>
+            <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17]">
+              {metrics.callsHandled}
+            </div>
+            <div className="text-[11px] text-[#6c6b7e] mt-0.5">
+              Real completed conversations
+            </div>
+          </div>
+        </div>
+
+        <div className="godly-card p-5 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="godly-eyebrow">Active AI Employees</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center text-[#7a50dc]">
+              <Users className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold font-display tabular-nums text-[#7a50dc]">
+              {employees.filter(e => ['active', 'ready'].includes(e.status)).length || employees.length}
+            </div>
+            <div className="text-[11px] text-[#6c6b7e] mt-0.5">
+              Trained and on duty
+            </div>
+          </div>
+        </div>
+
+        <div className="godly-card p-5 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="godly-eyebrow">Total Talk Time</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-[#16a34a]">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17]">
+              {metrics.talkTimeFormatted || '0 min'}
+            </div>
+            <div className="text-[11px] text-[#6c6b7e] mt-0.5">
+              Customer call duration
+            </div>
+          </div>
+        </div>
+
+        <div className="godly-card p-5 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between text-[#6c6b7e]">
+            <span className="godly-eyebrow">Calling Balance</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+              <CreditCard className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17]">
               ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
             </div>
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('billing')}
+              className="text-xs font-bold text-[#7a50dc] hover:text-[#5b32ba] flex items-center gap-1 cursor-pointer w-fit pt-1 active:scale-[0.98]"
+            >
+              + Add credits &rarr;
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => onNavigate && onNavigate('billing')}
-            className="text-xs font-bold text-[#7a50dc] hover:text-[#5b32ba] flex items-center gap-1 cursor-pointer w-fit pt-1"
-          >
-            + Add credits &rarr;
-          </button>
         </div>
       </div>
 
