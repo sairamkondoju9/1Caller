@@ -2224,7 +2224,7 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
       console.error('[Razorpay] Authoritative order lookup failed:', fetchErr.message);
       return res.status(502).json({ error: 'Could not verify payment order; no credits were applied' });
     }
-    if (!order || order.id !== razorpay_order_id || order.status !== 'paid' || order.currency !== 'INR') {
+    if (!order || order.id !== razorpay_order_id || (order.status !== 'paid' && order.status !== 'attempted') || order.currency !== 'INR') {
       return res.status(400).json({ error: 'Payment order is not paid or could not be verified' });
     }
 
@@ -2248,6 +2248,14 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
     }
     const topupAmount = noteBaseAmount;
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    if (payment && payment.status === 'authorized') {
+      try {
+        await razorpay.payments.capture(razorpay_payment_id, payment.amount, payment.currency || 'INR');
+        payment.status = 'captured';
+      } catch (capErr) {
+        console.warn('[Razorpay] Verification auto-capture note:', capErr.message);
+      }
+    }
     if (!payment || payment.order_id !== order.id || payment.status !== 'captured' || payment.amount !== order.amount) {
       return res.status(400).json({ error: 'Captured payment does not match the verified order' });
     }

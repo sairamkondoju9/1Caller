@@ -3,7 +3,6 @@ import { getAuthHeaders } from '../utils/api';
 
 import {
   RefreshCw,
-  ExternalLink,
   CreditCard,
   Zap,
   CheckCircle2,
@@ -13,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
   X,
-  AlertCircle,
   Lock
 } from 'lucide-react';
 
@@ -64,19 +62,15 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'statements' | 'invoicing'
   const [billing, setBilling] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // Recharge Modal State
-  const [showTopupModal, setShowTopupModal] = useState(false);
+  // Top-Up & Razorpay Checkout State
+  const [loadingPlanId, setLoadingPlanId] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [livePaymentLink, setLivePaymentLink] = useState('');
-  const [activeOrderId, setActiveOrderId] = useState('');
   const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false);
   const [customAmount, setCustomAmount] = useState('5000');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [processing, setProcessing] = useState(false);
   const [lastPaymentDetails, setLastPaymentDetails] = useState(null);
-  const [gatewayError, setGatewayError] = useState('');
 
   // Invoicing Settings State
   const [gstin, setGstin] = useState('36AABCS1429B1Z2');
@@ -91,17 +85,15 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
     ]).then(([bData, txData]) => {
       setBilling(bData);
       setTransactions(Array.isArray(txData) ? txData : []);
-      setLoading(false);
     }).catch(err => {
       console.error('Failed to load billing:', err);
-      setLoading(false);
     });
   };
 
   useEffect(() => {
     fetchBillingData();
 
-    // Automatic verification when returning from official Razorpay Live Gateway (rzp.io)
+    // Automatic verification if returning from hosted payment link callback
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const isPaymentReturn = urlParams.get('payment_link') === 'true' || urlParams.has('razorpay_payment_id') || urlParams.has('order_id');
@@ -110,9 +102,8 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
       const paymentLinkIdParam = urlParams.get('razorpay_payment_link_id');
 
       if (isPaymentReturn && (orderIdParam || paymentIdParam || paymentLinkIdParam)) {
-        setProcessing(true);
         setSelectedPlan(prev => prev || { id: 'custom', name: 'Calling Credits Top-Up', price: 100, credits: 100, bonus: 0, bonusPct: '0%' });
-        setShowTopupModal(true);
+        setShowSuccessModal(true);
         setIsAwaitingConfirmation(true);
 
         fetch('/api/billing/verify-order-status', {
@@ -126,7 +117,6 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         })
           .then(r => r.json())
           .then(data => {
-            setProcessing(false);
             setIsAwaitingConfirmation(false);
             if (data.success && data.status === 'paid') {
               setPaymentSuccess(true);
@@ -146,7 +136,6 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
           })
           .catch(err => {
             console.error('[Payment Verification Network Error]:', err);
-            setProcessing(false);
             setIsAwaitingConfirmation(false);
           });
       }
@@ -158,7 +147,29 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
   const premiumMins = (balanceCredits / 6.8).toFixed(0);
   const customMins = (balanceCredits / 3.5).toFixed(0);
 
-  // Directly Connect & Redirect to Official Razorpay Live Gateway (rzp.io)
+  // Dynamically load Razorpay SDK if not already present
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        return resolve(true);
+      }
+      const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+      if (existing) {
+        existing.onload = () => resolve(true);
+        existing.onerror = () => resolve(false);
+        if (window.Razorpay) resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Directly Open Official Razorpay Checkout Popup Right On This Screen
   const handleProceedToRazorpay = async (planOrAmount) => {
     let plan;
     if (typeof planOrAmount === 'number' || typeof planOrAmount === 'string') {
@@ -179,13 +190,13 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
       plan = planOrAmount;
     }
 
-    setSelectedPlan(plan);
-    setPaymentSuccess(false);
-    setGatewayError('');
-    setProcessing(true);
-    setShowTopupModal(true);
+    setLoadingPlanId(plan.id);
 
     try {
+      // 1. Ensure Razorpay SDK is ready
+      await loadRazorpayScript();
+
+      // 2. Create Live Order on Server
       const orderRes = await fetch('/api/billing/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -200,21 +211,94 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
 
       const orderData = await orderRes.json();
       if (!orderRes.ok || !orderData.success) {
-        throw new Error(orderData.error || orderData.details || 'Failed to initialize Razorpay checkout');
+        throw new Error(orderData.error || orderData.details || 'Failed to initialize payment order');
       }
 
-      setActiveOrderId(orderData.orderId);
-      if (orderData.paymentLinkUrl) {
-        setLivePaymentLink(orderData.paymentLinkUrl);
-        // Immediately navigate to official Razorpay payment page
+      // 3. Open Official Razorpay Checkout Popup Modal Directly Here
+      if (window.Razorpay) {
+        const options = {
+          key: orderData.keyId || 'rzp_live_TvJ7YXfy027Dyd',
+          amount: orderData.amount,
+          currency: orderData.currency || 'INR',
+          name: 'Sarvam Voice AI',
+          description: `${(plan.credits || plan.price).toLocaleString()} Calling Credits`,
+          image: 'https://sarvam-eta-rose.vercel.app/favicon.svg',
+          order_id: orderData.orderId,
+          prefill: {
+            name: currentUser?.name || companyName || 'Customer',
+            email: currentUser?.email || 'billing@sarvam.ai',
+            contact: ''
+          },
+          theme: {
+            color: '#7a50dc'
+          },
+          modal: {
+            backdropclose: false,
+            escape: true,
+            handleback: true,
+            ondismiss: () => {
+              setLoadingPlanId(null);
+            }
+          },
+          handler: async (response) => {
+            setSelectedPlan(plan);
+            setIsAwaitingConfirmation(true);
+            setShowSuccessModal(true);
+
+            try {
+              const verifyRes = await fetch('/api/billing/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                setPaymentSuccess(true);
+                setLastPaymentDetails({
+                  paymentId: response.razorpay_payment_id,
+                  orderId: response.razorpay_order_id,
+                  invoiceId: verifyData.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
+                  credits: plan.credits || plan.price,
+                  amount: plan.price,
+                  totalPaid: (plan.price * 1.18).toFixed(2),
+                  date: new Date().toLocaleString('en-IN')
+                });
+                fetchBillingData();
+                if (onBalanceUpdate) onBalanceUpdate();
+              } else {
+                alert(verifyData.error || 'Payment signature verification failed.');
+                setShowSuccessModal(false);
+              }
+            } catch (vErr) {
+              console.error('[Payment Verification Network Error]:', vErr);
+              alert('Payment confirmed by Razorpay! Wallet credits will update automatically.');
+              setShowSuccessModal(false);
+            } finally {
+              setIsAwaitingConfirmation(false);
+              setLoadingPlanId(null);
+            }
+          }
+        };
+
+        const rzpInstance = new window.Razorpay(options);
+        rzpInstance.on('payment.failed', (resp) => {
+          setLoadingPlanId(null);
+          alert('Payment Failed: ' + (resp.error?.description || 'Transaction cancelled'));
+        });
+        rzpInstance.open();
+      } else if (orderData.paymentLinkUrl) {
+        // Fallback if SDK is blocked by extreme browser extension
         window.location.href = orderData.paymentLinkUrl;
-      } else {
-        throw new Error('Razorpay live payment page URL was not returned by gateway.');
       }
     } catch (err) {
       console.error('[Razorpay Launch Error]:', err);
-      setGatewayError(err.message || 'Unable to open official Razorpay payment page');
-      setProcessing(false);
+      alert('Could not launch Razorpay Checkout: ' + (err.message || 'Please check your connection and retry.'));
+      setLoadingPlanId(null);
     }
   };
 
@@ -387,62 +471,75 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="text-base font-bold text-[#0f0e17] font-display">Instant Calling Credit Packs</h2>
-                <p className="text-xs text-[#6c6b7e] mt-0.5">Select a pack to open the official Razorpay payment page directly</p>
+                <p className="text-xs text-[#6c6b7e] mt-0.5">Click any pack to open Razorpay Checkout directly on this page</p>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#16a34a] bg-[#f0fdf4] px-2.5 py-1 rounded-full border border-[#bbf7d0]">
-                <ShieldCheck className="w-3.5 h-3.5" /> Official Razorpay Live Gateway
+                <ShieldCheck className="w-3.5 h-3.5" /> Razorpay Live Gateway (rzp_live_...)
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {TOPUP_PACKS.map((pack) => (
-                <div
-                  key={pack.id}
-                  className={`apple-glass rounded-xl p-5 border transition-all flex flex-col justify-between relative ${
-                    pack.badge ? 'border-[#7a50dc] shadow-md bg-purple-50/20' : 'border-[#e2e4ed] hover:border-[#cbd0df]'
-                  }`}
-                >
-                  {pack.badge && (
-                    <span className="absolute -top-2.5 right-4 bg-[#7a50dc] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      {pack.badge}
-                    </span>
-                  )}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#6c6b7e]">{pack.name}</h3>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-2xl font-extrabold text-[#0f0e17] font-display tabular-nums">
-                        ₹{pack.price.toLocaleString()}
-                      </span>
-                      <span className="text-[11px] text-[#6c6b7e]">+ 18% GST</span>
-                    </div>
-                    <div className="mt-2 text-xs font-bold text-[#16a34a] flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span>{pack.credits.toLocaleString()} Calling Credits</span>
-                    </div>
-                    {pack.bonus > 0 && (
-                      <div className="text-[11px] text-[#7a50dc] font-semibold mt-0.5">
-                        +{pack.bonus} bonus credits included ({pack.bonusPct})
-                      </div>
-                    )}
-                    <p className="text-[11.5px] text-[#6c6b7e] mt-3 leading-relaxed">
-                      {pack.description}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleProceedToRazorpay(pack)}
-                    className={`mt-5 w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
-                      pack.badge
-                        ? 'bg-[#7a50dc] hover:bg-[#683ec2] text-white shadow-sm'
-                        : 'bg-[#0f0e17] hover:bg-[#1f1e28] text-white shadow-xs'
+              {TOPUP_PACKS.map((pack) => {
+                const isPackLoading = loadingPlanId === pack.id;
+                return (
+                  <div
+                    key={pack.id}
+                    className={`apple-glass rounded-xl p-5 border transition-all flex flex-col justify-between relative ${
+                      pack.badge ? 'border-[#7a50dc] shadow-md bg-purple-50/20' : 'border-[#e2e4ed] hover:border-[#cbd0df]'
                     }`}
                   >
-                    <span>Pay ₹{(pack.price * 1.18).toFixed(2)}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
+                    {pack.badge && (
+                      <span className="absolute -top-2.5 right-4 bg-[#7a50dc] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        {pack.badge}
+                      </span>
+                    )}
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#6c6b7e]">{pack.name}</h3>
+                      <div className="mt-2 flex items-baseline gap-1">
+                        <span className="text-2xl font-extrabold text-[#0f0e17] font-display tabular-nums">
+                          ₹{pack.price.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] text-[#6c6b7e]">+ 18% GST</span>
+                      </div>
+                      <div className="mt-2 text-xs font-bold text-[#16a34a] flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 fill-current" />
+                        <span>{pack.credits.toLocaleString()} Calling Credits</span>
+                      </div>
+                      {pack.bonus > 0 && (
+                        <div className="text-[11px] text-[#7a50dc] font-semibold mt-0.5">
+                          +{pack.bonus} bonus credits included ({pack.bonusPct})
+                        </div>
+                      )}
+                      <p className="text-[11.5px] text-[#6c6b7e] mt-3 leading-relaxed">
+                        {pack.description}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={loadingPlanId !== null}
+                      onClick={() => handleProceedToRazorpay(pack)}
+                      className={`mt-5 w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 ${
+                        pack.badge
+                          ? 'bg-[#7a50dc] hover:bg-[#683ec2] text-white shadow-sm'
+                          : 'bg-[#0f0e17] hover:bg-[#1f1e28] text-white shadow-xs'
+                      }`}
+                    >
+                      {isPackLoading ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Opening Razorpay...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3 h-3" />
+                          <span>Pay ₹{(pack.price * 1.18).toFixed(2)}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -456,7 +553,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                 </p>
               </div>
               <span className="text-xs text-[#6c6b7e] flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a]" /> Opens official Razorpay Live Page
+                <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a]" /> Official Razorpay Checkout Popup
               </span>
             </div>
 
@@ -495,16 +592,26 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
               </div>
 
               <div className="text-xs text-[#6c6b7e] self-center">
-                Total Payable with 18% GST: <strong className="text-[#0f0e17] tabular-nums">₹{((parseFloat(customAmount) || 0) * 1.18).toFixed(2)}</strong>
+                Total with 18% GST: <strong className="text-[#0f0e17] tabular-nums">₹{((parseFloat(customAmount) || 0) * 1.18).toFixed(2)}</strong>
               </div>
 
               <button
                 type="button"
+                disabled={loadingPlanId !== null}
                 onClick={() => handleProceedToRazorpay(customAmount)}
-                className="bg-[#16a34a] hover:bg-[#15803d] text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98]"
+                className="bg-[#16a34a] hover:bg-[#15803d] text-white font-bold text-xs px-6 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] disabled:opacity-50"
               >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Pay via Official Razorpay Gateway &rarr;</span>
+                {loadingPlanId === 'custom' ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Opening Razorpay...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Pay via Razorpay Checkout &rarr;</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -678,22 +785,20 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
         </div>
       )}
 
-      {/* RAZORPAY GATEWAY MODAL / CONFIRMATION / INVOICE RECEIPT */}
-      {showTopupModal && (
+      {/* VERIFIED TAX INVOICE RECEIPT MODAL (ONLY AFTER SUCCESSFUL PAYMENT) */}
+      {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fadeIn">
           <div className="apple-glass rounded-2xl max-w-md w-full shadow-2xl border border-white/80 overflow-hidden bg-white/95 backdrop-blur-2xl animate-dialog-in">
             <div className="p-5 border-b border-[#e2e4ed] flex items-center justify-between bg-[#f8f9fc]/80">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-[#0f0e17]" />
-                <h3 className="font-bold text-[#0f0e17] text-sm">Official Razorpay Gateway</h3>
+                <h3 className="font-bold text-[#0f0e17] text-sm">Payment Confirmation</h3>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setShowTopupModal(false);
-                  setProcessing(false);
+                  setShowSuccessModal(false);
                   setIsAwaitingConfirmation(false);
-                  setGatewayError('');
                 }}
                 className="p-1 text-[#6c6b7e] hover:text-[#0f0e17] rounded-lg cursor-pointer"
               >
@@ -701,7 +806,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
               </button>
             </div>
 
-            {/* STATE 1: Awaiting Confirmation or Verifying on Return */}
+            {/* Awaiting Confirmation */}
             {isAwaitingConfirmation && !paymentSuccess ? (
               <div className="p-8 text-center space-y-4 animate-fadeIn">
                 <div className="w-16 h-16 bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
@@ -715,7 +820,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                 </div>
               </div>
             ) : paymentSuccess ? (
-              /* STATE 2: Verified & Paid Success Invoice */
+              /* Verified & Paid Success Invoice */
               <div className="p-8 text-center space-y-5 animate-fadeIn">
                 <div className="w-16 h-16 bg-[#f0fdf4] text-[#16a34a] border border-[#bbf7d0] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
                   <CheckCircle2 className="w-9 h-9" />
@@ -762,104 +867,14 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowTopupModal(false)}
+                    onClick={() => setShowSuccessModal(false)}
                     className="flex-1 bg-[#0f0e17] hover:bg-[#1f1e28] text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                   >
                     Return to Dashboard
                   </button>
                 </div>
               </div>
-            ) : (
-              /* STATE 3: Connecting & Redirecting to Official Razorpay Page (rzp.io) */
-              <div className="p-6 space-y-5 animate-fadeIn">
-                {selectedPlan && (
-                  <div className="bg-[#f8f9fc] p-4 rounded-xl space-y-2 border border-[#e2e4ed]">
-                    <div className="flex items-center justify-between text-xs text-[#6c6b7e]">
-                      <span>Plan / Top-up:</span>
-                      <span className="font-bold text-[#0f0e17]">{selectedPlan.name}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-[#6c6b7e]">
-                      <span>Base Amount:</span>
-                      <span className="font-bold text-[#0f0e17] tabular-nums">₹{selectedPlan.price.toLocaleString()}</span>
-                    </div>
-                    {selectedPlan.bonus > 0 && (
-                      <div className="flex items-center justify-between text-xs text-[#16a34a] font-semibold">
-                        <span>Bonus Credits ({selectedPlan.bonusPct}):</span>
-                        <span className="tabular-nums">+{selectedPlan.bonus.toLocaleString()} Credits</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-[#6c6b7e] pt-1 border-t border-[#e2e4ed]">
-                      <span>GST (18% Input Tax Credit):</span>
-                      <span className="tabular-nums">₹{(selectedPlan.price * 0.18).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm font-extrabold text-[#0f0e17] pt-1 border-t border-[#e2e4ed]">
-                      <span>Total Amount Payable:</span>
-                      <span className="text-[#0f0e17] tabular-nums">₹{(selectedPlan.price * 1.18).toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {gatewayError ? (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3">
-                    <div className="flex items-start gap-2.5 text-xs text-red-700">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
-                      <div>
-                        <strong className="block font-bold">Could not connect to Razorpay</strong>
-                        <span>{gatewayError}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleProceedToRazorpay(selectedPlan)}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 rounded-lg transition-all cursor-pointer"
-                      >
-                        Retry Connection
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowTopupModal(false)}
-                        className="px-4 bg-white border border-red-200 text-red-700 font-semibold text-xs py-2 rounded-lg transition-all cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-6 text-center space-y-4">
-                    <div className="w-14 h-14 bg-purple-50 text-[#7a50dc] border border-[#d9c7fa] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-                      <RefreshCw className="w-7 h-7 animate-spin" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-bold text-[#0f0e17]">
-                        {livePaymentLink ? 'Redirecting to Official Razorpay Gateway...' : 'Connecting to Official Razorpay Live Gateway...'}
-                      </h4>
-                      <p className="text-xs text-[#6c6b7e] mt-1 max-w-xs mx-auto leading-relaxed">
-                        Opening Razorpay's official secure payment page (rzp.io). You can pay via UPI (GPay, PhonePe, Paytm), Debit/Credit Cards, or Netbanking.
-                      </p>
-                    </div>
-
-                    {livePaymentLink && (
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => { window.location.href = livePaymentLink; }}
-                          className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-bold text-xs py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                        >
-                          <span>Open Razorpay Official Page Now</span>
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="text-[11px] text-[#6c6b7e] flex items-center justify-center gap-1.5 pt-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a] shrink-0" />
-                  <span>256-Bit SSL Encrypted Razorpay Live Gateway (rzp_live_TvJ7YXfy027Dyd)</span>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
