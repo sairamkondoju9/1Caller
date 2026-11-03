@@ -14,33 +14,119 @@ const protectedTabs = new Set([
   'performance', 'billing', 'settings', 'developers'
 ]);
 
-// Eagerly imported core views for instant 0ms first-paint and liquid-smooth navigation (Handshake AI standard)
+// Eagerly imported all views for instant 0ms tab switching and zero 'Loading module...' delay
 import LandingPageView from './views/LandingPageView';
 import DashboardView from './views/DashboardView';
+import NewEmployeeView from './views/NewEmployeeView';
+import TalkToEmployeeView from './views/TalkToEmployeeView';
+import InstantLeadsView from './views/InstantLeadsView';
+import BulkCampaignsView from './views/BulkCampaignsView';
+import InboundDeskView from './views/InboundDeskView';
+import LeadsResultsView from './views/LeadsResultsView';
+import AllConversationsView from './views/AllConversationsView';
+import TrainEmployeesView from './views/TrainEmployeesView';
+import PhoneNumbersView from './views/PhoneNumbersView';
+import PerformanceView from './views/PerformanceView';
+import BillingView from './views/BillingView';
+import SettingsView from './views/SettingsView';
+import DevelopersView from './views/DevelopersView';
+import OwnerAdminView from './views/OwnerAdminView';
+import PrivacyPolicyView from './views/PrivacyPolicyView';
+import TermsAndConditionsView from './views/TermsAndConditionsView';
+import RefundPolicyView from './views/RefundPolicyView';
+import ShippingPolicyView from './views/ShippingPolicyView';
+import ContactView from './views/ContactView';
+import NotFoundView from './views/NotFoundView';
 
-// Code-split secondary dynamic views with auto-retry and cache-busting resilience
-const LiveCallSimulator = lazyRetry(() => import('./components/screens/LiveCallSimulator').then(m => ({ default: m.LiveCallSimulator })), 'call-sim');
-const AgentFlowBuilder = lazyRetry(() => import('./components/screens/AgentFlowBuilder').then(m => ({ default: m.AgentFlowBuilder })), 'flow-builder');
-const FleetManager = lazyRetry(() => import('./components/screens/FleetManager').then(m => ({ default: m.FleetManager })), 'fleet-mgr');
-const ExecutiveAnalytics = lazyRetry(() => import('./components/screens/ExecutiveAnalytics').then(m => ({ default: m.ExecutiveAnalytics })), 'analytics');
 
-const NewEmployeeView = lazyRetry(() => import('./views/NewEmployeeView'), 'new-employee');
-const TalkToEmployeeView = lazyRetry(() => import('./views/TalkToEmployeeView'), 'talk-employee');
-const InstantLeadsView = lazyRetry(() => import('./views/InstantLeadsView'), 'instant-leads');
-const BulkCampaignsView = lazyRetry(() => import('./views/BulkCampaignsView'), 'bulk-campaigns');
-const InboundDeskView = lazyRetry(() => import('./views/InboundDeskView'), 'inbound-desk');
-const LeadsResultsView = lazyRetry(() => import('./views/LeadsResultsView'), 'leads-results');
-const AllConversationsView = lazyRetry(() => import('./views/AllConversationsView'), 'all-convos');
-const TrainEmployeesView = lazyRetry(() => import('./views/TrainEmployeesView'), 'train-employees');
-const PhoneNumbersView = lazyRetry(() => import('./views/PhoneNumbersView'), 'phone-numbers');
-const PerformanceView = lazyRetry(() => import('./views/PerformanceView'), 'performance');
-const BillingView = lazyRetry(() => import('./views/BillingView'), 'billing');
-const SettingsView = lazyRetry(() => import('./views/SettingsView'), 'settings');
-const DevelopersView = lazyRetry(() => import('./views/DevelopersView'), 'developers');
-const OwnerAdminView = lazyRetry(() => import('./views/OwnerAdminView'), 'owner-admin');
-const PrivacyPolicyView = lazyRetry(() => import('./views/PrivacyPolicyView'), 'privacy');
-const TermsAndConditionsView = lazyRetry(() => import('./views/TermsAndConditionsView'), 'terms');
-const NotFoundView = lazyRetry(() => import('./views/NotFoundView'), 'not-found');
+const CANONICAL_TABS = {
+  // Public & Compliance
+  'privacy': 'privacy',
+  'privacy-policy': 'privacy',
+  'privacy_policy': 'privacy',
+  'terms': 'terms',
+  'terms-and-conditions': 'terms',
+  'terms-of-service': 'terms',
+  'tos': 'terms',
+  'refund': 'refunds',
+  'refunds': 'refunds',
+  'refund-policy': 'refunds',
+  'cancellation-and-refund-policy': 'refunds',
+  'shipping': 'shipping',
+  'shipping-policy': 'shipping',
+  'shipping-and-delivery': 'shipping',
+  'delivery-policy': 'shipping',
+  'contact': 'contact',
+  'contact-us': 'contact',
+  'support': 'contact',
+  'help': 'contact',
+  'docs': 'developers',
+  'documentation': 'developers',
+
+  // Landing & In-Page Sections
+  'landing': 'landing',
+  'home': 'dashboard',
+  'pricing': 'landing',
+  'features': 'landing',
+  'hear': 'landing',
+  'how-it-works': 'landing',
+  'demo': 'landing',
+
+  // Application Views
+  'dashboard': 'dashboard',
+  'app': 'dashboard',
+  'ai-employee': 'my-employees',
+  'ai-employees': 'my-employees',
+  'employee': 'my-employees',
+  'employees': 'my-employees',
+  'my-employees': 'my-employees',
+  'new-employee': 'new-employee',
+  'employee-studio': 'employee-studio',
+  'talk-to-employee': 'talk-to-employee',
+  'instant-leads': 'instant-leads',
+  'lead': 'leads-results',
+  'leads': 'leads-results',
+  'leads-results': 'leads-results',
+  'campaign': 'bulk-campaigns',
+  'campaigns': 'bulk-campaigns',
+  'bulk-campaigns': 'bulk-campaigns',
+  'inbound-desk': 'inbound-desk',
+  'inbound': 'inbound-desk',
+  'call': 'all-conversations',
+  'calls': 'all-conversations',
+  'conversations': 'all-conversations',
+  'history': 'all-conversations',
+  'all-conversations': 'all-conversations',
+  'train-employees': 'train-employees',
+  'train': 'train-employees',
+  'training': 'train-employees',
+  'phone-numbers': 'phone-numbers',
+  'phone': 'phone-numbers',
+  'numbers': 'phone-numbers',
+  'performance': 'performance',
+  'analytics': 'performance',
+  'stats': 'performance',
+  'billing': 'billing',
+  'credits': 'billing',
+  'wallet': 'billing',
+  'topup': 'billing',
+  'recharge': 'billing',
+  'settings': 'settings',
+  'profile': 'settings',
+  'account': 'settings',
+  'developers': 'developers',
+  'api': 'developers',
+  'owner-admin': 'owner-admin',
+  'admin': 'owner-admin',
+  'owner': 'owner-admin'
+};
+
+const resolveCanonicalTab = (tab) => {
+  if (!tab) return 'landing';
+  const clean = String(tab).toLowerCase().trim().replace(/^\/+|\/+$/g, '');
+  const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'));
+  return CANONICAL_TABS[clean] || (hasToken ? 'dashboard' : 'landing');
+};
 
 const getInitialSession = () => {
   if (typeof window === 'undefined') return { tab: 'landing', user: null, ready: false };
@@ -84,6 +170,18 @@ const getInitialSession = () => {
 export default function App() {
   const [sessionInit] = useState(getInitialSession);
   const [activeTab, setActiveTab] = useState(sessionInit.tab);
+
+  // PushState URL synchronizer to ensure page refresh and browser back/forward buttons work seamlessly
+  const navigateTo = (rawTab, updateHistory = true) => {
+    const tab = resolveCanonicalTab(rawTab);
+    setActiveTab(tab);
+    if (updateHistory && typeof window !== 'undefined' && window.history?.pushState) {
+      const targetUrl = tab === 'landing' ? '/' : `/${tab}`;
+      if (window.location.pathname !== targetUrl) {
+        window.history.pushState({ tab }, '', targetUrl);
+      }
+    }
+  };
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -91,6 +189,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(sessionInit.ready);
   const [sessionError, setSessionError] = useState('');
   const [pendingTab, setPendingTab] = useState(null);
+  const [pendingPrompt, setPendingPrompt] = useState(null);
   const [workflowNotice, setWorkflowNotice] = useState('');
 
   const [stats, setStats] = useState({
@@ -109,9 +208,19 @@ export default function App() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Listen for smooth auth expiration without violent page refresh
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setSessionError('Please sign in to continue.');
+      setIsAuthModalOpen(true);
+    };
+    window.addEventListener('sarvam:auth_expired', handleAuthExpired);
+    return () => window.removeEventListener('sarvam:auth_expired', handleAuthExpired);
+  }, []);
+
   // Resolve the stored session before rendering any protected workflow.
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     if (!token) {
       setAuthReady(true);
       return;
@@ -119,21 +228,37 @@ export default function App() {
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(async response => {
         const data = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_role');
-          throw new Error(data.error || 'Your session expired. Please sign in again.');
+        if (response.ok && data.user) {
+          setCurrentUser(data.user);
+          setSessionError('');
+          localStorage.setItem('user', JSON.stringify(data.user));
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+            localStorage.setItem('token', data.token);
+          }
+          return;
         }
-        if (!response.ok) throw new Error(data.error || 'Could not verify your session. Please retry.');
-        return data;
-      })
-      .then(data => {
-        setCurrentUser(data.user || null);
-        setSessionError('');
+        if (response.status === 401) {
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+              if (payload.exp && Date.now() < payload.exp * 1000) {
+                console.warn('[Auth Verify] Server rejected with 401 but client token exp is still valid. Preserving session.');
+                return;
+              }
+            }
+          } catch {}
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_role');
+          setCurrentUser(null);
+          setSessionError('Your session expired. Please sign in again.');
+        }
       })
       .catch(error => {
-        setCurrentUser(null);
-        setSessionError(error.message || 'Could not verify your session.');
+        console.warn('[Auth Verify Network Notice]', error.message);
       })
       .finally(() => setAuthReady(true));
   }, []);
@@ -189,27 +314,61 @@ export default function App() {
   };
 
   useEffect(() => {
-    // URL and Secret Route Check: e.g. /privacy, /terms, /adminsairamsecreatelink
+    // URL, In-Page Anchors, and Secret Route Check: e.g. /privacy, /terms, #hear, #pricing
     const checkRoutes = () => {
       const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
       const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
-      const search = (window.location.search || '').toLowerCase();
-      const routeKey = path || hash;
-      if (!routeKey || routeKey === 'index.html') {
+      const searchParams = new URLSearchParams(window.location.search);
+
+      // URL query check for Razorpay Payment Link redirection
+      if (searchParams.get('payment_link') || searchParams.get('order_id')) {
+        setActiveTab('billing');
         return;
       }
 
-      const validTabs = [
-        'privacy', 'terms', 'owner-admin', 'dashboard', 'my-employees', 'employee-studio',
-        'new-employee', 'talk-to-employee', 'instant-leads', 'bulk-campaigns', 'inbound-desk',
-        'leads-results', 'all-conversations', 'train-employees', 'phone-numbers', 'performance',
-        'billing', 'settings', 'developers'
-      ];
+      // Auth routes: /login, /signin, /sign-in, /auth
+      const authRoutes = ['login', 'signin', 'sign-in', 'auth'];
+      if (authRoutes.includes(path) || authRoutes.includes(hash)) {
+        setActiveTab('landing');
+        setIsAuthModalOpen(true);
+        return;
+      }
 
-      if (validTabs.includes(routeKey)) {
-        setActiveTab(routeKey);
+      const inPageSections = ['hear', 'pricing', 'channels', 'brief', 'features', 'how-it-works'];
+
+      // Root path '/' or 'index.html'
+      if (!path || path === 'index.html') {
+        if (!hash || inPageSections.includes(hash)) {
+          setActiveTab('landing');
+          if (hash) {
+            setTimeout(() => {
+              const el = document.getElementById(hash);
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 60);
+          }
+          return;
+        }
+
+        const tab = resolveCanonicalTab(hash);
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        if (protectedTabs.has(tab) && !token) {
+          setPendingTab(tab);
+          setActiveTab('landing');
+          setIsAuthModalOpen(true);
+        } else {
+          setActiveTab(tab);
+        }
+        return;
+      }
+
+      const tab = resolveCanonicalTab(path);
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (protectedTabs.has(tab) && !token) {
+        setPendingTab(tab);
+        setActiveTab('landing');
+        setIsAuthModalOpen(true);
       } else {
-        setActiveTab('404');
+        setActiveTab(tab);
       }
     };
 
@@ -232,10 +391,13 @@ export default function App() {
   }, [authReady, currentUser, activeTab]);
 
   useEffect(() => {
-    if (!authReady || !protectedTabs.has(activeTab) || currentUser) return;
-    setPendingTab(activeTab);
-    setActiveTab('landing');
-    setIsAuthModalOpen(true);
+    if (!authReady) return;
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    if (protectedTabs.has(activeTab) && !token && !currentUser) {
+      setPendingTab(activeTab);
+      setActiveTab('landing');
+      setIsAuthModalOpen(true);
+    }
   }, [activeTab, authReady, currentUser]);
 
   // Handlers
@@ -291,6 +453,29 @@ export default function App() {
     }
   };
 
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!currentUser) {
+      setWorkflowNotice('Sign in before deleting an AI employee.');
+      setIsAuthModalOpen(true);
+      return false;
+    }
+    try {
+      const res = await apiFetch(`/api/employees/${employeeId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete employee');
+      refreshEmployees();
+      refreshStats();
+      setWorkflowNotice('Employee deleted successfully.');
+      return true;
+    } catch (err) {
+      setWorkflowNotice(err.message || 'Failed to delete employee.');
+      return false;
+    }
+  };
+
   const handleImpersonateTenant = (tenant) => {
     alert(`Switched workspace to: ${tenant.name} (${tenant.id})`);
     setActiveTab('dashboard');
@@ -304,7 +489,7 @@ export default function App() {
     if (!q) return;
 
     if (q.includes('bill') || q.includes('credit') || q.includes('recharge') || q.includes('price')) {
-      setActiveTab('billing');
+      navigateTo('billing');
     } else if (q.includes('number') || q.includes('phone') || q.includes('virtual') || q.includes('140')) {
       setActiveTab('phone-numbers');
     } else if (q.includes('train') || q.includes('faq') || q.includes('knowledge') || q.includes('rag')) {
@@ -372,12 +557,14 @@ export default function App() {
         )}
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
           <LandingPageView
-            onLaunchConsole={() => {
+            onLaunchConsole={(promptText) => {
+              if (promptText) setPendingPrompt(promptText);
               const token = localStorage.getItem('auth_token');
               if (!token || !currentUser) {
+                setPendingTab('new-employee');
                 setIsAuthModalOpen(true);
               } else {
-                setActiveTab('dashboard');
+                setActiveTab('new-employee');
               }
             }}
             onTalkToAgent={() => {
@@ -386,7 +573,7 @@ export default function App() {
               else setActiveTab('talk-to-employee');
             }}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
         </ErrorBoundary>
         <AuthModal
@@ -404,28 +591,57 @@ export default function App() {
     );
   }
 
-  if (activeTab === 'privacy') {
+  if (['privacy', 'privacy-policy', 'privacy_policy'].includes(activeTab)) {
     return (
-      <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Privacy Policy...</div>}>
-          <PrivacyPolicyView
-            onBack={() => setActiveTab('dashboard')}
-            onNavigate={(tab) => setActiveTab(tab)}
+      <ErrorBoundary onReset={() => navigateTo('dashboard')}>
+        <PrivacyPolicyView
+            onBack={() => navigateTo('landing')}
+            onNavigate={(tab) => navigateTo(tab)}
           />
-        </Suspense>
       </ErrorBoundary>
     );
   }
 
-  if (activeTab === 'terms') {
+  if (['terms', 'terms-and-conditions', 'terms-of-service', 'tos'].includes(activeTab)) {
     return (
-      <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-zinc-500 text-xs font-mono">Loading Terms & Conditions...</div>}>
-          <TermsAndConditionsView
-            onBack={() => setActiveTab('dashboard')}
-            onNavigate={(tab) => setActiveTab(tab)}
+      <ErrorBoundary onReset={() => navigateTo('dashboard')}>
+        <TermsAndConditionsView
+            onBack={() => navigateTo('landing')}
+            onNavigate={(tab) => navigateTo(tab)}
           />
-        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (['refund', 'refunds', 'refund-policy', 'cancellation-and-refund-policy'].includes(activeTab)) {
+    return (
+      <ErrorBoundary onReset={() => navigateTo('dashboard')}>
+        <RefundPolicyView
+            onBack={() => navigateTo('landing')}
+            onNavigate={(tab) => navigateTo(tab)}
+          />
+      </ErrorBoundary>
+    );
+  }
+
+  if (['shipping', 'shipping-policy', 'shipping-and-delivery', 'delivery-policy'].includes(activeTab)) {
+    return (
+      <ErrorBoundary onReset={() => navigateTo('dashboard')}>
+        <ShippingPolicyView
+            onBack={() => navigateTo('landing')}
+            onNavigate={(tab) => navigateTo(tab)}
+          />
+      </ErrorBoundary>
+    );
+  }
+
+  if (['contact', 'contact-us', 'support', 'help'].includes(activeTab)) {
+    return (
+      <ErrorBoundary onReset={() => navigateTo('dashboard')}>
+        <ContactView
+            onBack={() => navigateTo('landing')}
+            onNavigate={(tab) => navigateTo(tab)}
+          />
       </ErrorBoundary>
     );
   }
@@ -435,7 +651,7 @@ export default function App() {
       {/* Top Header Navigation (Apple Duo Glass Style) */}
       <Navbar
         stats={stats}
-        onOpenBilling={() => setActiveTab('billing')}
+        onOpenBilling={() => navigateTo('billing')}
         onSearch={handleGlobalSearch}
         currentSearch={searchQuery}
         currentUser={currentUser}
@@ -481,32 +697,35 @@ export default function App() {
             </div>
           )}
           <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
-          <Suspense fallback={<div className="p-8 text-[#6c6b7e] text-xs font-mono">Loading module...</div>}>
           {/* Secret Admin Portal (Accessible strictly via /adminsairamsecreatelink) */}
           {activeTab === 'owner-admin' && (
             <OwnerAdminView
               onImpersonateTenant={handleImpersonateTenant}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'dashboard' && (
             <DashboardView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
               onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
                 setSelectedEmployee({ ...emp, initialTab: targetTab });
                 setActiveTab('employee-studio');
               }}
               employees={employees}
               stats={stats}
+              campaigns={campaigns}
+              onQuickAction={(action) => handleQuickAction(action)}
             />
           )}
 
           {activeTab === 'my-employees' && (
             <DashboardView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
               onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
                 setSelectedEmployee({ ...emp, initialTab: targetTab });
                 setActiveTab('employee-studio');
@@ -523,16 +742,24 @@ export default function App() {
               initialData={selectedEmployee}
               initialTab={selectedEmployee?.initialTab || 'call-script'}
               onSaveEmployee={handleSaveEmployee}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onDeleteEmployee={handleDeleteEmployee}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'new-employee' && (
             <NewEmployeeView
               initialStep={2}
-              initialData={null}
+              initialData={pendingPrompt ? { prompt: pendingPrompt } : null}
               onSaveEmployee={handleSaveEmployee}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onBuildEmployee={(emp, targetTab = 'call-script') => {
+                setSelectedEmployee({ ...emp, initialTab: targetTab });
+                setActiveTab('employee-studio');
+              }}
+              onNavigate={(tab) => {
+                setPendingPrompt(null);
+                setActiveTab(tab);
+              }}
             />
           )}
 
@@ -544,7 +771,7 @@ export default function App() {
 
           {activeTab === 'instant-leads' && (
             <InstantLeadsView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
@@ -553,12 +780,12 @@ export default function App() {
               campaigns={campaigns}
               employees={employees}
               onCreateCampaign={handleCreateCampaign}
-              onNavigate={tab => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'inbound-desk' && (
-            <InboundDeskView employees={employees} onNavigate={(tab) => setActiveTab(tab)} />
+            <InboundDeskView employees={employees} onNavigate={(tab) => navigateTo(tab)} />
           )}
 
           {activeTab === 'leads-results' && (
@@ -571,7 +798,7 @@ export default function App() {
 
           {activeTab === 'train-employees' && (
             <TrainEmployeesView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
@@ -587,6 +814,7 @@ export default function App() {
 
           {activeTab === 'billing' && (
             <BillingView
+              currentUser={currentUser}
               onBalanceUpdate={refreshStats}
             />
           )}
@@ -602,14 +830,25 @@ export default function App() {
           )}
 
           {![
-            'owner-admin', 'dashboard', 'my-employees', 'employee-studio', 'new-employee',
+            'dashboard', 'owner-admin', 'my-employees', 'employee-studio', 'new-employee',
             'talk-to-employee', 'instant-leads', 'bulk-campaigns', 'inbound-desk',
             'leads-results', 'all-conversations', 'train-employees', 'phone-numbers',
             'performance', 'billing', 'settings', 'developers'
-          ].includes(activeTab) && (
-            <NotFoundView onNavigate={(tab) => setActiveTab(tab)} />
-          )}
-          </Suspense>
+          ].includes(activeTab) ? (
+            <DashboardView
+              stats={stats}
+              employees={employees}
+              campaigns={campaigns}
+              onNavigate={(tab) => navigateTo(tab)}
+              onQuickAction={(action) => handleQuickAction(action)}
+              onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
+              onBuildEmployee={(emp, targetTab = 'call-script') => {
+                setSelectedEmployee({ ...emp, initialTab: targetTab });
+                setActiveTab('employee-studio');
+              }}
+            />
+          ) : null}
           </ErrorBoundary>
         </main>
       </div>

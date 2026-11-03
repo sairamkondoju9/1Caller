@@ -716,6 +716,8 @@ export default function App() {
               }}
               employees={employees}
               stats={stats}
+              campaigns={campaigns}
+              onQuickAction={(action) => handleQuickAction(action)}
             />
           )}
 
@@ -827,8 +829,8 @@ export default function App() {
             <DevelopersView />
           )}
 
-          {activeTab === 'dashboard' || ![
-            'owner-admin', 'my-employees', 'employee-studio', 'new-employee',
+          {![
+            'dashboard', 'owner-admin', 'my-employees', 'employee-studio', 'new-employee',
             'talk-to-employee', 'instant-leads', 'bulk-campaigns', 'inbound-desk',
             'leads-results', 'all-conversations', 'train-employees', 'phone-numbers',
             'performance', 'billing', 'settings', 'developers'
@@ -839,6 +841,12 @@ export default function App() {
               campaigns={campaigns}
               onNavigate={(tab) => navigateTo(tab)}
               onQuickAction={(action) => handleQuickAction(action)}
+              onSaveEmployee={handleSaveEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
+              onBuildEmployee={(emp, targetTab = 'call-script') => {
+                setSelectedEmployee({ ...emp, initialTab: targetTab });
+                setActiveTab('employee-studio');
+              }}
             />
           ) : null}
           </ErrorBoundary>

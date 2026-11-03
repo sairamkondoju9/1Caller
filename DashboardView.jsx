@@ -2,41 +2,42 @@
 export function pickAutoNameAndVoice(langStr) {
   const l = (langStr || '').toLowerCase();
   if (l.includes('telugu') || l.includes('te')) {
-    const list = ['కావ్య', 'లక్ష్మి', 'సిరి', 'వందన', 'అనన్య'];
+    const list = ['Priya', 'Kavya', 'Sravani', 'Ananya', 'Harika'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'P09', label: 'P09 • Warm Telugu Voice' };
+    return { name, voice: 'P09', label: 'P09 · Warm Telugu Voice' };
   }
   if (l.includes('hindi') || l.includes('hi')) {
     const list = ['Imran', 'Pooja', 'Aarav', 'Rohan', 'Neha'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'H01', label: 'H01 • Fluent Hindi Professional' };
+    return { name, voice: 'H01', label: 'H01 · Fluent Hindi Professional' };
   }
   if (l.includes('tamil') || l.includes('ta')) {
     const list = ['Priya', 'Deepa', 'Karthik', 'Anitha'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'T01', label: 'T01 • Expressive Tamil Specialist' };
+    return { name, voice: 'T01', label: 'T01 · Expressive Tamil Specialist' };
   }
   if (l.includes('kannada') || l.includes('kn')) {
     const list = ['Sahana', 'Varun', 'Deepa', 'Kiran'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'K01', label: 'K01 • Natural Kannada Voice' };
+    return { name, voice: 'K01', label: 'K01 · Natural Kannada Voice' };
   }
   if (l.includes('malayalam') || l.includes('ml')) {
     const list = ['Anjali', 'Rahul', 'Reshma'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'M01', label: 'M01 • Clear Malayalam Advisor' };
+    return { name, voice: 'M01', label: 'M01 · Clear Malayalam Advisor' };
   }
   if (l.includes('marathi') || l.includes('mr')) {
     const list = ['Swati', 'Omkar', 'Pooja', 'Tanvi'];
     const name = list[Math.floor(Math.random() * list.length)];
-    return { name, voice: 'MR01', label: 'MR01 • Polished Marathi Executive' };
+    return { name, voice: 'MR01', label: 'MR01 · Polished Marathi Executive' };
   }
   const list = ['Lakshmi', 'Sarah', 'Alex', 'Rohan'];
   const name = list[Math.floor(Math.random() * list.length)];
-  return { name, voice: 'E01', label: 'E01 • Global English Professional' };
+  return { name, voice: 'E01', label: 'E01 · Global English Professional' };
 }
 
 import React, { useState, useEffect, useCallback } from 'react';
+import TrialCallModal from '../components/TrialCallModal';
 import { INDUSTRY_TEMPLATES, getIndustryDefaults } from '../utils/industryData';
 import { getAuthHeaders } from '../utils/api';
 import {
@@ -514,16 +515,29 @@ export default function DashboardView({
 
               <div className="pt-3 border-t border-[#f0f2f8] flex items-center justify-between text-xs text-[#6c6b7e]">
                 <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">{emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                    else if (onNavigate) onNavigate('employee-studio');
-                  }}
-                  className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
-                >
-                  Open Call Script &rarr;
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTrialCallEmployee(emp);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-[11.5px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <PhoneCall className="w-3 h-3" />
+                    <span>Trial Call</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                      else if (onNavigate) onNavigate('employee-studio');
+                    }}
+                    className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                  >
+                    Script &rarr;
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -598,7 +612,7 @@ export default function DashboardView({
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-7 font-sans text-[#0f0e17]">
       {/* 1. NEXT EMPLOYEE SETUP ACTION */}
-      {employees.some(employee => employee.status === 'draft') || employees.every(employee => employee.status === 'draft' || employee.status === 'archived') ? (
+      {employees.length > 0 && employees.some(employee => employee.status === 'draft') ? (
       <div className="apple-glass p-4 sm:p-5 flex items-center justify-between shadow-[0_4px_24px_-4px_rgba(15,14,23,0.03),inset_0_1px_1px_rgba(255,255,255,0.95)] rounded-2xl border border-white/60">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-[#fff7ed] border border-[#ffedd5] flex items-center justify-center text-[#ea580c] shadow-xs shrink-0">
@@ -1845,16 +1859,29 @@ export default function DashboardView({
                   <span className="font-mono text-[11px] text-[#7a50dc] font-semibold">
                     {emp.primary_language === 'te' || (emp.language && emp.language.includes('Telugu')) ? 'Telugu + English' : 'Multilingual'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
-                      else if (onNavigate) onNavigate('employee-studio');
-                    }}
-                    className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
-                  >
-                    Open Call Script &rarr;
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTrialCallEmployee(emp);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold text-[11.5px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <PhoneCall className="w-3 h-3" />
+                      <span>Trial Call</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onBuildEmployee) onBuildEmployee(emp, 'call-script');
+                        else if (onNavigate) onNavigate('employee-studio');
+                      }}
+                      className="text-[#7a50dc] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform cursor-pointer"
+                    >
+                      Script &rarr;
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

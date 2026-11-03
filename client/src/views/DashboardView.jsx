@@ -612,7 +612,7 @@ export default function DashboardView({
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-7 font-sans text-[#0f0e17]">
       {/* 1. NEXT EMPLOYEE SETUP ACTION */}
-      {employees.some(employee => employee.status === 'draft') || employees.every(employee => employee.status === 'draft' || employee.status === 'archived') ? (
+      {employees.length > 0 && employees.some(employee => employee.status === 'draft') ? (
       <div className="apple-glass p-4 sm:p-5 flex items-center justify-between shadow-[0_4px_24px_-4px_rgba(15,14,23,0.03),inset_0_1px_1px_rgba(255,255,255,0.95)] rounded-2xl border border-white/60">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-[#fff7ed] border border-[#ffedd5] flex items-center justify-center text-[#ea580c] shadow-xs shrink-0">
