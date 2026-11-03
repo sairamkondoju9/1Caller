@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Search,
@@ -15,68 +15,31 @@ import {
   Clock,
   Sparkles
 } from 'lucide-react';
+import { getAuthHeaders } from '../utils/api';
 
-export default function AllConversationsView({ calls = [] }) {
+export default function AllConversationsView({ calls = [], employees = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCall, setSelectedCall] = useState(null);
   const [playingId, setPlayingId] = useState(null);
   const [audioObj, setAudioObj] = useState(null);
+  const [realCalls, setRealCalls] = useState(calls);
+  const [loading, setLoading] = useState(true);
 
-  const defaultCalls = [
-    {
-      id: 'conv-1',
-      contact_name: 'Sairam',
-      phone: '+918919112039',
-      employee_name: 'Jagan',
-      direction: 'Outbound Instant',
-      qualification: 'qualified',
-      duration: '1m 30s',
-      cost: 13.6,
-      date: 'Today 5:00 PM',
-      audioUrl: '/audio/jagan-test-call.mp3',
-      summary: 'Caller interested in Christmas gold offer (no GST, no making charges) for Jillelaguda shop, requested WhatsApp catalog.',
-      transcript: [
-        { speaker: 'Jagan', text: 'నమస్కారం సాయిరామ్ గారు, నేను జిల్లేడుగూడ సాయిరామ్ జ్యువెలర్స్ నుండి జగన్ మాట్లాడుతున్నాను.' },
-        { speaker: 'Sairam', text: 'అవునండి, క్రిస్మస్ ఆఫర్లు ఏమైనా ఉన్నాయా?' },
-        { speaker: 'Jagan', text: 'అవునండి! నో జీఎస్టీ, నో మేకింగ్ ఛార్జెస్ అన్ని బంగారు, వెండి ఆభరణాలపై నడుస్తున్నాయి.' },
-        { speaker: 'Sairam', text: 'సరే వివరాలు వాట్సాప్ పంపించండి, చూసి వస్తాను.' }
-      ]
-    },
-    {
-      id: 'conv-2',
-      contact_name: 'Anil Kumar',
-      phone: '+919848012345',
-      employee_name: 'Jagan',
-      direction: 'Outbound Instant',
-      qualification: 'callback',
-      duration: '45s',
-      cost: 6.8,
-      date: 'Today 4:30 PM',
-      audioUrl: '/audio/jagan-test-call.mp3',
-      summary: 'Customer busy in meeting, requested callback tomorrow at 11 AM regarding silver articles for housewarming.',
-      transcript: [
-        { speaker: 'Jagan', text: 'హలో అనీల్ గారు, సాయిరామ్ జ్యువెలర్స్ నుంచి అండి.' },
-        { speaker: 'Customer', text: 'రేపు ఉదయం 11 గంటలకు చేయండి, ఇప్పుడు మీటింగ్‌లో ఉన్నాను.' },
-        { speaker: 'Jagan', text: 'తప్పకుండా అండీ, రేపు ఉదయం 11 గంటలకు మళ్లీ కాల్ చేస్తాను. ధన్యవాదాలు.' }
-      ]
-    },
-    {
-      id: 'conv-3',
-      contact_name: 'Sairam',
-      phone: '+918919112039',
-      employee_name: 'Jagan',
-      direction: 'Outbound Instant',
-      qualification: 'voicemail',
-      duration: '1s',
-      cost: 0.0,
-      date: 'Today 4:45 PM',
-      audioUrl: null,
-      summary: 'Call reached voicemail after 4 rings, retry scheduled in 20 minutes.',
-      transcript: []
-    }
-  ];
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/calls', { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (mounted && Array.isArray(data)) {
+          setRealCalls(data);
+        }
+      })
+      .catch(err => console.warn('[Calls fetch notice]:', err))
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
 
-  const activeCalls = (calls && calls.length > 0) ? calls : defaultCalls;
+  const activeCalls = realCalls;
 
   const filteredCalls = activeCalls.filter((c) => {
     const q = searchQuery.toLowerCase();
@@ -89,17 +52,18 @@ export default function AllConversationsView({ calls = [] }) {
   });
 
   const totalCalls = activeCalls.length;
-  const qualifiedCalls = activeCalls.filter((c) => c.qualification === 'qualified').length;
-  const totalCreditsUsed = activeCalls.reduce((acc, c) => acc + (c.cost || 0), 0);
+  const qualifiedCalls = activeCalls.filter((c) => c.qualification === 'qualified' || c.status === 'qualified').length;
+  const totalCreditsUsed = activeCalls.reduce((acc, c) => acc + (c.cost || c.credits_used || 0), 0);
 
   const handlePlayAudio = (call) => {
-    if (!call.audioUrl) return;
+    if (!call.audioUrl && !call.recording_url) return;
+    const url = call.audioUrl || call.recording_url;
     if (playingId === call.id) {
       if (audioObj) audioObj.pause();
       setPlayingId(null);
     } else {
       if (audioObj) audioObj.pause();
-      const sound = new Audio(call.audioUrl);
+      const sound = new Audio(url);
       sound.play().catch(err => console.warn("Audio playback notice:", err.message));
       sound.onended = () => setPlayingId(null);
       setAudioObj(sound);
@@ -123,20 +87,22 @@ export default function AllConversationsView({ calls = [] }) {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            const csv = activeCalls.map(c => `"${c.contact_name}","${c.phone}","${c.employee_name}","${c.qualification}","${c.duration}","${c.cost}","${c.date}"`).join('\n');
-            const blob = new Blob([`Name,Phone,Employee,Qualification,Duration,Cost,Date\n${csv}`], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'conversations_log.csv';
-            a.click();
-          }}
-          className="apple-glass text-[#0f0e17] text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
-        >
-          <Download className="w-3.5 h-3.5 text-[#6c6b7e]" /> Export CSV
-        </button>
+        {activeCalls.length > 0 && (
+          <button
+            onClick={() => {
+              const csv = activeCalls.map(c => `"${c.contact_name || c.contact || ''}","${c.phone || ''}","${c.employee_name || ''}","${c.qualification || c.status || ''}","${c.duration || ''}","${c.cost || 0}","${c.date || c.created_at || ''}"`).join('\n');
+              const blob = new Blob([`Name,Phone,Employee,Qualification,Duration,Cost,Date\n${csv}`], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'conversations_log.csv';
+              a.click();
+            }}
+            className="apple-glass text-[#0f0e17] text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
+          >
+            <Download className="w-3.5 h-3.5 text-[#6c6b7e]" /> Export CSV
+          </button>
+        )}
       </div>
 
       {/* Top 3 KPI Cards */}
@@ -167,164 +133,165 @@ export default function AllConversationsView({ calls = [] }) {
       </div>
 
       {/* Search Bar */}
-      <div className="apple-glass p-3.5 rounded-2xl border border-[#e2e4ed] shadow-xs">
-        <div className="relative">
-          <Search className="w-4 h-4 text-[#6c6b7e] absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search contact, phone, employee, summary..."
-            className="apple-glass-input w-full text-xs pl-9 pr-3 py-2 text-[#0f0e17] placeholder:text-[#6c6b7e]"
-          />
+      {activeCalls.length > 0 && (
+        <div className="apple-glass p-3.5 rounded-2xl border border-[#e2e4ed] shadow-xs">
+          <div className="relative">
+            <Search className="w-4 h-4 text-[#6c6b7e] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search contact, phone, employee, summary..."
+              className="apple-glass-input w-full text-xs pl-9 pr-3 py-2 text-[#0f0e17] placeholder:text-[#6c6b7e]"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Conversations Table */}
-      <div className="apple-glass rounded-2xl overflow-hidden border border-[#e2e4ed] shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#f8f9fc] border-b border-[#e2e4ed] text-[#6c6b7e] font-bold uppercase text-[10px] tracking-wider font-mono">
-              <tr>
-                <th className="py-3 px-5">Contact</th>
-                <th className="py-3 px-5">Employee</th>
-                <th className="py-3 px-5">Direction</th>
-                <th className="py-3 px-5">Summary</th>
-                <th className="py-3 px-5">Qualification</th>
-                <th className="py-3 px-5">Duration</th>
-                <th className="py-3 px-5">Cost</th>
-                <th className="py-3 px-5">Date</th>
-                <th className="py-3 px-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e2e4ed] text-[#3a3f5c]">
-              {filteredCalls.map((c) => (
-                <tr key={c.id} className="hover:bg-[#f6f7fb]/70 transition-colors">
-                  <td className="py-3.5 px-5 font-semibold text-[#0f0e17]">
-                    <div>{c.contact_name}</div>
-                    <div className="text-[11px] font-mono text-[#6c6b7e]">{c.phone}</div>
-                  </td>
+      {/* Conversations Table or Clean Empty State */}
+      {filteredCalls.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-[#e2e4ed] space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-[#7a50dc] mx-auto flex items-center justify-center">
+            <MessageSquare className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-[#0f0e17]">No conversations recorded yet</h3>
+            <p className="text-xs text-[#6c6b7e] max-w-md mx-auto mt-1">
+              When your AI employees make or receive calls, recordings, full transcripts, and lead qualification statuses will automatically appear here.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="apple-glass rounded-2xl overflow-hidden border border-[#e2e4ed] shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#f8f9fc] border-b border-[#e2e4ed] text-[#6c6b7e] font-bold uppercase text-[10px] tracking-wider font-mono">
+                <tr>
+                  <th className="py-3 px-5">Contact</th>
+                  <th className="py-3 px-5">Employee</th>
+                  <th className="py-3 px-5">Direction</th>
+                  <th className="py-3 px-5">Summary</th>
+                  <th className="py-3 px-5">Qualification</th>
+                  <th className="py-3 px-5">Duration</th>
+                  <th className="py-3 px-5">Cost</th>
+                  <th className="py-3 px-5">Date</th>
+                  <th className="py-3 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e2e4ed] text-[#3a3f5c]">
+                {filteredCalls.map((c) => (
+                  <tr key={c.id} className="hover:bg-[#f6f7fb]/70 transition-colors">
+                    <td className="py-3.5 px-5 font-semibold text-[#0f0e17]">
+                      <div>{c.contact_name || c.contact || 'Direct Call'}</div>
+                      <div className="text-[11px] font-mono text-[#6c6b7e]">{c.phone || c.to_number}</div>
+                    </td>
 
-                  <td className="py-3.5 px-5 font-medium text-[#0f0e17]">
-                    <span className="bg-[#f6f7fb] border border-[#e2e4ed] px-2 py-0.5 rounded text-[11px]">
-                      {c.employee_name}
-                    </span>
-                  </td>
+                    <td className="py-3.5 px-5 font-medium text-[#0f0e17]">
+                      <span className="bg-[#f6f7fb] border border-[#e2e4ed] px-2 py-0.5 rounded text-[11px]">
+                        {c.employee_name || 'AI Employee'}
+                      </span>
+                    </td>
 
-                  <td className="py-3.5 px-5 text-xs text-[#6c6b7e] font-mono">
-                    {c.direction}
-                  </td>
+                    <td className="py-3.5 px-5 text-xs text-[#6c6b7e] font-mono">
+                      {c.direction || 'Outbound'}
+                    </td>
 
-                  <td className="py-3.5 px-5 max-w-xs truncate text-[#3a3f5c]">
-                    {c.summary}
-                  </td>
+                    <td className="py-3.5 px-5 max-w-xs truncate text-[#3a3f5c]">
+                      {c.summary || c.call_summary || 'Completed conversation'}
+                    </td>
 
-                  <td className="py-3.5 px-5">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border font-mono ${
-                        c.qualification === 'qualified'
-                          ? 'bg-[#dcfce7] text-[#15803d] border-[#bbf7d0]'
-                          : c.qualification === 'callback'
-                          ? 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]'
-                          : 'bg-[#f1f5f9] text-[#475569] border-[#e2e8f0]'
-                      }`}
-                    >
-                      {c.qualification}
-                    </span>
-                  </td>
+                    <td className="py-3.5 px-5">
+                      <span
+                        className={`text-[10.5px] font-mono font-medium px-2 py-0.5 rounded-full border ${
+                          (c.qualification === 'qualified' || c.status === 'qualified')
+                            ? 'bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]'
+                            : (c.qualification === 'callback' || c.status === 'callback')
+                            ? 'bg-[#fffbeb] text-[#d97706] border-[#fde68a]'
+                            : 'bg-[#f6f7fb] text-[#6c6b7e] border-[#e2e4ed]'
+                        }`}
+                      >
+                        {c.qualification || c.status || 'Completed'}
+                      </span>
+                    </td>
 
-                  <td className="py-3.5 px-5 font-mono text-[#6c6b7e]">
-                    {c.duration}
-                  </td>
+                    <td className="py-3.5 px-5 font-mono text-[#6c6b7e]">
+                      {c.duration || '0s'}
+                    </td>
 
-                  <td className="py-3.5 px-5 font-mono text-[#0f0e17]">
-                    ₹{c.cost.toFixed(2)}
-                  </td>
+                    <td className="py-3.5 px-5 font-mono text-[#0f0e17]">
+                      ₹{Number(c.cost || c.credits_used || 0).toFixed(2)}
+                    </td>
 
-                  <td className="py-3.5 px-5 text-[11px] font-mono text-[#6c6b7e]">
-                    {c.date}
-                  </td>
+                    <td className="py-3.5 px-5 text-[#6c6b7e]">
+                      {c.date || (c.created_at ? new Date(c.created_at).toLocaleString() : 'Recent')}
+                    </td>
 
-                  <td className="py-3.5 px-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {c.audioUrl && (
-                        <button
-                          onClick={() => handlePlayAudio(c)}
-                          className="p-1.5 rounded-lg bg-[#f6f7fb] hover:bg-[#0f0e17] text-[#0f0e17] hover:text-white transition-all cursor-pointer border border-[#e2e4ed]"
-                          title="Play call recording"
-                        >
-                          {playingId === c.id ? (
-                            <Pause className="w-3.5 h-3.5 fill-current" />
-                          ) : (
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                          )}
-                        </button>
-                      )}
-                      {c.transcript && c.transcript.length > 0 && (
+                    <td className="py-3.5 px-5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {(c.audioUrl || c.recording_url) && (
+                          <button
+                            onClick={() => handlePlayAudio(c)}
+                            className="p-1.5 rounded-lg bg-[#f6f7fb] hover:bg-[#eef0f7] text-[#0f0e17] transition-colors cursor-pointer"
+                            title="Play Recording"
+                          >
+                            {playingId === c.id ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
                         <button
                           onClick={() => setSelectedCall(c)}
-                          className="p-1.5 rounded-lg bg-[#f6f7fb] hover:bg-[#f0f2f8] text-[#0f0e17] transition-all cursor-pointer border border-[#e2e4ed]"
-                          title="View transcript"
+                          className="px-2.5 py-1 text-xs font-semibold text-[#0f0e17] bg-[#f6f7fb] hover:bg-[#eef0f7] border border-[#e2e4ed] rounded-lg cursor-pointer"
                         >
-                          <FileText className="w-3.5 h-3.5" />
+                          View
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Transcript Modal */}
+      {/* Detail Modal */}
       {selectedCall && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="apple-glass rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl border border-white/80 bg-white/95 backdrop-blur-2xl max-h-[80vh] flex flex-col">
+          <div className="apple-glass rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl border border-white/80 bg-white/95 backdrop-blur-2xl">
             <div className="flex items-center justify-between border-b border-[#e2e4ed] pb-3">
               <div>
-                <h3 className="text-sm font-bold text-[#0f0e17] font-display">
-                  Call Recording &amp; Transcript
+                <h3 className="text-base font-bold text-[#0f0e17] font-display">
+                  {selectedCall.contact_name || selectedCall.contact || 'Direct Call'}
                 </h3>
-                <p className="text-[11px] font-mono text-[#6c6b7e]">
-                  {selectedCall.contact_name} ({selectedCall.phone}) · {selectedCall.date}
-                </p>
+                <p className="text-xs text-[#6c6b7e] font-mono">{selectedCall.phone || selectedCall.to_number}</p>
               </div>
-              <button
-                onClick={() => setSelectedCall(null)}
-                className="p-1 rounded-lg text-[#6c6b7e] hover:bg-[#f6f7fb] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
+              <button onClick={() => setSelectedCall(null)} className="p-1 text-[#6c6b7e] hover:text-[#0f0e17] cursor-pointer">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
-              {selectedCall.transcript.map((turn, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-xl border ${
-                    turn.speaker === 'Jagan'
-                      ? 'bg-[#f6f7fb] border-[#e2e4ed] text-[#0f0e17]'
-                      : 'bg-[#eff6ff] border-[#bfdbfe] text-[#1e3a8a]'
-                  }`}
-                >
-                  <div className="text-[10px] font-mono font-bold uppercase mb-1">
-                    {turn.speaker}
+            <div className="space-y-3">
+              <div className="p-3 bg-[#f8f9fc] rounded-xl border border-[#e2e4ed] text-xs">
+                <div className="font-bold text-[#0f0e17] mb-1">AI Call Summary</div>
+                <div className="text-[#3a3f5c] leading-relaxed">{selectedCall.summary || selectedCall.call_summary || 'No summary available.'}</div>
+              </div>
+
+              {selectedCall.transcript && Array.isArray(selectedCall.transcript) && selectedCall.transcript.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-[#0f0e17]">Transcript</div>
+                  <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-[#f8f9fc] rounded-xl border border-[#e2e4ed] text-xs">
+                    {selectedCall.transcript.map((t, idx) => (
+                      <div key={idx} className="leading-relaxed">
+                        <strong className="text-[#0f0e17]">{t.speaker}: </strong>
+                        <span className="text-[#3a3f5c]">{t.text}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="leading-relaxed font-sans">{turn.text}</div>
                 </div>
-              ))}
+              )}
             </div>
 
-            <div className="pt-2 border-t border-[#e2e4ed] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#16a34a] bg-[#f0fdf4] px-2.5 py-1 rounded-md border border-[#bbf7d0]">
-                Outcome: {selectedCall.qualification}
-              </span>
-              <button
-                onClick={() => setSelectedCall(null)}
-                className="px-4 py-2 text-xs bg-[#0f0e17] text-white font-semibold rounded-xl hover:bg-[#1f1e28] transition-colors cursor-pointer"
-              >
+            <div className="flex justify-end pt-2">
+              <button onClick={() => setSelectedCall(null)} className="sarvam-btn-primary px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer">
                 Close
               </button>
             </div>

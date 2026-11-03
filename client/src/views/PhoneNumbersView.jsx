@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Plus, ShieldCheck, CheckCircle2, AlertTriangle, ArrowRight, Sparkles, Zap, Radio, FileText, Building2, User, Check, X, Clock, Link2, ExternalLink } from 'lucide-react';
 import { getAuthHeaders } from '../utils/api';
 
-export default function PhoneNumbersView({ onBuyNumber, onBalanceUpdate }) {
+export default function PhoneNumbersView({ employees = [], onBuyNumber, onBalanceUpdate }) {
   const [numbersList, setNumbersList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -16,7 +16,7 @@ export default function PhoneNumbersView({ onBuyNumber, onBalanceUpdate }) {
   const [panNumber, setPanNumber] = useState('');
   const [gstin, setGstin] = useState('');
   const [existingSarvamNumber, setExistingSarvamNumber] = useState('');
-  const [assignedEmployee, setAssignedEmployee] = useState('emp-lakshmi');
+  const [assignedEmployee, setAssignedEmployee] = useState(employees[0]?.id || '');
   const [panError, setPanError] = useState('');
   const [successToast, setSuccessToast] = useState(null);
 
@@ -416,10 +416,15 @@ export default function PhoneNumbersView({ onBuyNumber, onBalanceUpdate }) {
                     onChange={(e) => setAssignedEmployee(e.target.value)}
                     className="w-full p-2.5 rounded-xl border border-[#e2e4ed] bg-[#f8f9fc] text-xs font-medium focus:outline-none focus:border-[#7a50dc] focus:bg-white cursor-pointer"
                   >
-                    <option value="emp-lakshmi">Lakshmi &mdash; Real Estate Sales (Telugu + English)</option>
-                    <option value="emp-bhuvana">Bhuvana &mdash; Car &amp; Bike Dealership (Telugu + English)</option>
-                    <option value="emp-ananya">Dr. Ananya &mdash; Sanjeevani Clinic Care (Telugu + English)</option>
-                    <option value="emp-jagan">Jagan &mdash; Jewellery Shop Sales Executive</option>
+                    {employees && employees.length > 0 ? (
+                      employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} &mdash; {emp.industry || 'AI Employee'} ({emp.language || 'Telugu + English'})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No AI employees created yet (create one first)</option>
+                    )}
                   </select>
                 </div>
 
@@ -563,10 +568,15 @@ export default function PhoneNumbersView({ onBuyNumber, onBalanceUpdate }) {
                       onChange={(e) => setAssignedEmployee(e.target.value)}
                       className="w-full p-2.5 rounded-xl border border-[#e2e4ed] bg-[#f8f9fc] text-xs font-medium focus:outline-none focus:border-[#7a50dc] focus:bg-white cursor-pointer"
                     >
-                      <option value="emp-lakshmi">Lakshmi &mdash; Real Estate Sales (Telugu + English)</option>
-                      <option value="emp-bhuvana">Bhuvana &mdash; Car &amp; Bike Dealership (Telugu + English)</option>
-                      <option value="emp-ananya">Dr. Ananya &mdash; Sanjeevani Clinic Care (Telugu + English)</option>
-                      <option value="emp-jagan">Jagan &mdash; Jewellery Shop Sales Executive</option>
+                      {employees && employees.length > 0 ? (
+                      employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} &mdash; {emp.industry || 'AI Employee'} ({emp.language || 'Telugu + English'})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No AI employees created yet (create one first)</option>
+                    )}
                     </select>
                   </div>
                 </div>

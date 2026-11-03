@@ -771,6 +771,7 @@ export default function App() {
 
           {activeTab === 'instant-leads' && (
             <InstantLeadsView
+              employees={employees}
               onNavigate={(tab) => navigateTo(tab)}
             />
           )}
@@ -793,17 +794,21 @@ export default function App() {
           )}
 
           {activeTab === 'all-conversations' && (
-            <AllConversationsView />
+            <AllConversationsView
+              employees={employees}
+            />
           )}
 
           {activeTab === 'train-employees' && (
             <TrainEmployeesView
+              employees={employees}
               onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'phone-numbers' && (
             <PhoneNumbersView
+              employees={employees}
               onBalanceUpdate={refreshStats}
             />
           )}

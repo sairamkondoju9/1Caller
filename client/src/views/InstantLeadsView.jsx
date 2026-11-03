@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAuthHeaders } from '../utils/api';
 import {
   Zap,
   Copy,
@@ -29,7 +30,8 @@ import {
   Download
 } from 'lucide-react';
 
-export default function InstantLeadsView({ onNavigate }) {
+export default function InstantLeadsView({ onNavigate, employees = [] }) {
+  const primaryEmployee = employees && employees.length > 0 ? employees[0] : null;
   // Banners & Webhook
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const webhookUrl = "https://api.sarvam.ai/v1/webhooks/incoming-leads";
@@ -66,63 +68,52 @@ export default function InstantLeadsView({ onNavigate }) {
   const [audioElement, setAudioElement] = useState(null);
   const [selectedTranscriptCall, setSelectedTranscriptCall] = useState(null);
 
-  // Mock Call Records matching Screenshots 13, 14, 18, 19
-  const allCalls = [
-    {
-      id: 'call-1',
-      contact: '+918919112039',
-      contactName: 'Sairam',
-      jewelleryType: 'Gold, Silver',
-      sendWhatsapp: 'Sent',
-      isHot: true,
-      summary: 'Enquired about Christmas gold offer, requested catalog on WhatsApp without committing to immediate visit.',
-      sentiment: 'Neutral',
-      outcome: 'Qualified',
-      duration: '1:30',
-      time: 'Today 5:00 PM',
-      audioUrl: '/audio/jagan-test-call.mp3',
-      transcript: [
-        { speaker: 'Jagan', text: 'నమస్కారం సాయిరామ్ గారు, నేను జిల్లేడుగూడ సాయిరామ్ జ్యువెలర్స్ నుండి జగన్ మాట్లాడుతున్నాను.' },
-        { speaker: 'Sairam', text: 'అవునండి, క్రిస్మస్ ఆఫర్లు ఏమైనా ఉన్నాయా?' },
-        { speaker: 'Jagan', text: 'అవునండి! నో జీఎస్టీ, నో మేకింగ్ ఛార్జెస్ అన్ని బంగారు, వెండి ఆభరణాలపై నడుస్తున్నాయి.' },
-        { speaker: 'Sairam', text: 'సరే వివరాలు వాట్సాప్ పంపించండి, చూసి వస్తాను.' }
-      ]
-    },
-    {
-      id: 'call-2',
-      contact: '+918919112039',
-      contactName: 'Sairam',
-      jewelleryType: '—',
-      sendWhatsapp: 'Pending',
-      isHot: false,
-      summary: 'Call reached voicemail after 4 rings, automatic 20 min retry scheduled.',
-      sentiment: 'Neutral',
-      outcome: 'Voicemail',
-      duration: '0:01',
-      time: 'Today 4:45 PM',
-      audioUrl: null,
-      transcript: []
-    },
-    {
-      id: 'call-3',
-      contact: 'Jagan Callback',
-      contactName: 'Anil Kumar',
-      jewelleryType: 'Silver',
-      sendWhatsapp: 'Sent',
-      isHot: false,
-      summary: 'Customer requested callback tomorrow at 11 AM regarding silver articles for housewarming.',
-      sentiment: 'Neutral',
-      outcome: 'Callback',
-      duration: '0:45',
-      time: 'Today 4:30 PM',
-      audioUrl: '/audio/jagan-test-call.mp3',
-      transcript: [
-        { speaker: 'Jagan', text: 'హలో అనీల్ గారు, సాయిరామ్ జ్యువెలర్స్ నుంచి అండి.' },
-        { speaker: 'Customer', text: 'రేపు ఉదయం 11 గంటలకు చేయండి, ఇప్పుడు మీటింగ్‌లో ఉన్నాను.' },
-        { speaker: 'Jagan', text: 'తప్పకుండా అండీ, రేపు ఉదయం 11 గంటలకు మళ్ళీ కాల్ చేస్తాను. ధన్యవాదాలు.' }
-      ]
+    // Dynamic Lead Calls State fetched from real API
+  const [allCalls, setAllCalls] = useState([]);
+  const [isLoadingCalls, setIsLoadingCalls] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchCalls() {
+      try {
+        const res = await fetch('/api/calls', {
+          headers: { ...getAuthHeaders() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            const list = Array.isArray(data) ? data : (data.calls || []);
+            const mapped = list.map((c) => ({
+              id: String(c.id || Math.random()),
+              contact: c.lead_phone || c.phone || c.contact || '+91' + String(c.id || '9876543210').slice(-10),
+              contactName: c.lead_name || c.contactName || (c.contact ? 'Lead ' + c.contact.slice(-4) : 'Direct Lead'),
+              jewelleryType: c.field_value || c.notes || '—',
+              sendWhatsapp: c.whatsapp_sent ? 'Sent' : 'Pending',
+              isHot: Boolean(c.is_hot || c.isHot),
+              summary: c.summary || c.call_summary || 'Autonomous enquiry call handled by AI telecaller.',
+              sentiment: c.sentiment || 'Neutral',
+              outcome: c.outcome || (c.status === 'completed' ? 'Qualified' : (c.status || 'Callback')),
+              duration: typeof c.duration === 'number'
+                ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}`
+                : (c.duration || '0:45'),
+              time: c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+              audioUrl: c.recording_url || c.audioUrl || null,
+              transcript: Array.isArray(c.transcript)
+                ? c.transcript
+                : (typeof c.transcript === 'string' ? JSON.parse(c.transcript || '[]') : [])
+            }));
+            setAllCalls(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load calls:', err);
+      } finally {
+        if (isMounted) setIsLoadingCalls(false);
+      }
     }
-  ];
+    fetchCalls();
+    return () => { isMounted = false; };
+  }, []);
 
   // Filtered Calls Logic
   const filteredCalls = allCalls.filter(call => {
@@ -324,7 +315,7 @@ export default function InstantLeadsView({ onNavigate }) {
               Connect your leads
             </h3>
             <p className="text-xs text-[#6c6b7e] mt-0.5">
-              Jagan calls new leads within seconds of submission — before your competitor's human team even opens their CRM.
+              {primaryEmployee?.name || 'Your AI telecaller'} calls new leads within seconds of submission — before your competitor's human team even opens their CRM.
             </p>
           </div>
 
@@ -903,8 +894,19 @@ export default function InstantLeadsView({ onNavigate }) {
               </tbody>
             </table>
           </div>
+        ) : allCalls.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#f6f7fb] border border-[#e2e4ed] flex items-center justify-center mx-auto text-[#6c6b7e]">
+              <Zap className="w-5 h-5 text-amber-500" />
+            </div>
+            <h4 className="text-sm font-bold text-[#0f0e17] font-display">
+              No instant lead calls yet
+            </h4>
+            <p className="text-xs text-[#6c6b7e] max-w-sm mx-auto">
+              Incoming leads from your webhook, CRM, or landing page will be automatically dialed within seconds. Copy your webhook URL above to connect your forms.
+            </p>
+          </div>
         ) : (
-          /* Empty State (Exact text from Screenshot 14) */
           <div className="p-12 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-[#f6f7fb] border border-[#e2e4ed] flex items-center justify-center mx-auto text-[#6c6b7e]">
               <Search className="w-5 h-5 text-[#6c6b7e]" />
@@ -951,13 +953,13 @@ export default function InstantLeadsView({ onNavigate }) {
                 <div
                   key={idx}
                   className={`p-3 rounded-xl border ${
-                    turn.speaker === 'Jagan'
+                    turn.speaker === 'Jagan' || turn.speaker.toLowerCase().includes('assistant') || (primaryEmployee && turn.speaker === primaryEmployee.name)
                       ? 'bg-[#f6f7fb] border-[#e2e4ed] text-[#0f0e17]'
                       : 'bg-[#eff6ff] border-[#bfdbfe] text-[#1e3a8a]'
                   }`}
                 >
                   <div className="text-[10px] font-mono font-bold uppercase mb-1">
-                    {turn.speaker}
+                    {turn.speaker === 'Jagan' ? (primaryEmployee?.name || 'AI Telecaller') : turn.speaker}
                   </div>
                   <div className="leading-relaxed font-sans">{turn.text}</div>
                 </div>

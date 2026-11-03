@@ -654,60 +654,12 @@ export default function NewEmployeeView({
 
   // Training tab chat & facts
   const [trainingInput, setTrainingInput] = useState('');
-  const [trainingChat, setTrainingChat] = useState([
-    { role: 'user', text: 'Where is your shop located?' },
-    { role: 'jagan', text: 'Maa showroom Jillelaguda main road lo undi andi. Meeru visit cheyali anukuntunnara? WhatsApp lo location map share cheyana?' }
-  ]);
-  const [factsList, setFactsList] = useState([
-    { label: 'Areas you cover', value: 'jillelaguda' },
-    { label: 'Offers', value: 'no gst no making charges on all of our jewellery silver and gold' },
-    { label: 'Prices', value: '5000 to 1500000' },
-    { label: 'What you sell', value: 'Gold jewellery, Silver jewellery, Diamond jewellery' }
-  ]);
+  const [trainingChat, setTrainingChat] = useState([]);
+  const [factsList, setFactsList] = useState([]);
   const [newFactInput, setNewFactInput] = useState('');
 
   // Call Logs Data for Instant Leads tab
-  const rawCallLogs = [
-    {
-      id: '#9243302c',
-      contact: '+918919112039',
-      badge: 'TEST CALL',
-      duration: '1:30',
-      cost: '₹10.20',
-      outcome: 'Qualified',
-      sentiment: 'Neutral',
-      jewelleryType: 'gold',
-      sendWhatsapp: 'true',
-      time: 'Today 4:47 pm',
-      summary: 'The caller expressed interest in gold jewellery and requested the shop location details to be sent via WhatsApp, without committing to a visit or purchase.'
-    },
-    {
-      id: '#8fc9d161',
-      contact: '+918919112039',
-      badge: 'TEST CALL',
-      duration: '0:04',
-      cost: '₹3.40',
-      outcome: 'Voicemail',
-      sentiment: 'Neutral',
-      jewelleryType: '—',
-      sendWhatsapp: '—',
-      time: 'Today 4:43 pm',
-      summary: 'Reached voicemail/an answering machine. Call terminated.'
-    },
-    {
-      id: '#0537e41c',
-      contact: 'Jagan',
-      badge: 'Web call',
-      duration: '0:00',
-      cost: '₹0.00',
-      outcome: 'Callback',
-      sentiment: 'Neutral',
-      jewelleryType: '—',
-      sendWhatsapp: '—',
-      time: 'Today 5:00 pm',
-      summary: 'No summary'
-    }
-  ];
+  const rawCallLogs = [];
 
   // Filtered Call Logs
   const filteredCallLogs = rawCallLogs.filter((call) => {
@@ -725,21 +677,7 @@ export default function NewEmployeeView({
   });
 
   // Real Telugu Conversation Turns (1:28 recording)
-    const realCallTurns = [
-    { time: 0, speaker: 'Jagan', text: 'హలో అండి, సాయిరామ్ తో మాట్లాడుతున్నానా?' },
-    { time: 4, speaker: 'Sairam', text: 'అవునవును.' },
-    { time: 6, speaker: 'Jagan', text: 'నమస్తే అండి, నేను జగన్ సాయిరామ్ జ్యువెలర్స్ జిల్లెలగూడ నుండి మాట్లాడుతున్నాను. మీరు జ్యువెలరీ గురించి ఎంక్వైరీ చేశారు కదా? మా షాప్ లో ఇప్పుడు క్రిస్మస్ ఆఫర్ నడుస్తోంది. గోల్డ్, సిల్వర్, డైమండ్ అన్నింటిపై జీఎస్టీ, మేకింగ్ ఛార్జెస్ ఏమీ లేవండి. మీకు ఏ టైప్ జ్యువెలరీలో ఇంట్రెస్ట్ ఉంది?' },
-    { time: 25, speaker: 'Sairam', text: 'గోల్డ్.' },
-    { time: 27, speaker: 'Jagan', text: 'ఓకే అండి, గోల్డ్ జ్యువెలరీలో అయితే చాలా మంచి కలెక్షన్స్ ఉన్నాయి. మీకేమైనా పర్టిక్యులర్ బడ్జెట్ ఉందా అండి? అంటే 5,000 నుంచి 15 లక్షల వరకు మన దగ్గర ఆప్షన్స్ ఉన్నాయి.' },
-    { time: 39, speaker: 'Sairam', text: 'సరే.' },
-    { time: 41, speaker: 'Jagan', text: 'సరే అండి, అర్థమైంది. మీకు గోల్డ్ జ్యువెలరీలో ఏవైనా పర్టిక్యులర్ డిజైన్స్ చూడాలని ఉందా? లేక కలెక్షన్స్ అన్నీ ఒక్కసారి చూడాలనుకుంటున్నారా?' },
-    { time: 50, speaker: 'Sairam', text: 'కలెక్షన్స్ అన్నీ ఒక్కసారి చూడాలనుకుంటున్నాను.' },
-    { time: 53, speaker: 'Jagan', text: 'తప్పకుండా అండి, కలెక్షన్స్ అన్నీ చాలా బాగుంటాయి. మీరొక్కసారి మా షాప్ కి వచ్చి చూస్తే మీకు నచ్చినవి సెలెక్ట్ చేసుకోవచ్చు. మీకు వీలైతే ఎప్పుడు రావాలనుకుంటున్నారు? లేదంటే లొకేషన్ డీటెయిల్స్ వాట్సాప్ లో పంపించమంటారా?' },
-    { time: 64, speaker: 'Sairam', text: 'ఆ పంపండి.' },
-    { time: 66, speaker: 'Jagan', text: 'తప్పకుండా అండి, లొకేషన్ డీటెయిల్స్ మీకు వాట్సాప్ లో పంపించేస్తాను. ఇంకేమైనా డీటెయిల్స్ కావాలా అండి? లేక షాప్ కి వచ్చేటప్పుడు ఏమైనా హెల్ప్ కావాలా?' },
-    { time: 74, speaker: 'Sairam', text: 'లేదు లేదు.' },
-    { time: 76, speaker: 'Jagan', text: 'సరే అండి థాంక్స్. లొకేషన్ పంపిస్తున్నాను. మీకు ఎప్పుడు వీలైతే అప్పుడు షాప్ కి రండి. క్రిస్మస్ ఆఫర్ మిస్ అవ్వకండి. ఇంకేమైనా డౌట్స్ ఉంటే ఎప్పుడైనా కాల్ చేయొచ్చండి. హ్యాపీ క్రిస్మస్!' }
-  ];
+    const realCallTurns = [];
 
   // Script steps on Step 4 (Concise 5 Steps + FAQs matching Outpero reference)
     const [scriptSteps, setScriptSteps] = useState([
@@ -892,7 +830,7 @@ export default function NewEmployeeView({
     }, 2800);
   };
 
-  const endCallToSummary = () => {
+  function endCallToSummary() {
     if (audioRef.current) {
       audioRef.current.pause();
       setIsPlayingAudio(false);
@@ -1397,8 +1335,8 @@ export default function NewEmployeeView({
       setTrainingChat((prev) => [
         ...prev,
         {
-          role: 'jagan',
-          text: 'సాయిరామ్ జ్యువెలర్స్ లో క్రిస్మస్ స్పెషల్ ఆఫర్స్ నడుస్తున్నాయి అండి. జీఎస్టీ మరియు మేకింగ్ ఛార్జీలు పూర్తిగా ఉచితం! మీరు ఎప్పుడు విజిట్ చేయాలనుకుంటున్నారు?'
+          role: 'assistant',
+          text: factsList.length > 0 ? ('Based on my training: ' + factsList.map(f => f.label + ': ' + f.value).join('. ') + '. How else can I help?') : ("I'm ready. Add knowledge facts above to ground my answers.")
         }
       ]);
     }, 900);
@@ -1708,10 +1646,10 @@ export default function NewEmployeeView({
             <div className="bg-white rounded-2xl p-4 border border-[#e2e4ed] shadow-xs space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#EA580C] text-white font-bold flex items-center justify-center shadow-xs">
-                  {(employeeName || 'Jagan').charAt(0)}
+                  {(employeeName || 'AI Employee').charAt(0)}
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-[#0f0e17]">{employeeName || 'Jagan'}</div>
+                  <div className="text-[13px] font-bold text-[#0f0e17]">{employeeName || 'AI Employee'}</div>
                   <div className="text-[11.5px] text-[#6c6b7e]">{businessName || 'Sairam Jewellers'}</div>
                 </div>
               </div>
@@ -2644,10 +2582,10 @@ export default function NewEmployeeView({
                   {/* Bottom Left Mini Employee Card */}
                   <div className="pt-4 border-t border-white/10 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#EA580C] text-white font-bold text-sm flex items-center justify-center shadow-xs shrink-0">
-                      {(employeeName || 'Jagan').charAt(0)}
+                      {(employeeName || 'AI Employee').charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'Jagan'}</div>
+                      <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'AI Employee'}</div>
                       <div className="text-[11px] text-white/60 truncate">{businessName || 'Sairam Jewellers'}</div>
                     </div>
                   </div>
@@ -2821,10 +2759,10 @@ export default function NewEmployeeView({
                   {/* Bottom Left Mini Employee Card */}
                   <div className="pt-4 border-t border-white/10 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#EA580C] text-white font-bold text-sm flex items-center justify-center shadow-xs shrink-0">
-                      {(employeeName || 'Jagan').charAt(0)}
+                      {(employeeName || 'AI Employee').charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'Jagan'}</div>
+                      <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'AI Employee'}</div>
                       <div className="text-[11px] text-white/60 truncate">{businessName || 'Sairam Jewellers'}</div>
                     </div>
                   </div>
@@ -2844,10 +2782,10 @@ export default function NewEmployeeView({
 
                   <div className="space-y-2">
                     <h2 className="text-[22px] sm:text-[26px] font-bold tracking-tight text-white font-display">
-                      Choose a voice for {employeeName || 'Jagan'}
+                      Choose a voice for {employeeName || 'AI Employee'}
                     </h2>
                     <p className="text-[13.5px] text-white/60 leading-relaxed">
-                      Pick how {employeeName || 'Jagan'} speaks on phone calls with callers. You can test and refine anytime.
+                      Pick how {employeeName || 'AI Employee'} speaks on phone calls with callers. You can test and refine anytime.
                     </p>
                   </div>
 
@@ -3040,7 +2978,7 @@ export default function NewEmployeeView({
                               <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600">
                                 <div className="w-full h-full rounded-full bg-white p-[2px]">
                                   <div className="w-full h-full rounded-full bg-[#7a50dc] text-white flex items-center justify-center text-xs font-bold">
-                                    {(employeeName || 'Jagan').charAt(0)}
+                                    {(employeeName || 'AI Employee').charAt(0)}
                                   </div>
                                 </div>
                               </div>
@@ -3092,7 +3030,7 @@ export default function NewEmployeeView({
                             {/* Call to Action Banner (Sign Up) */}
                             <div className="p-3 bg-zinc-50 border-b border-zinc-200/60 flex items-center justify-between">
                               <div className="min-w-0 pr-2">
-                                <div className="text-[12px] font-bold text-zinc-900 truncate">{employeeName || 'Jagan'}</div>
+                                <div className="text-[12px] font-bold text-zinc-900 truncate">{employeeName || 'AI Employee'}</div>
                                 <div className="text-[11px] text-zinc-500 truncate">{employeeRole}</div>
                               </div>
 
@@ -3145,10 +3083,10 @@ export default function NewEmployeeView({
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-8 h-8 rounded-full bg-[#7a50dc] text-white flex items-center justify-center text-xs font-bold">
-                                    {(employeeName || 'Jagan').charAt(0)}
+                                    {(employeeName || 'AI Employee').charAt(0)}
                                   </div>
                                   <div>
-                                    <div className="text-[13.5px] font-bold text-black leading-tight">Get a callback from {employeeName || 'Jagan'}</div>
+                                    <div className="text-[13.5px] font-bold text-black leading-tight">Get a callback from {employeeName || 'AI Employee'}</div>
                                     <div className="text-[11px] text-zinc-500">Fast 15-second response</div>
                                   </div>
                                 </div>
@@ -3218,11 +3156,11 @@ export default function NewEmployeeView({
                       <div className="flex-1 flex flex-col justify-between items-center py-12 px-6 bg-[#0f0e17] text-white">
                         <div className="text-center space-y-3 pt-6">
                           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#d99a2b] to-[#f2b94a] text-[#130e26] font-bold text-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
-                            {(employeeName || 'Jagan').charAt(0)}
+                            {(employeeName || 'AI Employee').charAt(0)}
                           </div>
                           <div>
                             <div className="text-[22px] font-bold tracking-tight text-white font-display">
-                              {employeeName || 'Jagan'}
+                              {employeeName || 'AI Employee'}
                             </div>
                             <div className="text-[13px] text-[#a78bfa] font-medium">
                               {businessName || 'Sairam Jewellers'} AI {employeeRole}
@@ -3281,9 +3219,9 @@ export default function NewEmployeeView({
                         {/* Call Top Bar */}
                         <div className="text-center space-y-1 pt-1">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#d99a2b] to-[#f2b94a] text-[#130e26] font-bold text-lg flex items-center justify-center mx-auto shadow-md">
-                            {(employeeName || 'Jagan').charAt(0)}
+                            {(employeeName || 'AI Employee').charAt(0)}
                           </div>
-                          <div className="text-[15px] font-bold text-white font-display">{employeeName || 'Jagan'}</div>
+                          <div className="text-[15px] font-bold text-white font-display">{employeeName || 'AI Employee'}</div>
                           <div className="text-[11.5px] text-emerald-400 font-mono flex items-center justify-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                             {formatTimer(Math.floor(audioCurrentTime))} / {formatTimer(audioDuration)} &bull; 412ms TTFT
@@ -3298,13 +3236,13 @@ export default function NewEmployeeView({
                               <div
                                 key={i}
                                 className={`p-3 rounded-2xl text-[12px] leading-relaxed transition-all ${
-                                  turn.speaker === 'Jagan'
+                                  turn.speaker === 'Jagan' || turn.speaker === 'Assistant' || (employeeName && turn.speaker === employeeName)
                                     ? 'bg-[#1e1442] border border-[#a78bfa]/40 text-white rounded-tl-xs mr-3'
                                     : 'bg-white/10 text-white/95 rounded-tr-xs ml-3 border border-white/10'
                                 }`}
                               >
                                 <div className="text-[9.5px] font-mono font-bold text-white/50 mb-0.5 uppercase flex items-center justify-between">
-                                  <span>{turn.speaker === 'Jagan' ? employeeName : turn.speaker}</span>
+                                  <span>{turn.speaker === 'Jagan' || turn.speaker === 'Assistant' || (employeeName && turn.speaker === employeeName) ? employeeName : turn.speaker}</span>
                                   <span className="text-[9px] text-[#a78bfa]">{formatTimer(turn.time)}</span>
                                 </div>
                                 {turn.text}
@@ -3349,7 +3287,7 @@ export default function NewEmployeeView({
                     )}
 
                     {/* ===================================================================== */}
-                    {/* CALL-ENDED / "HERE'S WHAT JAGAN CAUGHT" SCREEN */}
+                    {/* CALL-ENDED / "HERE'S WHAT EMPLOYEE CAUGHT" SCREEN */}
                     {/* ===================================================================== */}
                     {callState === 'call-ended' && (
                       <div className="flex-1 flex flex-col justify-between bg-white text-[#0f0e17] p-4.5 overflow-y-auto">
@@ -3513,11 +3451,11 @@ export default function NewEmployeeView({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#9a5b32] text-white font-bold text-2xl flex items-center justify-center shadow-xs shrink-0">
-                {(employeeName || 'Jagan').charAt(0)}
+                {(employeeName || 'AI Employee').charAt(0)}
               </div>
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-[24px] font-bold text-[#0f0e17] font-display">{employeeName || 'Jagan'}</h1>
+                  <h1 className="text-[24px] font-bold text-[#0f0e17] font-display">{employeeName || 'AI Employee'}</h1>
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-700 border border-cyan-200">
                     Draft
                   </span>
@@ -3898,10 +3836,10 @@ export default function NewEmployeeView({
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#d97757] text-white font-bold text-[12px] flex items-center justify-center shrink-0">
-                        {(employeeName || 'Jagan').charAt(0)}
+                        {(employeeName || 'AI Employee').charAt(0)}
                       </div>
                       <div>
-                        <div className="text-[13px] font-bold text-[#0f0e17]">{employeeName || 'Jagan'}</div>
+                        <div className="text-[13px] font-bold text-[#0f0e17]">{employeeName || 'AI Employee'}</div>
                         <div className="text-[11.5px] text-[#6c6b7e]">Today 5:00 pm &bull; 0:00</div>
                       </div>
                     </div>
@@ -4599,7 +4537,7 @@ export default function NewEmployeeView({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Facts & Knowledge Base */}
               <div className="lg:col-span-8 space-y-5">
-                {/* Tell Jagan something (Highlighted by Tour Step 5) */}
+                {/* Tell employee something (Highlighted by Tour Step 5) */}
                 <div
                   className={`bg-white rounded-3xl p-6 border shadow-xs space-y-4 transition-all ${
                     showTour && tourStep === 5
@@ -4655,7 +4593,7 @@ export default function NewEmployeeView({
                   </div>
                 </div>
 
-                {/* WHAT JAGAN KNOWS */}
+                {/* WHAT EMPLOYEE KNOWS */}
                 <div className="bg-white rounded-3xl p-6 border border-[#e2e4ed] shadow-xs space-y-4">
                   <div className="text-[11.5px] font-bold text-[#6c6b7e] uppercase tracking-wider font-mono">
                     WHAT {employeeName.toUpperCase()} KNOWS
@@ -4666,12 +4604,28 @@ export default function NewEmployeeView({
                       <div className="text-[11.5px] font-mono font-bold text-zinc-500">
                         FACTS &bull; {factsList.length}
                       </div>
-                      {factsList.map((f, i) => (
-                        <div key={i} className="p-3 rounded-xl bg-[#f6f7fb] border border-[#e8ebf3] text-[12.5px]">
-                          <span className="font-semibold text-zinc-800">{f.label}:</span>{' '}
-                          <span className="text-zinc-600">{f.value}</span>
+                      {factsList.length === 0 ? (
+                        <div className="p-4 rounded-xl border border-dashed border-zinc-200 text-zinc-400 text-xs text-center">
+                          No facts added yet. Add knowledge facts above to ground your employee.
                         </div>
-                      ))}
+                      ) : (
+                        factsList.map((f, i) => (
+                          <div key={i} className="p-3 rounded-xl bg-[#f6f7fb] border border-[#e8ebf3] text-[12.5px] flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold text-zinc-800">{f.label}:</span>{' '}
+                              <span className="text-zinc-600">{f.value}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFactsList(factsList.filter((_, idx) => idx !== i))}
+                              className="text-zinc-400 hover:text-red-500 cursor-pointer ml-2"
+                              title="Delete fact"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     <div className="space-y-2.5">
@@ -4707,13 +4661,13 @@ export default function NewEmployeeView({
                       <div
                         key={i}
                         className={`p-2.5 rounded-xl text-[12px] leading-relaxed ${
-                          msg.role === 'jagan'
+                          msg.role === 'jagan' || msg.role === 'assistant'
                             ? 'bg-[#f2ecfd] text-[#331c5f] mr-4'
                             : 'bg-zinc-100 text-zinc-800 ml-4'
                         }`}
                       >
                         <div className="text-[9.5px] font-mono font-bold opacity-60 mb-0.5">
-                          {msg.role === 'jagan' ? employeeName : 'You'}
+                          {msg.role === 'jagan' || msg.role === 'assistant' ? employeeName : 'You'}
                         </div>
                         {msg.text}
                       </div>
@@ -4737,7 +4691,7 @@ export default function NewEmployeeView({
                   </form>
                 </div>
 
-                {/* WHERE JAGAN STRUGGLED (Screenshot 1) */}
+                {/* WHERE STRUGGLED (Screenshot 1) */}
                 <div
                   className={`bg-white rounded-3xl p-5 border border-[#e2e4ed] shadow-xs space-y-2 transition-all ${
                     showTour && tourStep === 4 ? 'ring-4 ring-[#7a50dc] ring-offset-2' : ''

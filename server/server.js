@@ -1811,6 +1811,22 @@ app.post('/api/knowledge-base', authenticateToken, async (req, res) => {
   }
 });
 
+app.delete('/api/knowledge-base/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant_id;
+  try {
+    if (turso) {
+      await turso.execute({ sql: 'DELETE FROM knowledge_base WHERE id = ? AND tenant_id = ?', args: [id, tenantId] });
+    } else {
+      db.prepare('DELETE FROM knowledge_base WHERE id = ? AND tenant_id = ?').run(id, tenantId);
+    }
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('[Knowledge Base Delete Error]:', error.message);
+    res.status(500).json({ error: 'Could not delete knowledge base item.' });
+  }
+});
+
 // Billing & Credits
 app.get('/api/billing', authenticateToken, async (req, res) => {
   const tenantId = req.user.tenant_id;

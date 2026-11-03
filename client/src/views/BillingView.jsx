@@ -1,4 +1,3 @@
-import QRCode from 'qrcode';
 import React, { useState, useEffect } from 'react';
 import { getAuthHeaders } from '../utils/api';
 
@@ -215,17 +214,7 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         setActiveOrderId(orderData.orderId);
         setLivePaymentLink(orderData.paymentLinkUrl);
 
-        try {
-          const qr = await QRCode.toDataURL(orderData.paymentLinkUrl, {
-            width: 240,
-            margin: 1,
-            color: { dark: '#0f0e17', light: '#ffffff' }
-          });
-          setQrCodeDataUrl(qr);
-        } catch (e) {
-          setQrCodeDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(orderData.paymentLinkUrl)}`);
-        }
-
+        setQrCodeDataUrl(orderData.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderData.paymentLinkUrl)}`);
         startStatusPoller(orderData.orderId, plan);
       }
     } catch (err) {
