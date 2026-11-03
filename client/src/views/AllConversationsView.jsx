@@ -111,7 +111,7 @@ export default function AllConversationsView({ calls = [], employees = [] }) {
           <div className="w-8 h-8 rounded-lg bg-[#f6f7fb] text-[#0f0e17] border border-[#e2e4ed] flex items-center justify-center mb-2 shadow-2xs">
             <MessageSquare className="w-4 h-4" />
           </div>
-          <div className="text-2xl font-bold text-[#0f0e17] font-display">{totalCalls}</div>
+          <div className="text-2xl font-bold text-[#0f0e17] font-display tabular-nums">{totalCalls}</div>
           <div className="text-xs text-[#6c6b7e] font-medium">Calls · all time</div>
         </div>
 
@@ -119,7 +119,7 @@ export default function AllConversationsView({ calls = [], employees = [] }) {
           <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] text-[#16a34a] border border-[#bbf7d0] flex items-center justify-center mb-2 shadow-2xs">
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <div className="text-2xl font-bold text-[#16a34a] font-display">{qualifiedCalls}</div>
+          <div className="text-2xl font-bold text-[#16a34a] font-display tabular-nums">{qualifiedCalls}</div>
           <div className="text-xs text-[#6c6b7e] font-medium">Qualified · all time</div>
         </div>
 
@@ -127,7 +127,7 @@ export default function AllConversationsView({ calls = [], employees = [] }) {
           <div className="w-8 h-8 rounded-lg bg-[#fff7ed] text-[#ea580c] border border-[#fed7aa] flex items-center justify-center mb-2 shadow-2xs">
             <span className="text-sm font-bold font-mono">₹</span>
           </div>
-          <div className="text-2xl font-bold text-[#0f0e17] font-mono">₹{totalCreditsUsed.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-[#0f0e17] font-mono tabular-nums">₹{totalCreditsUsed.toFixed(2)}</div>
           <div className="text-xs text-[#6c6b7e] font-medium">Credits used · all time</div>
         </div>
       </div>

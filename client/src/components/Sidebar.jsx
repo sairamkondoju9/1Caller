@@ -105,7 +105,7 @@ export default function Sidebar({
                         onSelectTab(item.id);
                         if (onCloseMobile) onCloseMobile();
                       }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                         isActive
                           ? 'bg-[#0f0e17] text-white font-bold shadow-md ring-1 ring-black/5'
                           : 'text-[#3a3f5c] hover:bg-zinc-100 hover:text-[#0f0e17]'

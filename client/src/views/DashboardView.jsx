@@ -1712,7 +1712,7 @@ export default function DashboardView({
 
             {/* 2. REAL METRICS STRIP (CLEAN & MINIMAL) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-[#e2e4ed] shadow-xs space-y-1.5">
+        <div className="p-5 rounded-2xl bg-white/90 backdrop-blur-md border border-[#e2e4ed] shadow-xs hover:shadow-md hover:border-[#7a50dc]/40 transition-all duration-150 space-y-1.5">
           <div className="flex items-center justify-between text-[#6c6b7e]">
             <span className="text-xs font-medium">Calls Handled</span>
             <Phone className="w-4 h-4" />
@@ -1757,7 +1757,7 @@ export default function DashboardView({
               <span className="text-xs font-medium">Calling Balance</span>
               <CreditCard className="w-4 h-4 text-amber-600" />
             </div>
-            <div className="text-2xl font-bold font-display text-[#0f0e17] mt-1.5">
+            <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17] mt-1.5">
               ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
             </div>
           </div>
