@@ -731,7 +731,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
       {/* RECHARGE / CHECKOUT MODAL (Apple HIG Glass Sheet) */}
       {showTopupModal && selectedPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 animate-fadeIn">
-          <div className="apple-glass rounded-2xl max-w-md w-full shadow-2xl border border-white/80 overflow-hidden bg-white/95 backdrop-blur-2xl">
+          <div className="apple-glass rounded-2xl max-w-md w-full shadow-2xl border border-white/80 overflow-hidden bg-white/95 backdrop-blur-2xl animate-dialog-in">
             <div className="p-5 border-b border-[#e2e4ed] flex items-center justify-between bg-[#f8f9fc]/80">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-[#0f0e17]" />

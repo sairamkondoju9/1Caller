@@ -104,10 +104,10 @@ export default function Navbar({
           className="flex items-center gap-1.5 sm:gap-2 bg-[#fff7ed] hover:bg-[#ffedd5] border border-[#fed7aa] text-[#ea580c] text-xs px-2.5 sm:px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer shadow-2xs"
           title="Click to recharge wallet credits"
         >
-          <span className="text-[#c2410c] font-extrabold font-mono text-[11px] sm:text-xs">
+          <span className="text-[#c2410c] font-extrabold font-mono tabular-nums text-[11px] sm:text-xs">
             ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
           </span>
-          <span className="hidden sm:inline text-[#c2410c]/70 text-[11px] font-mono">
+          <span className="hidden sm:inline text-[#c2410c]/70 text-[11px] font-mono tabular-nums">
             ({stats?.balanceMinutes ?? '0.0'} min)
           </span>
           <span className="w-4 h-4 rounded-full bg-[#0f0e17] text-white flex items-center justify-center text-[10px] font-black">
@@ -178,7 +178,7 @@ export default function Navbar({
 
           {/* Account Dropdown Menu */}
           {isMenuOpen && currentUser && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#e2e4ed] py-2 z-50 animate-fadeIn text-left">
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#e2e4ed] py-2 z-50 animate-popover-in text-left">
               {/* Profile Header */}
               <div className="px-4 py-3 border-b border-[#e2e4ed]/70">
                 <div className="flex items-center gap-2.5">

@@ -198,7 +198,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       {/* Centered White Card (Pixel-perfect clone of app.outpero.com) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[420px] bg-white rounded-[28px] border border-zinc-200/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.07)] p-8 sm:p-9 text-left relative cursor-default transition-all"
+        className="w-full max-w-[420px] bg-white rounded-[28px] border border-zinc-200/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.07)] p-8 sm:p-9 text-left relative cursor-default transition-all animate-dialog-in"
       >
         {/* Modal Close Button */}
         <button
