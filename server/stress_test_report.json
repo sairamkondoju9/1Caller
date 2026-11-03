@@ -1,0 +1,306 @@
+{
+  "elapsedSeconds": 3616,
+  "targetDuration": 3600,
+  "concurrentUsers": 100,
+  "totalRequests": 985706,
+  "successfulRequests": 458420,
+  "failedRequests": 527286,
+  "errorRate": "53.49%",
+  "rps": "272.6",
+  "latencies": {
+    "avg": "334.0",
+    "p50": 52,
+    "p90": 900,
+    "p95": 1445,
+    "p99": 3084
+  },
+  "memory": {
+    "rssMB": "79.2",
+    "heapUsedMB": "37.9"
+  },
+  "endpointStats": {
+    "/api/auth/email/send-code": {
+      "calls": 100,
+      "errors": 0,
+      "totalLatency": 111024,
+      "min": 4,
+      "max": 10926
+    },
+    "/api/auth/email/verify-code": {
+      "calls": 100,
+      "errors": 0,
+      "totalLatency": 320295,
+      "min": 564,
+      "max": 7979
+    },
+    "/api/auth/me": {
+      "calls": 48167,
+      "errors": 26138,
+      "totalLatency": 17961499,
+      "min": 0,
+      "max": 30022
+    },
+    "/api/stats": {
+      "calls": 48167,
+      "errors": 26119,
+      "totalLatency": 30832518,
+      "min": 0,
+      "max": 15043
+    },
+    "/api/dashboard-summary": {
+      "calls": 48167,
+      "errors": 26165,
+      "totalLatency": 19774260,
+      "min": 0,
+      "max": 15034
+    },
+    "/api/employees [GET]": {
+      "calls": 48167,
+      "errors": 26082,
+      "totalLatency": 16431746,
+      "min": 0,
+      "max": 15012
+    },
+    "/api/employees [POST]": {
+      "calls": 48167,
+      "errors": 26017,
+      "totalLatency": 31698771,
+      "min": 0,
+      "max": 15016
+    },
+    "/api/campaigns [GET]": {
+      "calls": 48167,
+      "errors": 26087,
+      "totalLatency": 16370818,
+      "min": 0,
+      "max": 14658
+    },
+    "/api/leads": {
+      "calls": 48167,
+      "errors": 26011,
+      "totalLatency": 14237761,
+      "min": 0,
+      "max": 14499
+    },
+    "/api/calls": {
+      "calls": 48167,
+      "errors": 26022,
+      "totalLatency": 13495362,
+      "min": 0,
+      "max": 15008
+    },
+    "/api/billing": {
+      "calls": 48167,
+      "errors": 26015,
+      "totalLatency": 13778862,
+      "min": 0,
+      "max": 15001
+    },
+    "/api/billing/transactions": {
+      "calls": 48167,
+      "errors": 26006,
+      "totalLatency": 13730192,
+      "min": 0,
+      "max": 15003
+    },
+    "/api/billing/create-order": {
+      "calls": 48167,
+      "errors": 31656,
+      "totalLatency": 27191246,
+      "min": 0,
+      "max": 15014
+    },
+    "/api/settings [GET]": {
+      "calls": 48167,
+      "errors": 26056,
+      "totalLatency": 17080858,
+      "min": 0,
+      "max": 15016
+    },
+    "/api/dnc [POST]": {
+      "calls": 48167,
+      "errors": 26001,
+      "totalLatency": 25778826,
+      "min": 0,
+      "max": 15014
+    },
+    "/api/dnc [GET]": {
+      "calls": 48167,
+      "errors": 26061,
+      "totalLatency": 17798615,
+      "min": 0,
+      "max": 15022
+    },
+    "/api/dnc [DELETE]": {
+      "calls": 22166,
+      "errors": 39,
+      "totalLatency": 24791731,
+      "min": 1,
+      "max": 15015
+    },
+    "/api/phone-numbers": {
+      "calls": 48167,
+      "errors": 26066,
+      "totalLatency": 17153315,
+      "min": 0,
+      "max": 15024
+    },
+    "/api/performance": {
+      "calls": 48167,
+      "errors": 26063,
+      "totalLatency": 16189855,
+      "min": 0,
+      "max": 21699
+    },
+    "/audio/voices/P09.wav": {
+      "calls": 48167,
+      "errors": 26083,
+      "totalLatency": 10060923,
+      "min": 0,
+      "max": 31644
+    },
+    "/audio/ambience/quiet-office.wav": {
+      "calls": 48167,
+      "errors": 26058,
+      "totalLatency": 6590138,
+      "min": 0,
+      "max": 35802
+    },
+    "/terms": {
+      "calls": 48167,
+      "errors": 26270,
+      "totalLatency": 2250094,
+      "min": 0,
+      "max": 2979
+    },
+    "/refund": {
+      "calls": 48167,
+      "errors": 26271,
+      "totalLatency": 2190704,
+      "min": 0,
+      "max": 11090
+    }
+  },
+  "recentErrors": [
+    {
+      "time": "2026-11-03T08:52:39.342Z",
+      "endpoint": "/api/settings [GET]",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.870Z",
+      "endpoint": "/api/dnc [POST]",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.871Z",
+      "endpoint": "/api/billing/create-order",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.872Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.873Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.873Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.874Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.875Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.900Z",
+      "endpoint": "/api/billing",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.901Z",
+      "endpoint": "/api/dnc [POST]",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.902Z",
+      "endpoint": "/api/billing/create-order",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.903Z",
+      "endpoint": "/api/dnc [POST]",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.905Z",
+      "endpoint": "/api/billing/create-order",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.906Z",
+      "endpoint": "/api/billing/create-order",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.906Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.907Z",
+      "endpoint": "/api/billing",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.907Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.908Z",
+      "endpoint": "/api/billing/transactions",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.908Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    },
+    {
+      "time": "2026-11-03T08:52:39.909Z",
+      "endpoint": "/api/dashboard-summary",
+      "status": 0,
+      "error": "read ECONNRESET"
+    }
+  ]
+}

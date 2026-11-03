@@ -61,6 +61,57 @@ export default function BillingView({ onBalanceUpdate }) {
 
   useEffect(() => {
     fetchBillingData();
+
+    // Automatic verification when returning from official Razorpay Live Gateway
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPaymentReturn = urlParams.get('payment_link') === 'true' || urlParams.has('razorpay_payment_id') || urlParams.has('order_id');
+      const orderIdParam = urlParams.get('order_id') || urlParams.get('razorpay_payment_link_reference_id');
+      const paymentIdParam = urlParams.get('razorpay_payment_id');
+      const paymentLinkIdParam = urlParams.get('razorpay_payment_link_id');
+
+      if (isPaymentReturn && (orderIdParam || paymentIdParam || paymentLinkIdParam)) {
+        setProcessing(true);
+        setSelectedPlan(prev => prev || { id: 'custom', name: 'Calling Credits Top-Up', price: 100, credits: 100, bonus: 0, bonusPct: '0%' });
+        setShowTopupModal(true);
+        setIsAwaitingConfirmation(true);
+
+        fetch('/api/billing/verify-order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({
+            orderId: orderIdParam,
+            paymentId: paymentIdParam,
+            paymentLinkId: paymentLinkIdParam
+          })
+        })
+          .then(r => r.json())
+          .then(data => {
+            setProcessing(false);
+            setIsAwaitingConfirmation(false);
+            if (data.success && data.status === 'paid') {
+              setPaymentSuccess(true);
+              setLastPaymentDetails({
+                paymentId: data.paymentId || paymentIdParam || 'rzp_verified',
+                orderId: data.orderId || orderIdParam || 'order_verified',
+                invoiceId: data.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
+                credits: data.creditsAdded || 100,
+                amount: data.baseAmount || 100,
+                totalPaid: ((data.baseAmount || 100) * 1.18).toFixed(2),
+                date: new Date().toLocaleString('en-IN')
+              });
+              fetchBillingData();
+              if (onBalanceUpdate) onBalanceUpdate();
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch(err => {
+            console.error('[Payment Verification Network Error]:', err);
+            setProcessing(false);
+            setIsAwaitingConfirmation(false);
+          });
+      }
+    }
   }, []);
 
   const balanceCredits = Number(billing?.balance_credits ?? 0);
@@ -279,6 +330,8 @@ export default function BillingView({ onBalanceUpdate }) {
             setProcessing(false);
           }
         },
+        one_click_checkout: false,
+        send_sms_hash: false,
         prefill,
         notes: {
           platform: 'Sarvam Voice AI Engine',
@@ -297,16 +350,13 @@ export default function BillingView({ onBalanceUpdate }) {
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (resp) {
         console.warn('[Razorpay Payment Notice]:', resp.error);
-        const desc = resp.error?.description || '';
-        const reason = resp.error?.reason || '';
-        // If domain whitelisting is needed or popup blocked, automatically launch official Razorpay link
+        // Automatically seamless navigation to Razorpay Official Hosted Gateway
         if (orderData.paymentLinkUrl) {
-          window.open(orderData.paymentLinkUrl, '_blank');
-        } else if (desc.includes('does not match registered website') || reason === 'payment_risk_check_failed') {
-          alert('Razorpay Live Payment Notice:\n\nThis domain (' + window.location.hostname + ') has been registered in Razorpay. Use the direct Razorpay Gateway below to complete payment immediately.');
-        } else {
-          alert('Payment notice: ' + (desc || 'Please complete checkout on the Razorpay gateway'));
+          window.location.href = orderData.paymentLinkUrl;
+          return;
         }
+        const desc = resp.error?.description || '';
+        alert('Payment notice: ' + (desc || 'Please complete checkout on the Razorpay gateway'));
         setProcessing(false);
       });
       rzp.open();
@@ -703,7 +753,19 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
               </button>
             </div>
 
-            {paymentSuccess ? (
+            {isAwaitingConfirmation && !paymentSuccess ? (
+              <div className="p-8 text-center space-y-4 animate-fadeIn">
+                <div className="w-16 h-16 bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] rounded-2xl flex items-center justify-center mx-auto shadow-sm animate-pulse">
+                  <RefreshCw className="w-8 h-8 animate-spin" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-[#0f0e17]">Verifying Razorpay Payment...</h4>
+                  <p className="text-xs text-[#6c6b7e] mt-1 max-w-xs mx-auto">
+                    Connecting to Razorpay Live Gateway to confirm your transaction. Calling credits will be added to your balance immediately.
+                  </p>
+                </div>
+              </div>
+            ) : paymentSuccess ? (
               <div className="p-8 text-center space-y-5 animate-fadeIn">
                 <div className="w-16 h-16 bg-[#f0fdf4] text-[#16a34a] border border-[#bbf7d0] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
                   <CheckCircle2 className="w-9 h-9" />
@@ -801,14 +863,24 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                   <span>256-Bit SSL Encrypted Razorpay Live Gateway (rzp_live_...)</span>
                 </div>
 
-                <button
-                  disabled={processing}
-                  onClick={handleProcessTopup}
-                  className="w-full bg-[#16a34a] hover:bg-[#15803d] disabled:opacity-50 text-white font-bold text-sm py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Lock className="w-4 h-4" />
-                  {processing ? 'Connecting to Razorpay...' : `Pay ₹${(selectedPlan.price * 1.18).toFixed(2)} via Razorpay`}
-                </button>
+                <div className="space-y-2 pt-1">
+                  <button
+                    disabled={processing}
+                    onClick={handleDirectGatewayPay}
+                    className="w-full bg-[#16a34a] hover:bg-[#15803d] disabled:opacity-50 text-white font-bold text-sm py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4" />
+                    {processing ? 'Connecting to Razorpay Gateway...' : `Pay ₹${(selectedPlan.price * 1.18).toFixed(2)} via Razorpay Live Gateway`}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processing}
+                    onClick={handleProcessTopup}
+                    className="w-full text-center text-xs text-[#6c6b7e] hover:text-[#0f0e17] py-1 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span>Prefer inline popup? Open Razorpay Modal</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

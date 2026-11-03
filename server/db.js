@@ -311,6 +311,14 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_dnc_phone ON dnc_registry(phone);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
+    CREATE INDEX IF NOT EXISTS idx_calls_tenant_created ON calls(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_leads_tenant_created ON leads(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_leads_tenant_status ON leads(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_employees_tenant ON employees(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_campaigns_tenant ON campaigns(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON transactions(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_billing_tenant ON billing(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_tenant ON payment_orders(tenant_id, order_id);
   `);
 
   // High-concurrency WAL mode & optimizations for 500k scale
