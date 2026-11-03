@@ -40,6 +40,17 @@ import NotFoundView from './views/NotFoundView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('landing');
+
+  // PushState URL synchronizer to ensure page refresh and browser back/forward buttons work seamlessly
+  const navigateTo = (tab, updateHistory = true) => {
+    setActiveTab(tab);
+    if (updateHistory && typeof window !== 'undefined' && window.history?.pushState) {
+      const targetUrl = tab === 'landing' ? '/' : `/${tab}`;
+      if (window.location.pathname !== targetUrl) {
+        window.history.pushState({ tab }, '', targetUrl);
+      }
+    }
+  };
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -185,6 +196,13 @@ export default function App() {
     const checkRoutes = () => {
       const path = (window.location.pathname || '').replace(/^\/+|\/+$/g, '').toLowerCase();
       const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
+      const searchParams = new URLSearchParams(window.location.search);
+
+      // URL query check for Razorpay Payment Link redirection
+      if (searchParams.get('payment_link') || searchParams.get('order_id')) {
+        navigateTo('billing');
+        return;
+      }
 
       // Auth routes: /login, /signin, /sign-in, /auth
       const authRoutes = ['login', 'signin', 'sign-in', 'auth'];
@@ -197,8 +215,11 @@ export default function App() {
       const routeAliasMap = {
         'privacy': 'privacy',
         'privacy-policy': 'privacy',
+        'privacy_policy': 'privacy',
         'terms': 'terms',
         'terms-and-conditions': 'terms',
+        'terms-of-service': 'terms',
+        'tos': 'terms',
         'refund': 'refunds',
         'refunds': 'refunds',
         'refund-policy': 'refunds',
@@ -209,7 +230,60 @@ export default function App() {
         'delivery-policy': 'shipping',
         'contact': 'contact',
         'contact-us': 'contact',
-        'app': 'dashboard'
+        'support': 'contact',
+        'help': 'contact',
+        'ai-employee': 'my-employees',
+        'ai-employees': 'my-employees',
+        'employee': 'my-employees',
+        'employees': 'my-employees',
+        'my-employees': 'my-employees',
+        'new-employee': 'new-employee',
+        'talk-to-employee': 'talk-to-employee',
+        'instant-leads': 'instant-leads',
+        'leads': 'leads-results',
+        'leads-results': 'leads-results',
+        'campaign': 'bulk-campaigns',
+        'campaigns': 'bulk-campaigns',
+        'bulk-campaigns': 'bulk-campaigns',
+        'inbound-desk': 'inbound-desk',
+        'inbound': 'inbound-desk',
+        'calls': 'all-conversations',
+        'call': 'all-conversations',
+        'conversations': 'all-conversations',
+        'history': 'all-conversations',
+        'all-conversations': 'all-conversations',
+        'train-employees': 'train-employees',
+        'train': 'train-employees',
+        'phone-numbers': 'phone-numbers',
+        'phone': 'phone-numbers',
+        'numbers': 'phone-numbers',
+        'performance': 'performance',
+        'analytics': 'performance',
+        'stats': 'performance',
+        'billing': 'billing',
+        'credits': 'billing',
+        'wallet': 'billing',
+        'topup': 'billing',
+        'recharge': 'billing',
+        'pricing': 'landing',
+        'features': 'landing',
+        'hear': 'landing',
+        'how-it-works': 'landing',
+        'demo': 'landing',
+        'settings': 'settings',
+        'profile': 'settings',
+        'account': 'settings',
+        'developers': 'developers',
+        'docs': 'developers',
+        'documentation': 'developers',
+        'api': 'developers',
+        'owner-admin': 'owner-admin',
+        'admin': 'owner-admin',
+        'owner': 'owner-admin',
+        'app': 'dashboard',
+        'dashboard': 'dashboard',
+        'home': 'dashboard',
+        'landing': 'landing'
       };
 
       const validTabs = [
@@ -237,9 +311,9 @@ export default function App() {
           return;
         }
 
-        const resolvedHash = routeAliasMap[hash] || hash;
-        if (validTabs.includes(resolvedHash)) {
-          const token = localStorage.getItem('auth_token');
+        const resolvedHash = routeAliasMap[hash] || (validTabs.includes(hash) ? hash : null);
+        if (resolvedHash) {
+          const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
           if (protectedTabs.has(resolvedHash) && !token) {
             setPendingTab(resolvedHash);
             setActiveTab('landing');
@@ -258,19 +332,26 @@ export default function App() {
         return;
       }
 
-      const resolvedPath = routeAliasMap[path] || path;
-      if (validTabs.includes(resolvedPath) || validTabs.includes(path)) {
-        const targetTab = validTabs.includes(resolvedPath) ? resolvedPath : path;
-        const token = localStorage.getItem('auth_token');
-        if (protectedTabs.has(targetTab) && !token) {
-          setPendingTab(targetTab);
+      const resolvedPath = routeAliasMap[path] || (validTabs.includes(path) ? path : null);
+      if (resolvedPath) {
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        if (protectedTabs.has(resolvedPath) && !token) {
+          setPendingTab(resolvedPath);
           setActiveTab('landing');
           setIsAuthModalOpen(true);
         } else {
-          setActiveTab(targetTab);
+          setActiveTab(resolvedPath);
         }
+        return;
+      }
+
+      // Safe fallback: NEVER show 404 on general navigation or refresh.
+      // Redirect signed-in users to dashboard, and visitors to landing.
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (token) {
+        setActiveTab('dashboard');
       } else {
-        setActiveTab('404');
+        setActiveTab('landing');
       }
     };
 
@@ -391,7 +472,7 @@ export default function App() {
     if (!q) return;
 
     if (q.includes('bill') || q.includes('credit') || q.includes('recharge') || q.includes('price')) {
-      setActiveTab('billing');
+      navigateTo('billing');
     } else if (q.includes('number') || q.includes('phone') || q.includes('virtual') || q.includes('140')) {
       setActiveTab('phone-numbers');
     } else if (q.includes('train') || q.includes('faq') || q.includes('knowledge') || q.includes('rag')) {
@@ -475,7 +556,7 @@ export default function App() {
               else setActiveTab('talk-to-employee');
             }}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
         </ErrorBoundary>
         <AuthModal
@@ -498,7 +579,7 @@ export default function App() {
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <PrivacyPolicyView
             onBack={() => setActiveTab('dashboard')}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
       </ErrorBoundary>
     );
@@ -509,7 +590,7 @@ export default function App() {
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <TermsAndConditionsView
             onBack={() => setActiveTab('landing')}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
       </ErrorBoundary>
     );
@@ -520,7 +601,7 @@ export default function App() {
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <RefundPolicyView
             onBack={() => setActiveTab('landing')}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
       </ErrorBoundary>
     );
@@ -531,7 +612,7 @@ export default function App() {
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <ShippingPolicyView
             onBack={() => setActiveTab('landing')}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
       </ErrorBoundary>
     );
@@ -542,7 +623,7 @@ export default function App() {
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <ContactView
             onBack={() => setActiveTab('landing')}
-            onNavigate={(tab) => setActiveTab(tab)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
       </ErrorBoundary>
     );
@@ -553,7 +634,7 @@ export default function App() {
       {/* Top Header Navigation (Apple Duo Glass Style) */}
       <Navbar
         stats={stats}
-        onOpenBilling={() => setActiveTab('billing')}
+        onOpenBilling={() => navigateTo('billing')}
         onSearch={handleGlobalSearch}
         currentSearch={searchQuery}
         currentUser={currentUser}
@@ -603,13 +684,13 @@ export default function App() {
           {activeTab === 'owner-admin' && (
             <OwnerAdminView
               onImpersonateTenant={handleImpersonateTenant}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'dashboard' && (
             <DashboardView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
               onSaveEmployee={handleSaveEmployee}
               onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
@@ -623,7 +704,7 @@ export default function App() {
 
           {activeTab === 'my-employees' && (
             <DashboardView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
               onSaveEmployee={handleSaveEmployee}
               onDeleteEmployee={handleDeleteEmployee}
               onBuildEmployee={(emp, targetTab = 'call-script') => {
@@ -643,7 +724,7 @@ export default function App() {
               initialTab={selectedEmployee?.initialTab || 'call-script'}
               onSaveEmployee={handleSaveEmployee}
               onDeleteEmployee={handleDeleteEmployee}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
@@ -671,7 +752,7 @@ export default function App() {
 
           {activeTab === 'instant-leads' && (
             <InstantLeadsView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
@@ -680,12 +761,12 @@ export default function App() {
               campaigns={campaigns}
               employees={employees}
               onCreateCampaign={handleCreateCampaign}
-              onNavigate={tab => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 
           {activeTab === 'inbound-desk' && (
-            <InboundDeskView employees={employees} onNavigate={(tab) => setActiveTab(tab)} />
+            <InboundDeskView employees={employees} onNavigate={(tab) => navigateTo(tab)} />
           )}
 
           {activeTab === 'leads-results' && (
@@ -698,7 +779,7 @@ export default function App() {
 
           {activeTab === 'train-employees' && (
             <TrainEmployeesView
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => navigateTo(tab)}
             />
           )}
 

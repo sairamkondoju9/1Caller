@@ -1954,14 +1954,46 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
                   VALUES (?, ?, ?, ?, ?, ?, ?, 'created')`)
         .run(order.id, tenantId, order.amount, baseAmount, creditAmount, 0, 'custom');
     }
-    console.log(`[Razorpay] Created live order ${order.id} for ₹${totalWithGst} (${amountInPaise} paise)`);
+    let paymentLinkUrl = null;
+    let paymentLinkId = null;
+    try {
+      const plink = await razorpay.paymentLink.create({
+        amount: amountInPaise,
+        currency: 'INR',
+        accept_partial: false,
+        reference_id: order.id,
+        description: `Credits Top-Up: ${baseAmount} Calling Credits`,
+        customer: {
+          name: req.user?.name || req.user?.email?.split('@')[0] || 'Customer',
+          email: req.user?.email || 'billing@sarvam.ai'
+        },
+        notify: { sms: false, email: false },
+        reminder_enable: false,
+        notes: {
+          order_id: order.id,
+          tenant_id: tenantId,
+          credits: String(creditAmount),
+          baseAmount: String(baseAmount)
+        },
+        callback_url: `${req.headers.origin || 'https://sarvam-eta-rose.vercel.app'}/billing?payment_link=true&order_id=${order.id}`,
+        callback_method: 'get'
+      });
+      paymentLinkUrl = plink.short_url;
+      paymentLinkId = plink.id;
+    } catch (plErr) {
+      console.warn('[Razorpay] Payment link creation note:', plErr.message);
+    }
+
+    console.log(`[Razorpay] Created live order ${order.id} for ₹${totalWithGst} (${amountInPaise} paise). Link: ${paymentLinkUrl || 'N/A'}`);
     res.json({
       success: true,
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       keyId: process.env.RAZORPAY_KEY_ID,
-      receipt: order.receipt
+      receipt: order.receipt,
+      paymentLinkUrl,
+      paymentLinkId
     });
   } catch (err) {
     console.error('[Razorpay] Order creation error:', err);
@@ -2119,6 +2151,146 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('[Razorpay] Payment verification error:', err);
     res.status(500).json({ error: 'Internal payment verification error', details: err.message });
+  }
+});
+
+// Poll or verify whether an order / payment link has been completed
+app.post('/api/billing/verify-order-status', authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Missing orderId parameter' });
+    }
+    if (!razorpay) {
+      return res.status(503).json({ error: 'Payments are not configured' });
+    }
+
+    const tenantId = req.user.tenant_id;
+    let paymentOrder;
+    if (turso) {
+      const storedOrder = await turso.execute({
+        sql: 'SELECT * FROM payment_orders WHERE order_id = ? AND tenant_id = ?',
+        args: [orderId, tenantId]
+      });
+      paymentOrder = storedOrder.rows[0];
+    } else {
+      paymentOrder = db.prepare('SELECT * FROM payment_orders WHERE order_id = ? AND tenant_id = ?').get(orderId, tenantId);
+    }
+
+    if (!paymentOrder) {
+      return res.status(404).json({ error: 'Order not found for this workspace' });
+    }
+
+    if (paymentOrder.status === 'credited') {
+      const billingRow = turso
+        ? (await turso.execute({ sql: 'SELECT * FROM billing WHERE tenant_id = ?', args: [tenantId] })).rows[0]
+        : db.prepare('SELECT * FROM billing WHERE tenant_id = ?').get(tenantId);
+      return res.json({
+        success: true,
+        status: 'paid',
+        alreadyCredited: true,
+        paymentId: paymentOrder.payment_id,
+        orderId,
+        creditsAdded: Number(paymentOrder.credits),
+        newBalance: billingRow?.balance_credits
+      });
+    }
+
+    const order = await razorpay.orders.fetch(orderId);
+    if (order.status !== 'paid') {
+      return res.json({
+        success: false,
+        status: order.status,
+        message: 'Order has not been paid yet'
+      });
+    }
+
+    const payments = await razorpay.orders.fetchPayments(orderId);
+    const capturedPayment = payments.items.find(p => p.status === 'captured') || payments.items[0];
+    const paymentId = capturedPayment?.id || `rzp_${orderId.slice(-8)}`;
+
+    const topupAmount = Number(paymentOrder.base_amount);
+    const creditsToAdd = Number(paymentOrder.credits);
+    const txId = `razorpay_${paymentId}`;
+    const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
+
+    if (turso) {
+      let tx;
+      try {
+        tx = await turso.transaction('write');
+        const existingPayment = await tx.execute({ sql: 'SELECT payment_id FROM payment_orders WHERE order_id = ?', args: [orderId] });
+        if (existingPayment.rows[0]?.payment_id) {
+          await tx.rollback();
+          return res.json({ success: true, status: 'paid', message: 'Already credited' });
+        }
+        await tx.execute({ sql: `INSERT OR IGNORE INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, 0, 0)`, args: [`b_${tenantId}`, tenantId] });
+        await tx.execute({ sql: 'UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?', args: [creditsToAdd, topupAmount, tenantId] });
+        await tx.execute({
+          sql: `INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status) VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')`,
+          args: [txId, tenantId, topupAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${paymentId})`, invoiceId]
+        });
+        await tx.execute({ sql: `UPDATE payment_orders SET status = 'credited', payment_id = ? WHERE order_id = ? AND tenant_id = ?`, args: [paymentId, orderId, tenantId] });
+        await tx.commit();
+      } catch (ledgerError) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw ledgerError;
+      }
+      const updated = await turso.execute({ sql: 'SELECT * FROM billing WHERE tenant_id = ?', args: [tenantId] });
+      invalidateTenantCache(tenantId);
+      return res.json({
+        success: true,
+        status: 'paid',
+        paymentId,
+        orderId,
+        invoiceId,
+        creditsAdded: creditsToAdd,
+        newBalance: updated.rows[0]?.balance_credits,
+        billing: updated.rows[0]
+      });
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const priorTransaction = db.prepare('SELECT id FROM transactions WHERE id = ?').get(txId);
+      if (!priorTransaction) {
+        const existingRow = db.prepare('SELECT id FROM billing WHERE tenant_id = ?').get(tenantId);
+        if (existingRow) {
+          db.prepare('UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?').run(
+            creditsToAdd, topupAmount, tenantId
+          );
+        } else {
+          db.prepare('INSERT INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, ?, ?)')
+            .run(`b_${tenantId}`, tenantId, creditsToAdd, topupAmount);
+        }
+        db.prepare(`
+          INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status)
+          VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')
+        `).run(txId, tenantId, topupAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${paymentId})`, invoiceId);
+        db.prepare(`UPDATE payment_orders SET status = 'credited', payment_id = ? WHERE order_id = ? AND tenant_id = ?`).run(paymentId, orderId, tenantId);
+      }
+      db.exec('COMMIT');
+    } catch (ledgerError) {
+      db.exec('ROLLBACK');
+      throw ledgerError;
+    }
+
+    const updatedBilling = db.prepare('SELECT * FROM billing WHERE tenant_id = ?').get(tenantId)
+      || db.prepare("SELECT * FROM billing WHERE id = 'b-1'").get();
+    invalidateTenantCache(tenantId);
+
+    res.json({
+      success: true,
+      status: 'paid',
+      paymentId,
+      orderId,
+      invoiceId,
+      creditsAdded: creditsToAdd,
+      newBalance: updatedBilling?.balance_credits,
+      billing: updatedBilling
+    });
+  } catch (err) {
+    console.error('[Razorpay] Verify order status error:', err);
+    res.status(500).json({ error: 'Failed to verify order status', details: err.message });
   }
 });
 

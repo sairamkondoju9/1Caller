@@ -22,6 +22,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('user_role', data.user.role || 'client');
       onLoginSuccess(data.user);
       onClose();

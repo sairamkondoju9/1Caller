@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAuthHeaders } from '../utils/api';
 
 import {
+  ExternalLink,
   CreditCard,
   Zap,
   CheckCircle2,
@@ -30,6 +31,9 @@ export default function BillingView({ onBalanceUpdate }) {
   // Recharge Modal State
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [livePaymentLink, setLivePaymentLink] = useState('');
+  const [activeOrderId, setActiveOrderId] = useState('');
+  const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -96,20 +100,51 @@ export default function BillingView({ onBalanceUpdate }) {
     });
   };
 
+  const startStatusPoller = (orderId, plan) => {
+    setIsAwaitingConfirmation(true);
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 120) { // Poll for up to 6 minutes
+        clearInterval(interval);
+        setIsAwaitingConfirmation(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/billing/verify-order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ orderId })
+        });
+        const data = await res.json();
+        if (data.success && data.status === 'paid') {
+          clearInterval(interval);
+          setIsAwaitingConfirmation(false);
+          setProcessing(false);
+          setPaymentSuccess(true);
+          setLastPaymentDetails({
+            paymentId: data.paymentId,
+            orderId: data.orderId,
+            invoiceId: data.invoiceId,
+            credits: data.creditsAdded,
+            amount: plan.price,
+            totalPaid: (plan.price * 1.18).toFixed(2),
+            date: new Date().toLocaleString('en-IN')
+          });
+          fetchBillingData();
+          if (onBalanceUpdate) onBalanceUpdate();
+        }
+      } catch {}
+    }, 3000);
+    return interval;
+  };
+
   const handleProcessTopup = async () => {
     if (!selectedPlan) return;
     setProcessing(true);
 
     try {
-      // 1. Ensure Razorpay SDK is loaded
-      const isLoaded = await loadRazorpayScript();
-      if (!isLoaded || !window.Razorpay) {
-        alert('Razorpay Checkout SDK could not be loaded. Please check your internet connection.');
-        setProcessing(false);
-        return;
-      }
-
-      // 2. Create official order on server
+      // 1. Create official order and Live Payment Link on server
       const orderRes = await fetch('/api/billing/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -127,19 +162,56 @@ export default function BillingView({ onBalanceUpdate }) {
         throw new Error(orderData.error || orderData.details || 'Failed to initialize Razorpay payment order');
       }
 
-      // 3. Launch official Razorpay Checkout popup
+      setActiveOrderId(orderData.orderId);
+      if (orderData.paymentLinkUrl) {
+        setLivePaymentLink(orderData.paymentLinkUrl);
+      }
+
+      // Start automatic polling for payment completion
+      startStatusPoller(orderData.orderId, selectedPlan);
+
+      // 2. Load Razorpay Checkout SDK for in-app popup
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded || !window.Razorpay) {
+        // If SDK blocked, open official live payment link directly!
+        if (orderData.paymentLinkUrl) {
+          window.open(orderData.paymentLinkUrl, '_blank');
+          setProcessing(false);
+          return;
+        }
+        alert('Razorpay Checkout SDK could not be loaded. Please check your internet connection.');
+        setProcessing(false);
+        return;
+      }
+
+      // 3. Launch official Razorpay Checkout popup with sanitized prefill
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sarvam-eta-rose.vercel.app';
+      const cleanContact = currentUser?.phone
+        ? currentUser.phone.replace(/[^0-9]/g, '').slice(-10)
+        : '';
+
+      const prefill = {};
+      if (currentUser?.name && currentUser.name.trim()) {
+        prefill.name = currentUser.name.trim();
+      }
+      if (currentUser?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentUser.email.trim())) {
+        prefill.email = currentUser.email.trim();
+      }
+      if (cleanContact && cleanContact.length === 10) {
+        prefill.contact = cleanContact;
+      }
+
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
         name: 'Sarvam Voice AI',
         description: `${selectedPlan.name} (${selectedPlan.credits.toLocaleString()} Calling Credits)`,
-        image: '/favicon.svg',
+        image: `${origin}/sarvam-logo.png`,
         order_id: orderData.orderId,
         handler: async function (response) {
           try {
             setProcessing(true);
-            // 4. Verify cryptographic HMAC-SHA256 signature on server
             const verifyRes = await fetch('/api/billing/verify-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -176,11 +248,7 @@ export default function BillingView({ onBalanceUpdate }) {
             setProcessing(false);
           }
         },
-        prefill: {
-          name: 'Sairam',
-          email: 'sairamkondoju9@gmail.com',
-          contact: '+919876543210'
-        },
+        prefill,
         notes: {
           platform: 'Sarvam Voice AI Engine',
           plan_name: selectedPlan.name
@@ -197,7 +265,17 @@ export default function BillingView({ onBalanceUpdate }) {
 
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (resp) {
-        alert('Payment failed: ' + (resp.error?.description || 'Transaction declined'));
+        console.warn('[Razorpay Payment Notice]:', resp.error);
+        const desc = resp.error?.description || '';
+        const reason = resp.error?.reason || '';
+        // If domain whitelisting is needed or popup blocked, automatically launch official Razorpay link
+        if (orderData.paymentLinkUrl) {
+          window.open(orderData.paymentLinkUrl, '_blank');
+        } else if (desc.includes('does not match registered website') || reason === 'payment_risk_check_failed') {
+          alert('Razorpay Live Payment Notice:\n\nThis domain (' + window.location.hostname + ') has been registered in Razorpay. Use the direct Razorpay Gateway below to complete payment immediately.');
+        } else {
+          alert('Payment notice: ' + (desc || 'Please complete checkout on the Razorpay gateway'));
+        }
         setProcessing(false);
       });
       rzp.open();
