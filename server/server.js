@@ -2133,6 +2133,8 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
     }
     let paymentLinkUrl = null;
     let paymentLinkId = null;
+    const clientOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || 'https://sarvam-eta-rose.vercel.app';
+    const customerEmail = (req.user?.email && req.user.email.includes('@')) ? req.user.email : 'billing@sarvam.ai';
     try {
       const plink = await razorpay.paymentLink.create({
         amount: amountInPaise,
@@ -2142,7 +2144,7 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
         description: `Credits Top-Up: ${baseAmount} Calling Credits`,
         customer: {
           name: req.user?.name || req.user?.email?.split('@')[0] || 'Customer',
-          email: req.user?.email || 'billing@sarvam.ai'
+          email: customerEmail
         },
         notify: { sms: false, email: false },
         reminder_enable: false,
@@ -2152,7 +2154,7 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
           credits: String(creditAmount),
           baseAmount: String(baseAmount)
         },
-        callback_url: `${req.headers.origin || 'https://sarvam-eta-rose.vercel.app'}/billing?payment_link=true&order_id=${order.id}`,
+        callback_url: `${clientOrigin}/billing?payment_link=true&order_id=${order.id}`,
         callback_method: 'get'
       });
       paymentLinkUrl = plink.short_url;
@@ -2409,7 +2411,14 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     if (paymentId) {
       try {
         const payRecord = await razorpay.payments.fetch(paymentId);
-        if (payRecord && payRecord.status === 'captured') {
+        if (payRecord && (payRecord.status === 'captured' || payRecord.status === 'authorized')) {
+          if (payRecord.status === 'authorized') {
+            try {
+              await razorpay.payments.capture(paymentId, payRecord.amount, payRecord.currency || 'INR');
+            } catch (capErr) {
+              console.warn('[Razorpay] Auto-capture note:', capErr.message);
+            }
+          }
           isPaid = true;
           verifiedPaymentId = payRecord.id;
           if (!paymentOrder) {
