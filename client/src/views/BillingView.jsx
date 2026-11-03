@@ -41,6 +41,7 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [lastPaymentDetails, setLastPaymentDetails] = useState(null);
+  const [gatewayError, setGatewayError] = useState('');
 
   // Invoicing Settings State
   const [gstin, setGstin] = useState('36AABCS1429B1Z2');
@@ -142,12 +143,20 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
-      if (window.Razorpay) {
+      if (typeof window !== 'undefined' && window.Razorpay) {
         resolve(true);
+        return;
+      }
+      const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+      if (existing) {
+        existing.onload = () => resolve(true);
+        existing.onerror = () => resolve(false);
+        if (window.Razorpay) resolve(true);
         return;
       }
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
@@ -155,13 +164,12 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
   };
 
   const startStatusPoller = (orderId, plan) => {
-    setIsAwaitingConfirmation(true);
+    // Only poll in background; NEVER block the user's modal with isAwaitingConfirmation
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      if (attempts > 120) { // Poll for up to 6 minutes
+      if (attempts > 120) {
         clearInterval(interval);
-        setIsAwaitingConfirmation(false);
         return;
       }
       try {
@@ -173,14 +181,14 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         const data = await res.json();
         if (data.success && data.status === 'paid') {
           clearInterval(interval);
-          setIsAwaitingConfirmation(false);
           setProcessing(false);
+          setIsAwaitingConfirmation(false);
           setPaymentSuccess(true);
           setLastPaymentDetails({
-            paymentId: data.paymentId,
-            orderId: data.orderId,
-            invoiceId: data.invoiceId,
-            credits: data.creditsAdded,
+            paymentId: data.paymentId || 'rzp_verified',
+            orderId: data.orderId || orderId,
+            invoiceId: data.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
+            credits: data.creditsAdded || plan.credits || plan.price,
             amount: plan.price,
             totalPaid: (plan.price * 1.18).toFixed(2),
             date: new Date().toLocaleString('en-IN')
@@ -193,11 +201,11 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
     return interval;
   };
 
-  // Generate Live Razorpay Order and UPI QR Code
+  // Generate Live Razorpay Order and optional UPI QR Code
   const generateQrForPlan = async (plan) => {
     if (!plan) return;
     setQrLoading(true);
-    setQrCodeDataUrl('');
+    setGatewayError('');
     try {
       const orderRes = await fetch('/api/billing/create-order', {
         method: 'POST',
@@ -205,64 +213,144 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
         body: JSON.stringify({
           amount: plan.price,
           credits: plan.credits,
-          bonusCredits: plan.bonus,
-          planId: plan.id,
-          planName: plan.name
+          bonusCredits: plan.bonus || 0,
+          planId: plan.id || 'custom',
+          planName: plan.name || 'Credits Top-Up'
         })
       });
       const orderData = await orderRes.json();
-      if (orderData.success && orderData.paymentLinkUrl) {
+      if (orderData.success) {
         setActiveOrderId(orderData.orderId);
-        setLivePaymentLink(orderData.paymentLinkUrl);
-
-        setQrCodeDataUrl(orderData.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderData.paymentLinkUrl)}`);
+        if (orderData.paymentLinkUrl) {
+          setLivePaymentLink(orderData.paymentLinkUrl);
+          setQrCodeDataUrl(orderData.qrCodeDataUrl || `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(orderData.paymentLinkUrl)}`);
+        }
         startStatusPoller(orderData.orderId, plan);
       }
     } catch (err) {
-      console.warn('[QR Gen Error]:', err);
+      console.warn('[QR Gen Note]:', err);
     } finally {
       setQrLoading(false);
     }
   };
 
-  // Automatically generate QR whenever modal opens with a plan
+  // Automatically fetch order/QR in background when modal opens
   useEffect(() => {
     if (showTopupModal && selectedPlan && !paymentSuccess) {
       generateQrForPlan(selectedPlan);
     }
   }, [showTopupModal, selectedPlan?.price]);
 
-
+  // Open Official Razorpay Checkout Modal
   const handleDirectGatewayPay = async () => {
     if (!selectedPlan) return;
-    if (livePaymentLink) {
-      window.location.href = livePaymentLink;
-      return;
-    }
     setProcessing(true);
+    setGatewayError('');
     try {
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded || !window.Razorpay) {
+        throw new Error('Could not load Razorpay Checkout SDK. Please check your connection or ad-blocker.');
+      }
+
       const orderRes = await fetch('/api/billing/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           amount: selectedPlan.price,
           credits: selectedPlan.credits,
-          bonusCredits: selectedPlan.bonus,
-          planId: selectedPlan.id,
-          planName: selectedPlan.name
+          bonusCredits: selectedPlan.bonus || 0,
+          planId: selectedPlan.id || 'custom',
+          planName: selectedPlan.name || 'Calling Credits Top-Up'
         })
       });
 
       const orderData = await orderRes.json();
-      if (!orderData.success || !orderData.paymentLinkUrl) {
-        throw new Error(orderData.error || orderData.details || 'Failed to initialize payment gateway');
+      if (!orderData.success || !orderData.orderId) {
+        throw new Error(orderData.error || orderData.details || 'Failed to initialize Razorpay live order');
       }
 
-      setLivePaymentLink(orderData.paymentLinkUrl);
-      window.location.href = orderData.paymentLinkUrl;
+      setActiveOrderId(orderData.orderId);
+      if (orderData.paymentLinkUrl) {
+        setLivePaymentLink(orderData.paymentLinkUrl);
+      }
+
+      // Initialize Official Razorpay Standard Checkout Popup
+      const options = {
+        key: orderData.keyId || 'rzp_live_TvJ7YXfy027Dyd',
+        amount: orderData.amount, // in paise
+        currency: orderData.currency || 'INR',
+        name: 'Sarvam Voice AI',
+        description: `${(selectedPlan.credits || selectedPlan.price).toLocaleString()} Calling Credits`,
+        image: 'https://sarvam-eta-rose.vercel.app/favicon.svg',
+        order_id: orderData.orderId,
+        prefill: {
+          name: currentUser?.name || companyName || 'Customer',
+          email: currentUser?.email || 'billing@sarvam.ai',
+          contact: ''
+        },
+        theme: {
+          color: '#7a50dc'
+        },
+        modal: {
+          backdropclose: false,
+          escape: true,
+          handleback: true,
+          ondismiss: () => {
+            setProcessing(false);
+          }
+        },
+        handler: async (response) => {
+          setIsAwaitingConfirmation(true);
+          try {
+            const verifyRes = await fetch('/api/billing/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planId: selectedPlan.id || 'custom',
+                credits: selectedPlan.credits,
+                amount: selectedPlan.price
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              setPaymentSuccess(true);
+              setLastPaymentDetails({
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                invoiceId: verifyData.invoiceId || `INV-${Date.now().toString().slice(-6)}`,
+                credits: selectedPlan.credits || selectedPlan.price,
+                amount: selectedPlan.price,
+                totalPaid: (selectedPlan.price * 1.18).toFixed(2),
+                date: new Date().toLocaleString('en-IN')
+              });
+              fetchBillingData();
+              if (onBalanceUpdate) onBalanceUpdate();
+            } else {
+              setGatewayError(verifyData.error || 'Payment signature verification failed.');
+            }
+          } catch (vErr) {
+            setGatewayError('Verification connection error: ' + vErr.message);
+          } finally {
+            setIsAwaitingConfirmation(false);
+            setProcessing(false);
+          }
+        }
+      };
+
+      const rzpInstance = new window.Razorpay(options);
+      rzpInstance.on('payment.failed', (resp) => {
+        setProcessing(false);
+        const reason = resp.error?.description || resp.error?.reason || 'Payment could not be completed';
+        setGatewayError('Payment Failed: ' + reason);
+      });
+      rzpInstance.open();
     } catch (err) {
       console.error('[Payment Gateway Error]:', err);
-      alert('Unable to launch Razorpay gateway: ' + err.message);
+      setGatewayError(err.message || 'Unable to launch Razorpay gateway');
       setProcessing(false);
     }
   };
@@ -748,43 +836,41 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                   </div>
                 </div>
 
-                <div className="bg-[#f8f9fc] p-4 rounded-xl border border-[#e2e4ed] flex flex-col items-center justify-center space-y-3">
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0f0e17]">
-                      <QrCode className="w-4 h-4 text-[#7a50dc]" />
-                      <span>Scan &amp; Pay with Any UPI App</span>
-                    </div>
-                    <p className="text-[11px] text-[#6c6b7e] mt-0.5">
-                      Google Pay &bull; PhonePe &bull; Paytm &bull; CRED &bull; BHIM
-                    </p>
+                <div className="bg-[#f8f9fc] p-4 rounded-xl border border-[#e2e4ed] space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#0f0e17]">
+                    <ShieldCheck className="w-4 h-4 text-[#16a34a]" />
+                    <span>Official Razorpay Live Gateway</span>
+                  </div>
+                  <p className="text-xs text-[#6c6b7e] leading-relaxed">
+                    Click the button below to open the secure Razorpay payment window. Choose from UPI (Google Pay, PhonePe, Paytm, CRED), Live Dynamic QR, Credit/Debit Cards, or Netbanking.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {['Google Pay', 'PhonePe', 'Paytm', 'UPI QR', 'Credit/Debit Cards', 'Netbanking'].map((tag) => (
+                      <span key={tag} className="px-2 py-0.5 rounded-md bg-white border border-[#e2e4ed] text-[10.5px] font-semibold text-[#3a3f5c]">
+                        {tag}
+                      </span>
+                    ))}
                   </div>
 
-                  {/* Real Live UPI QR Code */}
-                  <div className="relative p-2.5 bg-white rounded-2xl border border-[#e2e4ed] shadow-xs flex items-center justify-center min-w-[200px] min-h-[200px]">
-                    {qrCodeDataUrl ? (
-                      <img
-                        src={qrCodeDataUrl}
-                        alt="Scan UPI QR Code"
-                        className="w-48 h-48 rounded-xl block"
-                      />
-                    ) : (
-                      <div className="w-48 h-48 flex flex-col items-center justify-center gap-2 text-zinc-400">
-                        <RefreshCw className="w-6 h-6 animate-spin text-[#7a50dc]" />
-                        <span className="text-[11px] font-medium">Generating UPI QR...</span>
+                  {qrCodeDataUrl && (
+                    <div className="pt-2 border-t border-[#e2e4ed] flex flex-col items-center">
+                      <div className="text-[11px] font-semibold text-[#6c6b7e] mb-1.5 flex items-center gap-1">
+                        <QrCode className="w-3.5 h-3.5 text-[#7a50dc]" /> Or scan direct UPI QR with your phone:
                       </div>
-                    )}
-                  </div>
-
-                  <div className="text-center space-y-1">
-                    <div className="text-xs font-semibold text-[#6c6b7e]">
-                      Total Payable: <strong className="text-[#0f0e17] text-sm font-extrabold">₹{(selectedPlan.price * 1.18).toFixed(2)}</strong> (Incl. 18% GST)
+                      <img src={qrCodeDataUrl} alt="UPI QR" className="w-36 h-36 rounded-xl border border-white shadow-xs" />
+                      <div className="text-[10px] text-[#16a34a] font-medium mt-1.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-ping" />
+                        Listening for payment... Credits update automatically
+                      </div>
                     </div>
-                    <div className="text-[10.5px] font-semibold text-[#16a34a] flex items-center justify-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping" />
-                      <span>Listening for payment... Credits update automatically</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
+
+                {gatewayError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+                    {gatewayError}
+                  </div>
+                )}
 
                 <div className="text-[11px] text-[#6c6b7e] flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#16a34a] shrink-0" />

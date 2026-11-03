@@ -2091,10 +2091,11 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
 app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
   try {
     if (!razorpay) return res.status(503).json({ error: 'Payments are not configured' });
-    const { amount, planName } = req.body;
+    const { amount, planName, credits, bonusCredits, planId } = req.body;
     const requestedAmount = Number(amount);
     const baseAmount = requestedAmount;
-    const creditAmount = requestedAmount;
+    const requestedCredits = Number(credits);
+    const creditAmount = Number.isFinite(requestedCredits) && requestedCredits >= requestedAmount ? requestedCredits : requestedAmount;
     if (!Number.isSafeInteger(baseAmount) || baseAmount < 100 || baseAmount > 100000) {
       return res.status(400).json({ error: 'Choose a top-up amount between ₹100 and ₹100,000' });
     }
@@ -2123,12 +2124,12 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
       await turso.execute({
         sql: `INSERT INTO payment_orders (order_id, tenant_id, amount_paise, base_amount, credits, bonus_credits, plan_id, status)
               VALUES (?, ?, ?, ?, ?, ?, ?, 'created')`,
-        args: [order.id, tenantId, order.amount, baseAmount, creditAmount, 0, 'custom']
+        args: [order.id, tenantId, order.amount, baseAmount, creditAmount, Number(bonusCredits || 0), String(planId || 'custom')]
       });
     } else {
       db.prepare(`INSERT INTO payment_orders (order_id, tenant_id, amount_paise, base_amount, credits, bonus_credits, plan_id, status)
                   VALUES (?, ?, ?, ?, ?, ?, ?, 'created')`)
-        .run(order.id, tenantId, order.amount, baseAmount, creditAmount, 0, 'custom');
+        .run(order.id, tenantId, order.amount, baseAmount, creditAmount, Number(bonusCredits || 0), String(planId || 'custom'));
     }
     let paymentLinkUrl = null;
     let paymentLinkId = null;
@@ -2166,7 +2167,7 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_live_TvJ7YXfy027Dyd',
       receipt: order.receipt,
       paymentLinkUrl,
       paymentLinkId
