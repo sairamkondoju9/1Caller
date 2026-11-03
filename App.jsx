@@ -42,13 +42,53 @@ const PrivacyPolicyView = lazyRetry(() => import('./views/PrivacyPolicyView'), '
 const TermsAndConditionsView = lazyRetry(() => import('./views/TermsAndConditionsView'), 'terms');
 const NotFoundView = lazyRetry(() => import('./views/NotFoundView'), 'not-found');
 
+const getInitialSession = () => {
+  if (typeof window === 'undefined') return { tab: 'landing', user: null, ready: false };
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+  let user = null;
+  try {
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) user = JSON.parse(rawUser);
+    if (!user && token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(decodeURIComponent(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+        if (payload && payload.email) {
+          user = {
+            id: payload.id,
+            email: payload.email,
+            name: payload.email.split('@')[0],
+            role: payload.role || 'client',
+            tenant_id: payload.tenant_id || 'default'
+          };
+        }
+      }
+    }
+  } catch {}
+
+  const p = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const h = window.location.hash.replace(/^#\/?/, '');
+  const target = p || h;
+
+  if (target) {
+    return { tab: resolveCanonicalTab(target), user, ready: true };
+  }
+
+  if (token && user) {
+    return { tab: 'dashboard', user, ready: true };
+  }
+
+  return { tab: 'landing', user: null, ready: true };
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('landing');
+  const [sessionInit] = useState(getInitialSession);
+  const [activeTab, setActiveTab] = useState(sessionInit.tab);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState(sessionInit.user);
+  const [authReady, setAuthReady] = useState(sessionInit.ready);
   const [sessionError, setSessionError] = useState('');
   const [pendingTab, setPendingTab] = useState(null);
   const [workflowNotice, setWorkflowNotice] = useState('');

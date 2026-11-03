@@ -4,7 +4,7 @@ import { X, Mail, KeyRound, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [configAttempt, setConfigAttempt] = useState(0);
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const googleButtonRef = useRef(null);
 
   // Email OTP state
@@ -45,7 +45,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const handleSendEmailCode = async (e) => {
     e?.preventDefault();
     if (!email || !email.includes('@')) {
-      setError('Please enter a valid email address');
+      setError('Please enter a valid work or personal email');
       return;
     }
     setEmailLoading(true);
@@ -67,7 +67,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       }
       if (data.code) {
         setSuggestedCode(data.code);
-        setCode(data.code); // Auto-fill for friction-free sign-in
+        setCode(data.code); // Friction-free 1-click verify
       }
     } catch {
       setError('Unable to send code. Please check your internet connection.');
@@ -79,7 +79,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const handleVerifyEmailCode = async (e) => {
     e?.preventDefault();
     if (!code || code.trim().length < 4) {
-      setError('Please enter the verification code');
+      setError('Please enter the 6-digit verification code');
       return;
     }
     setEmailLoading(true);
@@ -136,7 +136,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       }
     };
 
-    const loadGoogleIdentity = () => new Promise((resolve, reject) => {
+    const loadGoogleIdentity = () => new Promise((resolve) => {
       if (window.google?.accounts?.id) {
         resolve();
         return;
@@ -150,7 +150,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         script.defer = true;
         document.head.appendChild(script);
       }
-      const timeout = window.setTimeout(() => resolve(), 3000); // Soft timeout so email login remains active
+      const timeout = window.setTimeout(() => resolve(), 3000);
       script.addEventListener('load', () => {
         window.clearTimeout(timeout);
         resolve();
@@ -174,39 +174,49 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       cancelled = true;
       if (googleButtonRef.current) googleButtonRef.current.innerHTML = '';
     };
-  }, [isOpen, configAttempt]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200 cursor-pointer"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn cursor-pointer"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md overflow-hidden rounded-[28px] bg-white p-7 sm:p-8 shadow-2xl border border-[#e8eaed] cursor-default"
+        className="relative w-full max-w-[420px] overflow-hidden rounded-[24px] bg-white p-7 sm:p-8 shadow-2xl border border-[#e2e4ed] cursor-default font-sans"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 w-8 h-8 rounded-full text-[#5f6368] hover:text-[#202124] hover:bg-[#f1f3f4] flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute right-4 top-4 w-8 h-8 rounded-full text-[#6c6b7e] hover:text-[#0f0e17] hover:bg-[#f6f7fb] flex items-center justify-center transition-colors cursor-pointer"
           aria-label="Close dialog"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Brand & Heading */}
-        <div className="text-center space-y-1.5 mb-6">
-          <div className="inline-flex items-center gap-1.5 font-bold text-xl tracking-tight text-[#202124] font-display">
-            SARVAM
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ff7a00] shadow-xs shadow-[#ff7a00]/40"></span>
+        {/* Outpero Official Header */}
+        <div className="text-center mb-5">
+          <img
+            src="/outpero-wordmark-black.svg"
+            alt="Outpero"
+            className="h-7 w-auto mx-auto block mb-2.5"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/outpero-wordmark.png';
+            }}
+          />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10.5px] font-bold tracking-[0.16em] uppercase text-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            AI phone employees
           </div>
-          <h2 className="text-xl font-bold text-[#202124] font-display tracking-tight">
-            Sign in to Voice Console
+          <div className="h-px bg-[#e2e4ed] my-4" />
+          <h2 className="font-display font-semibold text-[19px] tracking-tight text-[#0f0e17] mb-1 text-center">
+            {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
           </h2>
-          <p className="text-xs text-[#5f6368]">
-            Deploy autonomous multilingual AI telecallers across Indian languages
+          <p className="text-[#6c6b7e] text-[13.5px] leading-relaxed text-center">
+            {mode === 'signin' ? 'Manage your AI employees and calls.' : 'Free trial credits included, no card needed to start.'}
           </p>
         </div>
 
@@ -218,32 +228,44 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
         <div className="space-y-4">
           {/* Google Sign-In Container */}
-          <div className="flex min-h-[44px] justify-center items-center" ref={googleButtonRef} aria-label="Continue with Google" />
-
-          {loading && <p className="text-center text-xs text-[#5f6368] animate-pulse">Verifying Google identity…</p>}
+          <div className="flex min-h-[44px] justify-center items-center" ref={googleButtonRef} aria-label="Continue with Google">
+            <button
+              type="button"
+              disabled={loading}
+              className="w-full py-2.5 px-4 rounded-xl border border-[#dadce0] hover:bg-zinc-50 bg-white flex items-center justify-center gap-3 font-semibold text-xs text-zinc-800 shadow-xs transition-all cursor-pointer"
+            >
+              <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.9-2.26 5.36-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.94 23.94 0 000 24c0 3.87.92 7.53 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.92-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.97 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              <span>{loading ? 'Redirecting…' : 'Continue with Google'}</span>
+            </button>
+          </div>
 
           <div className="relative flex items-center justify-center my-3">
-            <div className="border-t border-[#e8eaed] w-full" />
-            <span className="bg-white px-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider shrink-0">
-              or continue with email
+            <div className="border-t border-[#e2e4ed] w-full" />
+            <span className="bg-white px-3 text-[11.5px] font-semibold text-[#6c6b7e] uppercase tracking-wide shrink-0">
+              or use email
             </span>
           </div>
 
           {!codeSent ? (
-            <form onSubmit={handleSendEmailCode} className="space-y-3">
+            <form onSubmit={handleSendEmailCode} className="space-y-3.5">
               <div>
-                <label className="block text-[12px] font-medium text-zinc-700 mb-1.5">
-                  Work or Personal Email
+                <label className="block text-[12px] font-semibold text-[#0f0e17] mb-1.5">
+                  Email
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Mail className="w-4 h-4 text-[#9392a5] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
+                    placeholder="you@business.com"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#202124] outline-none transition-all placeholder:text-zinc-400"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#0f0e17] outline-none transition-all placeholder:text-[#9392a5]"
                   />
                 </div>
               </div>
@@ -251,29 +273,55 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={emailLoading}
-                className="w-full py-2.5 rounded-xl bg-[#0f0e17] hover:bg-zinc-800 text-white font-medium text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                className="w-full py-2.5 rounded-xl bg-[#0f0e17] hover:bg-zinc-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
               >
-                {emailLoading ? 'Sending verification code…' : 'Continue with Email'}
+                {emailLoading ? 'Sending verification code…' : (mode === 'signup' ? 'Create free account' : 'Continue with Email')}
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+
+              <div className="text-center pt-1">
+                {mode === 'signin' ? (
+                  <p className="text-xs text-[#6c6b7e]">
+                    Don't have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('signup')}
+                      className="font-semibold text-[#7a50dc] hover:underline cursor-pointer"
+                    >
+                      Sign up
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-xs text-[#6c6b7e]">
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('signin')}
+                      className="font-semibold text-[#7a50dc] hover:underline cursor-pointer"
+                    >
+                      Sign in
+                    </button>
+                  </p>
+                )}
+              </div>
             </form>
           ) : (
-            <form onSubmit={handleVerifyEmailCode} className="space-y-3">
+            <form onSubmit={handleVerifyEmailCode} className="space-y-3.5">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[12px] font-medium text-zinc-700">
+                  <label className="block text-[12px] font-semibold text-[#0f0e17]">
                     Enter Verification Code
                   </label>
                   <button
                     type="button"
                     onClick={() => setCodeSent(false)}
-                    className="text-[11px] text-[#7a50dc] hover:underline"
+                    className="text-[11px] font-medium text-[#7a50dc] hover:underline"
                   >
                     Change email
                   </button>
                 </div>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <KeyRound className="w-4 h-4 text-[#9392a5] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={code}
@@ -281,7 +329,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                     placeholder="6-digit code"
                     maxLength={6}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#202124] font-mono tracking-widest outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#dadce0] focus:border-[#7a50dc] focus:ring-2 focus:ring-[#7a50dc]/20 text-sm text-[#0f0e17] font-mono tracking-widest outline-none transition-all"
                   />
                 </div>
                 {suggestedCode && (
@@ -303,7 +351,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <button
                 type="submit"
                 disabled={emailLoading}
-                className="w-full py-2.5 rounded-xl bg-[#7a50dc] hover:bg-[#683cc9] text-white font-medium text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                className="w-full py-2.5 rounded-xl bg-[#7a50dc] hover:bg-[#683cc9] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
               >
                 {emailLoading ? 'Verifying session…' : 'Verify & Enter Workspace'}
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -311,11 +359,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </form>
           )}
 
-          <div className="pt-2 text-center text-[11px] text-[#5f6368]">
+          <div className="pt-2 text-center text-[11px] text-[#6c6b7e]">
             Secured with 256-bit JWT authentication &bull; Turso serverless storage
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-2 border-t border-[#e2e4ed]/60 text-[10.5px] text-[#6c6b7e]">
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-3 border-t border-[#e2e4ed] text-[10.5px] text-[#6c6b7e]">
             <a href="https://docs.outpero.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Help &amp; Docs</a>
             <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Terms</a>
             <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#0f0e17]">Privacy</a>

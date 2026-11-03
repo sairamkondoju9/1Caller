@@ -128,8 +128,48 @@ const resolveCanonicalTab = (tab) => {
   return CANONICAL_TABS[clean] || (hasToken ? 'dashboard' : 'landing');
 };
 
+const getInitialSession = () => {
+  if (typeof window === 'undefined') return { tab: 'landing', user: null, ready: false };
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+  let user = null;
+  try {
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) user = JSON.parse(rawUser);
+    if (!user && token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(decodeURIComponent(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+        if (payload && payload.email) {
+          user = {
+            id: payload.id,
+            email: payload.email,
+            name: payload.email.split('@')[0],
+            role: payload.role || 'client',
+            tenant_id: payload.tenant_id || 'default'
+          };
+        }
+      }
+    }
+  } catch {}
+
+  const p = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const h = window.location.hash.replace(/^#\/?/, '');
+  const target = p || h;
+
+  if (target) {
+    return { tab: resolveCanonicalTab(target), user, ready: true };
+  }
+
+  if (token && user) {
+    return { tab: 'dashboard', user, ready: true };
+  }
+
+  return { tab: 'landing', user: null, ready: true };
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('landing');
+  const [sessionInit] = useState(getInitialSession);
+  const [activeTab, setActiveTab] = useState(sessionInit.tab);
 
   // PushState URL synchronizer to ensure page refresh and browser back/forward buttons work seamlessly
   const navigateTo = (rawTab, updateHistory = true) => {
@@ -145,8 +185,8 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState(sessionInit.user);
+  const [authReady, setAuthReady] = useState(sessionInit.ready);
   const [sessionError, setSessionError] = useState('');
   const [pendingTab, setPendingTab] = useState(null);
   const [pendingPrompt, setPendingPrompt] = useState(null);
@@ -188,46 +228,37 @@ export default function App() {
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(async response => {
         const data = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user_role');
-          throw new Error(data.error || 'Your session expired. Please sign in again.');
+        if (response.ok && data.user) {
+          setCurrentUser(data.user);
+          setSessionError('');
+          localStorage.setItem('user', JSON.stringify(data.user));
+          if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+            localStorage.setItem('token', data.token);
+          }
+          return;
         }
-        if (!response.ok) {
-          // If server error (e.g. 500/503), decode payload from JWT client-side so session is not lost!
+        if (response.status === 401) {
           try {
             const parts = token.split('.');
             if (parts.length === 3) {
-              const base64Url = parts[1];
-              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-              const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-              const decoded = JSON.parse(jsonPayload);
-              if (decoded && decoded.email && (!decoded.exp || Date.now() < decoded.exp * 1000)) {
-                return {
-                  user: {
-                    id: decoded.id,
-                    email: decoded.email,
-                    name: decoded.email.split('@')[0],
-                    role: decoded.role || 'client',
-                    tenant_id: decoded.tenant_id || 'default'
-                  }
-                };
+              const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+              if (payload.exp && Date.now() < payload.exp * 1000) {
+                console.warn('[Auth Verify] Server rejected with 401 but client token exp is still valid. Preserving session.');
+                return;
               }
             }
           } catch {}
-          throw new Error(data.error || 'Could not verify your session.');
-        }
-        return data;
-      })
-      .then(data => {
-        if (data.user) {
-          setCurrentUser(data.user);
-          setSessionError('');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_role');
+          setCurrentUser(null);
+          setSessionError('Your session expired. Please sign in again.');
         }
       })
       .catch(error => {
-        console.warn('[Auth Verify]', error.message);
+        console.warn('[Auth Verify Network Notice]', error.message);
       })
       .finally(() => setAuthReady(true));
   }, []);

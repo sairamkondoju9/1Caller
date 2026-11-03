@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import React, { useState, useEffect } from 'react';
 import { getAuthHeaders } from '../utils/api';
 
@@ -35,6 +36,8 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
   const [activeOrderId, setActiveOrderId] = useState('');
   const [isAwaitingConfirmation, setIsAwaitingConfirmation] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [lastPaymentDetails, setLastPaymentDetails] = useState(null);
@@ -189,6 +192,56 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
     }, 3000);
     return interval;
   };
+
+  // Generate Live Razorpay Order and UPI QR Code
+  const generateQrForPlan = async (plan) => {
+    if (!plan) return;
+    setQrLoading(true);
+    setQrCodeDataUrl('');
+    try {
+      const orderRes = await fetch('/api/billing/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          amount: plan.price,
+          credits: plan.credits,
+          bonusCredits: plan.bonus,
+          planId: plan.id,
+          planName: plan.name
+        })
+      });
+      const orderData = await orderRes.json();
+      if (orderData.success && orderData.paymentLinkUrl) {
+        setActiveOrderId(orderData.orderId);
+        setLivePaymentLink(orderData.paymentLinkUrl);
+
+        try {
+          const qr = await QRCode.toDataURL(orderData.paymentLinkUrl, {
+            width: 240,
+            margin: 1,
+            color: { dark: '#0f0e17', light: '#ffffff' }
+          });
+          setQrCodeDataUrl(qr);
+        } catch (e) {
+          setQrCodeDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(orderData.paymentLinkUrl)}`);
+        }
+
+        startStatusPoller(orderData.orderId, plan);
+      }
+    } catch (err) {
+      console.warn('[QR Gen Error]:', err);
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  // Automatically generate QR whenever modal opens with a plan
+  useEffect(() => {
+    if (showTopupModal && selectedPlan && !paymentSuccess) {
+      generateQrForPlan(selectedPlan);
+    }
+  }, [showTopupModal, selectedPlan?.price]);
+
 
   const handleDirectGatewayPay = async () => {
     if (!selectedPlan) return;
@@ -844,16 +897,40 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-[#3a3f5c]">Supported Payment Channels (Razorpay):</span>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 border border-[#0f0e17] bg-[#f6f7fb] text-[#0f0e17] rounded-lg font-semibold flex items-center justify-center gap-2">
-                      <QrCode className="w-4 h-4 text-[#0f0e17]" />
-                      UPI (GPay / PhonePe / Paytm)
+                <div className="bg-[#f8f9fc] p-4 rounded-xl border border-[#e2e4ed] flex flex-col items-center justify-center space-y-3">
+                  <div className="text-center">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0f0e17]">
+                      <QrCode className="w-4 h-4 text-[#7a50dc]" />
+                      <span>Scan &amp; Pay with Any UPI App</span>
                     </div>
-                    <div className="p-2.5 border border-[#e2e4ed] bg-white text-[#3a3f5c] rounded-lg font-semibold flex items-center justify-center gap-2">
-                      <CreditCard className="w-4 h-4 text-[#6c6b7e]" />
-                      Cards & NetBanking
+                    <p className="text-[11px] text-[#6c6b7e] mt-0.5">
+                      Google Pay &bull; PhonePe &bull; Paytm &bull; CRED &bull; BHIM
+                    </p>
+                  </div>
+
+                  {/* Real Live UPI QR Code */}
+                  <div className="relative p-2.5 bg-white rounded-2xl border border-[#e2e4ed] shadow-xs flex items-center justify-center min-w-[200px] min-h-[200px]">
+                    {qrCodeDataUrl ? (
+                      <img
+                        src={qrCodeDataUrl}
+                        alt="Scan UPI QR Code"
+                        className="w-48 h-48 rounded-xl block"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 flex flex-col items-center justify-center gap-2 text-zinc-400">
+                        <RefreshCw className="w-6 h-6 animate-spin text-[#7a50dc]" />
+                        <span className="text-[11px] font-medium">Generating UPI QR...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <div className="text-xs font-semibold text-[#6c6b7e]">
+                      Total Payable: <strong className="text-[#0f0e17] text-sm font-extrabold">₹{(selectedPlan.price * 1.18).toFixed(2)}</strong> (Incl. 18% GST)
+                    </div>
+                    <div className="text-[10.5px] font-semibold text-[#16a34a] flex items-center justify-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping" />
+                      <span>Listening for payment... Credits update automatically</span>
                     </div>
                   </div>
                 </div>
