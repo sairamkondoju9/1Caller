@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
+import { Toaster } from 'sonner';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import AuthModal from './components/AuthModal';
@@ -881,6 +882,17 @@ export default function App() {
         onClose={handleDismissBonus}
         onStartFirstCall={handleStartFirstCall}
         onLookAround={handleLookAround}
+      />
+
+      {/* Emil Kowalski / Vibe Coder Interactive Toaster */}
+      <Toaster
+        richColors
+        position="top-right"
+        theme="system"
+        closeButton
+        toastOptions={{
+          className: 'apple-glass font-sans text-xs font-semibold shadow-xl border border-zinc-200/80 rounded-xl'
+        }}
       />
     </div>
   );

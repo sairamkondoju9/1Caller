@@ -37,6 +37,8 @@ export function pickAutoNameAndVoice(langStr) {
 }
 
 import React, { useState, useEffect, useCallback } from 'react';
+import NumberTicker from '../components/ui/NumberTicker';
+import HaikeiBackground from '../components/ui/HaikeiBackground';
 import TrialCallModal from '../components/TrialCallModal';
 import { INDUSTRY_TEMPLATES, getIndustryDefaults } from '../utils/industryData';
 import { getAuthHeaders } from '../utils/api';
@@ -658,6 +660,7 @@ export default function DashboardView({
 
       {/* 2. MAIN HERO CARD: OBSIDIAN LUXURY STAGE BUILDER (Matching Outpero Screenshots Exactly) */}
       <div className="apple-glass-stage p-6 sm:p-7 text-white relative overflow-hidden rounded-3xl shadow-xl">
+        <HaikeiBackground variant="mesh" opacity={0.35} />
         {/* ========================================================================= */}
         {/* MODE A: IDLE / BRIEF PROMPT TEXTAREA (SCREENSHOT 1) */}
         {/* ========================================================================= */}
@@ -1721,7 +1724,7 @@ export default function DashboardView({
           </div>
           <div>
             <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17]">
-              {metrics.callsHandled}
+              <NumberTicker value={Number(metrics.callsHandled || 0)} />
             </div>
             <div className="text-[11px] text-[#6c6b7e] mt-0.5">
               Real completed conversations
@@ -1772,7 +1775,7 @@ export default function DashboardView({
           </div>
           <div>
             <div className="text-2xl font-bold font-display tabular-nums text-[#0f0e17]">
-              ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
+              ₹<NumberTicker value={Number(stats?.balanceCredits ?? 0)} decimalPlaces={2} />
             </div>
             <button
               type="button"

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2 } from 'lucide-react';
+import HaikeiBackground from './ui/HaikeiBackground';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -193,8 +194,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen bg-[#fafafa] bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] [background-size:24px_24px] p-4 sm:p-6 overflow-y-auto cursor-pointer animate-fadeIn font-sans"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen bg-[#fafafa] p-4 sm:p-6 overflow-y-auto cursor-pointer animate-fadeIn font-sans relative"
     >
+      <HaikeiBackground variant="dots" opacity={0.65} />
+      <HaikeiBackground variant="wave" opacity={0.4} />
       {/* Centered White Card (Pixel-perfect clone of app.outpero.com) */}
       <div
         onClick={(e) => e.stopPropagation()}

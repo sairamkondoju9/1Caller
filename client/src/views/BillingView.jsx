@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import AnimatedTabs from '../components/ui/AnimatedTabs';
+import NumberTicker from '../components/ui/NumberTicker';
+import BorderBeam from '../components/ui/BorderBeam';
+import HaikeiBackground from '../components/ui/HaikeiBackground';
 import { getAuthHeaders } from '../utils/api';
 
 import {
@@ -400,35 +404,16 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
         </div>
 
         {/* View Tabs */}
-        <div className="flex items-center bg-[#f0f1f6] p-1 rounded-xl border border-[#e2e4ed]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              activeTab === 'overview' ? 'bg-white text-[#0f0e17] shadow-xs font-bold' : 'text-[#6c6b7e] hover:text-[#0f0e17]'
-            }`}
-          >
-            Overview &amp; Top-Up
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('statements')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              activeTab === 'statements' ? 'bg-white text-[#0f0e17] shadow-xs font-bold' : 'text-[#6c6b7e] hover:text-[#0f0e17]'
-            }`}
-          >
-            Statements &amp; History
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('invoicing')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-              activeTab === 'invoicing' ? 'bg-white text-[#0f0e17] shadow-xs font-bold' : 'text-[#6c6b7e] hover:text-[#0f0e17]'
-            }`}
-          >
-            GSTIN &amp; Tax Invoices
-          </button>
-        </div>
+        <AnimatedTabs
+          layoutId="billing-nav-tab"
+          tabs={[
+            { id: 'overview', label: 'Overview & Top-Up' },
+            { id: 'statements', label: 'Statements & History' },
+            { id: 'invoicing', label: 'GSTIN & Tax Invoices' }
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
 
       {/* TAB 1: OVERVIEW & TOP-UP */}
@@ -444,7 +429,7 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                 </div>
                 <div className="flex items-baseline gap-3">
                   <span className="text-4xl sm:text-5xl font-extrabold tracking-tight font-mono tabular-nums">
-                    ₹{balanceCredits.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹<NumberTicker value={balanceCredits} decimalPlaces={2} />
                   </span>
                   <span className="text-white/70 text-sm font-medium">Credits</span>
                 </div>
@@ -511,6 +496,9 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                       <span className="absolute -top-2.5 right-4 bg-[#7a50dc] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                         {pack.badge}
                       </span>
+                    )}
+                    {pack.badge && (
+                      <BorderBeam size={160} duration={6} colorFrom="#7a50dc" colorTo="#16a34a" />
                     )}
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-[#6c6b7e]">{pack.name}</h3>

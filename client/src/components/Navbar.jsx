@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Kbd from './ui/Kbd';
+import NumberTicker from './ui/NumberTicker';
 import {
   Search,
   BookOpen,
@@ -76,9 +78,7 @@ export default function Navbar({
             placeholder="Search agents, campaigns, DND..."
             className="w-full bg-[#f6f7fb]/80 border border-[#e2e4ed] text-xs rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:border-[#0f0e17] focus:bg-white transition-all text-[#0f0e17] placeholder-[#6c6b7e]"
           />
-          <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#6c6b7e] bg-white px-1.5 py-0.5 rounded-md border border-[#e2e4ed] shadow-2xs font-mono">
-            ⌘K
-          </kbd>
+          <Kbd className="absolute right-2.5 top-1/2 -translate-y-1/2">⌘K</Kbd>
         </div>
       </div>
 
@@ -105,7 +105,7 @@ export default function Navbar({
           title="Click to recharge wallet credits"
         >
           <span className="text-[#c2410c] font-extrabold font-mono tabular-nums text-[11px] sm:text-xs">
-            ₹{Number(stats?.balanceCredits ?? 0).toFixed(2)}
+            ₹<NumberTicker value={Number(stats?.balanceCredits ?? 0)} decimalPlaces={2} />
           </span>
           <span className="hidden sm:inline text-[#c2410c]/70 text-[11px] font-mono tabular-nums">
             ({stats?.balanceMinutes ?? '0.0'} min)

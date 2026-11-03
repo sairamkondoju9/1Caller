@@ -528,6 +528,20 @@ kbd, .replit-kbd {
   gap: 2px;
 }
 
+/* --- MOTION-PRIMITIVES (motion-primitives.com) BORDER BEAM & SHIMMER --- */
+@keyframes border-beam {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+.animate-border-beam {
+  animation: border-beam var(--duration, 8s) infinite linear;
+}
+
 /* 7. Respect user accessibility settings */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
