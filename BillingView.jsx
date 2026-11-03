@@ -139,6 +139,37 @@ export default function BillingView({ onBalanceUpdate }) {
     return interval;
   };
 
+  const handleDirectGatewayPay = async () => {
+    if (!selectedPlan) return;
+    setProcessing(true);
+    try {
+      const orderRes = await fetch('/api/billing/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          amount: selectedPlan.price,
+          credits: selectedPlan.credits,
+          bonusCredits: selectedPlan.bonus,
+          planId: selectedPlan.id,
+          planName: selectedPlan.name
+        })
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderData.success || !orderData.paymentLinkUrl) {
+        throw new Error(orderData.error || orderData.details || 'Failed to initialize payment gateway');
+      }
+
+      // Direct navigation to official Razorpay Checkout Gateway
+      // Works 100% on all mobile devices & browsers without popup block or domain mismatch!
+      window.location.href = orderData.paymentLinkUrl;
+    } catch (err) {
+      console.error('[Payment Gateway Error]:', err);
+      alert('Unable to launch Razorpay gateway: ' + err.message);
+      setProcessing(false);
+    }
+  };
+
   const handleProcessTopup = async () => {
     if (!selectedPlan) return;
     setProcessing(true);
