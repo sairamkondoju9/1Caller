@@ -32,7 +32,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpenAuth, onNavigate }) {
+export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpenAuth, onNavigate, currentUser, onLogout }) {
   // Rotating word state in Hero
   const rotatingWords = [
     { word: 'नमस्ते', lang: 'hi' },
@@ -1841,29 +1841,65 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
 
           {/* Right Desktop CTA Buttons */}
           <div className="ml-auto hidden lg:flex items-center gap-2">
+            {currentUser ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 h-10 px-4 rounded-full cursor-pointer"
+                >
+                  Sign out
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('dashboard')}
+                  className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-all select-none btn-fill magnet hover:shadow-[0_14px_30px_-12px_rgba(15,14,23,0.3)] bg-brand-600 text-white hover:bg-brand-700 shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-8px_rgba(15,14,23,0.25)] text-[13px] gap-1.5 h-10 px-4.5 rounded-full cursor-pointer"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 h-10 px-4 rounded-full cursor-pointer"
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onLaunchConsole?.(promptText)}
+                  className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-all select-none btn-fill magnet hover:shadow-[0_14px_30px_-12px_rgba(15,14,23,0.3)] bg-brand-600 text-white hover:bg-brand-700 shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-8px_rgba(15,14,23,0.25)] text-[13px] gap-1.5 h-10 px-4.5 rounded-full cursor-pointer"
+                >
+                  Start free
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Actions */}
+          {currentUser ? (
             <button
-              onClick={onOpenAuth}
-              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none text-ink-2 hover:text-ink hover:bg-canvas text-[13px] gap-1.5 h-10 px-4 font-medium rounded-full cursor-pointer"
+              type="button"
+              onClick={() => onNavigate?.('dashboard')}
+              className="ml-auto lg:hidden shrink-0 whitespace-nowrap inline-flex items-center gap-1 h-9 pl-3 pr-2.5 rounded-lg bg-brand-600 text-white text-[13px] font-semibold"
             >
-              Sign in
+              Dashboard
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
+          ) : (
             <button
-              onClick={() => onLaunchConsole?.(promptText)}
-              className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-all select-none btn-fill magnet hover:shadow-[0_14px_30px_-12px_rgba(15,14,23,0.3)] bg-brand-600 text-white hover:bg-brand-700 shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_20px_-8px_rgba(15,14,23,0.25)] text-[13px] gap-1.5 h-10 px-4.5 rounded-full cursor-pointer"
+              type="button"
+              onClick={onLaunchConsole}
+              className="ml-auto lg:hidden shrink-0 whitespace-nowrap inline-flex items-center gap-1 h-9 pl-3 pr-2.5 rounded-lg bg-brand-600 text-white text-[13px] font-semibold"
             >
               Start free
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-          </div>
-
-          {/* Mobile Actions */}
-          <button
-            onClick={onLaunchConsole}
-            className="ml-auto lg:hidden shrink-0 whitespace-nowrap inline-flex items-center gap-1 h-9 pl-3 pr-2.5 rounded-lg bg-brand-600 text-white text-[13px] font-semibold"
-          >
-            Start free
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          )}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1879,8 +1915,41 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
           <div className="pointer-events-auto lg:hidden mx-3 mt-2 p-4 rounded-2xl bg-paper border border-line shadow-card space-y-2 text-[14px]">
             <a href="#hear" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); document.getElementById('hear')?.scrollIntoView({ behavior: 'smooth' }); }} className="block py-2 text-ink-2">Voices</a>
             <a href="#pricing" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }} className="block py-2 text-ink-2">Pricing</a>
-            <button onClick={() => { setMobileMenuOpen(false); onOpenAuth(); }} className="block w-full text-left py-2 text-ink-2">Sign in</button>
-            <button onClick={() => { setMobileMenuOpen(false); onLaunchConsole(); }} className="block w-full py-2.5 rounded-xl bg-brand-600 text-white font-medium text-center">Open Console</button>
+            {currentUser ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onNavigate?.('dashboard'); }}
+                  className="block w-full py-2.5 rounded-xl bg-brand-600 text-white font-medium text-center"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onLogout?.(); }}
+                  className="block w-full text-left py-2 text-rose-600 font-medium"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onOpenAuth?.(); }}
+                  className="block w-full text-left py-2 text-ink-2"
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onLaunchConsole?.(); }}
+                  className="block w-full py-2.5 rounded-xl bg-brand-600 text-white font-medium text-center"
+                >
+                  Open Console
+                </button>
+              </>
+            )}
           </div>
         )}
       </header>

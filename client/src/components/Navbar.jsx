@@ -239,9 +239,7 @@ const [isMenuOpen, setIsMenuOpen] = useState(false);
                     if (onLogout) {
                       onLogout();
                     } else {
-                      localStorage.removeItem('auth_token');
-                      localStorage.removeItem('user_role');
-                      window.location.reload();
+                      localStorage.removeItem('auth_token'); localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('user_role'); sessionStorage.clear(); window.location.href = '/';
                     }
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer font-semibold"

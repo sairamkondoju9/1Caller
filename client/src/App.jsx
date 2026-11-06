@@ -125,8 +125,7 @@ const CANONICAL_TABS = {
 const resolveCanonicalTab = (tab) => {
   if (!tab) return 'landing';
   const clean = String(tab).toLowerCase().trim().replace(/^\/+|\/+$/g, '');
-  const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'));
-  return CANONICAL_TABS[clean] || (hasToken ? 'dashboard' : 'landing');
+  return CANONICAL_TABS[clean] || 'landing';
 };
 
 const getInitialSession = () => {
@@ -158,14 +157,15 @@ const getInitialSession = () => {
   const target = p || h;
 
   if (target) {
-    return { tab: resolveCanonicalTab(target), user, ready: true };
+    const canonical = resolveCanonicalTab(target);
+    if (protectedTabs.has(canonical) && !token) {
+      return { tab: 'landing', user: null, ready: true, requireAuthFor: canonical };
+    }
+    return { tab: canonical, user, ready: true };
   }
 
-  if (token && user) {
-    return { tab: 'dashboard', user, ready: true };
-  }
-
-  return { tab: 'landing', user: null, ready: true };
+  // Root URL '/' always opens the website Landing Page!
+  return { tab: 'landing', user, ready: true };
 };
 
 export default function App() {
@@ -193,13 +193,13 @@ export default function App() {
       navigateTo(action);
     }
   };
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(Boolean(sessionInit.requireAuthFor));
   const [isWelcomeCreditsModalOpen, setIsWelcomeCreditsModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(sessionInit.user);
   const [authReady, setAuthReady] = useState(sessionInit.ready);
   const [sessionError, setSessionError] = useState('');
-  const [pendingTab, setPendingTab] = useState(null);
+  const [pendingTab, setPendingTab] = useState(sessionInit.requireAuthFor || null);
   const [pendingPrompt, setPendingPrompt] = useState(null);
   const [workflowNotice, setWorkflowNotice] = useState('');
 
@@ -250,22 +250,13 @@ export default function App() {
           return;
         }
         if (response.status === 401) {
-          try {
-            const parts = token.split('.');
-            if (parts.length === 3) {
-              const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-              if (payload.exp && Date.now() < payload.exp * 1000) {
-                console.warn('[Auth Verify] Server rejected with 401 but client token exp is still valid. Preserving session.');
-                return;
-              }
-            }
-          } catch {}
           localStorage.removeItem('auth_token');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           localStorage.removeItem('user_role');
+          sessionStorage.clear();
           setCurrentUser(null);
-          setSessionError('Your session expired. Please sign in again.');
+          setSessionError('Your session has expired. Please sign in again.');
         }
       })
       .catch(error => {
@@ -530,9 +521,16 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     localStorage.removeItem('user_role');
+    sessionStorage.clear();
     setCurrentUser(null);
+    setAuthReady(true);
     setActiveTab('landing');
+    if (typeof window !== 'undefined' && window.history?.pushState) {
+      window.history.pushState({ tab: 'landing' }, '', '/');
+    }
   };
 
   const handleStartFirstCall = () => {
@@ -562,15 +560,17 @@ export default function App() {
             <p className="mt-1 text-xs">Your saved session has not been deleted. Retry after the account service is available, or sign in again.</p>
             <div className="mt-3 flex gap-4">
               <button type="button" className="font-semibold underline" onClick={() => window.location.reload()}>Retry</button>
-              <button type="button" className="font-semibold underline" onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('user_role'); setSessionError(''); setIsAuthModalOpen(true); }}>Sign in again</button>
+              <button type="button" className="font-semibold underline" onClick={() => { localStorage.removeItem('auth_token'); localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('user_role'); sessionStorage.clear(); setCurrentUser(null); setSessionError(''); setIsAuthModalOpen(true); }}>Sign in again</button>
             </div>
           </div>
         )}
         <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
           <LandingPageView
+            currentUser={currentUser}
+            onLogout={handleLogout}
             onLaunchConsole={(promptText) => {
               if (promptText) setPendingPrompt(promptText);
-              const token = localStorage.getItem('auth_token');
+              const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
               if (!token || !currentUser) {
                 setPendingTab('new-employee');
                 setIsAuthModalOpen(true);
