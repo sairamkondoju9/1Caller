@@ -156,9 +156,9 @@ export default function Sidebar({
           </div>
           <div className="text-[11px] text-[#6c6b7e] flex items-center justify-between pt-1 font-mono">
             <span>Telephony Gateways</span>
-            <span className="text-[#16a34a] font-bold flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>Online · 100%</span>
+            <span className="text-[#6c6b7e] font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+              <span>Not verified</span>
             </span>
           </div>
 

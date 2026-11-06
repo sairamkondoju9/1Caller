@@ -17,6 +17,7 @@ import {
   Terminal,
   ExternalLink,
   ShieldCheck,
+  AlertTriangle,
   Zap
 } from 'lucide-react';
 
@@ -28,12 +29,14 @@ export default function DevelopersView() {
   const [showLiveKey, setShowLiveKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedBaseUrl, setCopiedBaseUrl] = useState(false);
-  const [liveApiKey, setLiveApiKey] = useState('sarv_live_9a7f4e8b2c1d0e5f6a7b8c9d0e1f2a3b');
-  const [testApiKey, setTestApiKey] = useState('sarv_test_41c09e88d721fa62b489e31d0411a77c');
+  // API keys are issued by the backend; until a key service is connected this
+  // screen must not display a fabricated secret as if it were the tenant's key.
+  const [liveApiKey] = useState('');
+  const [testApiKey] = useState('');
 
   // Webhook state
   const [webhookUrl, setWebhookUrl] = useState('https://crm.yourcompany.com/api/voice-events');
-  const [webhookSecret, setWebhookSecret] = useState('whsec_5f2d91a8c3e4b7069123456789abcdef');
+  const [webhookSecret] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [webhookSubscribedEvents, setWebhookSubscribedEvents] = useState([
     'call.initiated',
@@ -308,14 +311,15 @@ paths:
                     {envMode === 'live' ? 'Live Production Key' : 'Test Sandbox Key'}
                   </span>
                 </div>
-                <span className="text-[11px] text-[#6c6b7e]">Created 2 days ago · Full Access</span>
+                <span className="text-[11px] text-[#6c6b7e]">No key provisioned</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <input
-                  type={showLiveKey ? 'text' : 'password'}
+                  type="text"
                   readOnly
                   value={envMode === 'live' ? liveApiKey : testApiKey}
+                  placeholder="No API key provisioned for this workspace"
                   className="apple-glass-input w-full font-mono text-xs font-semibold px-3 py-2 text-[#0f0e17]"
                 />
                 <button
@@ -337,15 +341,12 @@ paths:
               <div className="flex items-center justify-between text-[11px] text-[#6c6b7e] pt-1">
                 <span className="text-[#ea580c]">Never share your secret key in client-side repositories.</span>
                 <button
-                  onClick={() => {
-                    const newKey = `sarv_${envMode}_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-                    if (envMode === 'live') setLiveApiKey(newKey);
-                    else setTestApiKey(newKey);
-                    alert("API Key regenerated successfully. Previous key will expire in 24 hours.");
-                  }}
-                  className="text-[#0f0e17] hover:text-[#1f1e28] font-semibold cursor-pointer"
+                  type="button"
+                  disabled
+                  title="API key rotation is not connected in this deployment."
+                  className="text-[#6c6b7e] cursor-not-allowed"
                 >
-                  Regenerate Key
+                  Rotation unavailable
                 </button>
               </div>
             </div>
@@ -400,13 +401,28 @@ paths:
               <div className={`p-4 rounded-xl border text-xs ${
                 testResult.success ? 'bg-[#f0fdf4] border-[#bbf7d0] text-[#166534]' : 'bg-[#fef2f2] border-[#fecaca] text-[#991b1b]'
               }`}>
-                <div className="font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#16a34a]" />
-                  Webhook delivered successfully to {testResult.targetUrl}
-                </div>
-                <div className="mt-2 font-mono text-[11px] bg-white/80 p-2.5 rounded border border-[#bbf7d0]">
-                  Status: 200 OK · Round-trip latency: {testResult.latencyMs}ms · Event: call.completed
-                </div>
+                {testResult.success ? (
+                  <>
+                    <div className="font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#16a34a]" />
+                      Test payload accepted
+                    </div>
+                    <div className="mt-2 font-mono text-[11px] bg-white/80 p-2.5 rounded border border-[#bbf7d0]">
+                      {testResult.targetUrl ? `Target: ${testResult.targetUrl}` : ''}
+                      {typeof testResult.latencyMs === 'number' ? ` · Round-trip latency: ${testResult.latencyMs}ms` : ''}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-bold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[#dc2626]" />
+                      Test webhook not sent
+                    </div>
+                    <div className="mt-2">
+                      {testResult.error || testResult.message || 'The webhook delivery service is not available in this deployment.'}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -415,9 +431,10 @@ paths:
               <label className="text-xs font-semibold text-[#3a3f5c]">Webhook HMAC Secret (for signature verification)</label>
               <div className="flex items-center gap-2">
                 <input
-                  type={showSecret ? 'text' : 'password'}
+                  type="text"
                   readOnly
                   value={webhookSecret}
+                  placeholder="No webhook secret provisioned"
                   className="apple-glass-input w-full font-mono text-xs font-semibold px-3 py-2 text-[#6c6b7e]"
                 />
                 <button

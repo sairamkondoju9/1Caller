@@ -11,7 +11,7 @@ const testDbPath = path.join(testDbDir, 'sarvam.db');
 
 process.env.NODE_ENV = 'test';
 process.env.VERCEL = '1';
-process.env.JWT_SECRET = 'launch-guard-test-secret';
+process.env.JWT_SECRET = 'launch-guard-test-secret-for-auth-suite';
 process.env.SARVAM_DB_PATH = testDbPath;
 process.env.GOOGLE_CLIENT_ID = '';
 process.env.RAZORPAY_KEY_ID = '';
@@ -47,6 +47,47 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   });
   assert.equal(emailLogin.status, 410);
 
+  const passwordLogin = await fetch(`${baseUrl}/api/auth/email/password`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'attacker@example.com', password: 'wrong-password' })
+  });
+  assert.equal(passwordLogin.status, 410);
+
+  // The temporary test-login route must not exist unless explicitly enabled.
+  const disabledTestLogin = await fetch(`${baseUrl}/api/auth/test-login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'smoke@sarvam-smoke.test', password: 'SmokeTest#1' })
+  });
+  assert.equal(disabledTestLogin.status, 404);
+
+  process.env.TEST_LOGIN_CREDENTIALS = 'smoke@sarvam-smoke.test:SmokeTest#1';
+
+  const wrongTestPassword = await fetch(`${baseUrl}/api/auth/test-login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'smoke@sarvam-smoke.test', password: 'wrong-password' })
+  });
+  assert.equal(wrongTestPassword.status, 401);
+
+  const unknownTestEmail = await fetch(`${baseUrl}/api/auth/test-login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'stranger@example.com', password: 'SmokeTest#1' })
+  });
+  assert.equal(unknownTestEmail.status, 401);
+
+  const goodTestLogin = await fetch(`${baseUrl}/api/auth/test-login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'smoke@sarvam-smoke.test', password: 'SmokeTest#1' })
+  });
+  assert.equal(goodTestLogin.status, 200);
+  const goodTestBody = await goodTestLogin.json();
+  assert.ok(goodTestBody.token, 'enabled test login should issue a session token');
+  delete process.env.TEST_LOGIN_CREDENTIALS;
+
   const spoofedGoogle = await fetch(`${baseUrl}/api/auth/google`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -55,6 +96,39 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   assert.equal(spoofedGoogle.status, 503);
 
   const token = jwt.sign({ id: 'test-user', tenant_id: 'test-tenant', role: 'client' }, process.env.JWT_SECRET);
+  const legacyToken = jwt.sign(
+    { id: 'forged-user', tenant_id: 'forged-tenant', role: 'owner' },
+    'launch-guard-test-secret'
+  );
+  const legacyAuthResponse = await fetch(`${baseUrl}/api/admin/overview`, {
+    headers: { authorization: `Bearer ${legacyToken}` }
+  });
+  assert.equal(legacyAuthResponse.status, 401, 'legacy hard-coded JWT secrets must not authenticate requests');
+
+  const noBalanceToken = jwt.sign(
+    { id: 'unfunded-user', tenant_id: 'unfunded-tenant', role: 'client' },
+    process.env.JWT_SECRET
+  );
+  const noBalanceHeaders = { authorization: `Bearer ${noBalanceToken}` };
+  testDb.prepare('INSERT INTO employees (id, tenant_id, name, type, primary_language, voice, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('unfunded-employee', 'unfunded-tenant', 'Unfunded Agent', 'instant_lead', 'en', 'E01', 'active');
+  const billingResponse = await fetch(`${baseUrl}/api/billing`, { headers: noBalanceHeaders });
+  assert.equal(billingResponse.status, 200);
+  assert.equal((await billingResponse.json()).balance_credits, 0, 'missing billing rows must not fabricate credits');
+  const statsResponse = await fetch(`${baseUrl}/api/stats`, { headers: noBalanceHeaders });
+  assert.equal(statsResponse.status, 200);
+  assert.equal((await statsResponse.json()).balanceCredits, 0, 'stats must not report demo balances for an unfunded tenant');
+  const blockedUnfundedCall = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${noBalanceToken}` },
+    body: JSON.stringify({
+      phone: '+919849012345',
+      employee_id: 'unfunded-employee'
+    })
+  });
+  assert.equal(blockedUnfundedCall.status, 402, 'calls must be blocked when the workspace cannot fund one minute');
+  assert.equal(testDb.prepare('SELECT COUNT(*) AS count FROM calls WHERE tenant_id = ?').get('unfunded-tenant').count, 0);
+
   const noProviderResponse = await fetch(`${baseUrl}/api/employees/parse-prompt`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -335,6 +409,55 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   });
   assert.equal(directTopup.status, 410);
 
+  const productionSendCode = await fetch(`${baseUrl}/api/auth/email/send-code`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'production-code@example.com' })
+  });
+  const productionSendCodeData = await productionSendCode.json();
+  assert.equal(productionSendCode.status, 503, 'serverless production auth must require a configured email sender');
+  assert.equal('code' in productionSendCodeData, false, 'production responses must never reveal verification codes');
+
+  const otpVercelValue = process.env.VERCEL;
+  delete process.env.VERCEL;
+  try {
+    const sendCodeResponse = await fetch(`${baseUrl}/api/auth/email/send-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'verified-code@example.com' })
+    });
+    const sendCodeData = await sendCodeResponse.json();
+    assert.equal(sendCodeResponse.status, 200);
+    assert.match(sendCodeData.code, /^\d{6}$/);
+    assert.notEqual(sendCodeData.code, '123456', 'verification codes must not use the historical fixed bypass');
+
+    const wrongCode = sendCodeData.code === '000000' ? '000001' : '000000';
+    const invalidVerification = await fetch(`${baseUrl}/api/auth/email/verify-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'verified-code@example.com', code: wrongCode })
+    });
+    assert.equal(invalidVerification.status, 401);
+
+    const validVerification = await fetch(`${baseUrl}/api/auth/email/verify-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'verified-code@example.com', code: sendCodeData.code })
+    });
+    const verifiedUser = await validVerification.json();
+    assert.equal(validVerification.status, 200);
+    assert.equal(verifiedUser.success, true);
+
+    const replayedCode = await fetch(`${baseUrl}/api/auth/email/verify-code`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'verified-code@example.com', code: sendCodeData.code })
+    });
+    assert.equal(replayedCode.status, 401, 'verification codes must be single use');
+  } finally {
+    process.env.VERCEL = otpVercelValue;
+  }
+
   const unavailablePayment = await fetch(`${baseUrl}/api/billing/create-order`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -507,6 +630,79 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
   });
   assert.equal(draftEmployeeCampaign.status, 400);
   assert.match((await draftEmployeeCampaign.json()).error, /publish this employee/i);
+
+  const addDncEntry = await fetch(`${baseUrl}/api/dnc`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({ phone: '98490 12345', reason: 'Caller requested no further calls' })
+  });
+  const dncEntry = await addDncEntry.json();
+  assert.equal(addDncEntry.status, 200);
+  assert.equal(dncEntry.entry.phone, '+919849012345', 'DNC entries should be normalized to E.164');
+
+  const blockedDncCall = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      phone: '98490 12345',
+      employee_id: 'tenant-a-employee',
+      employee: { name: 'Untrusted client employee', opening_greeting: 'Override' }
+    })
+  });
+  assert.equal(blockedDncCall.status, 403, 'DNC entries must block calls before provider dispatch');
+  assert.equal(testDb.prepare('SELECT COUNT(*) AS count FROM calls WHERE phone = ?').get('+919849012345').count, 0);
+
+  const crossTenantEmployeeCall = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      phone: '+919849012346',
+      employee_id: 'tenant-b-employee',
+      employee: { name: 'Untrusted cross-tenant employee' }
+    })
+  });
+  assert.equal(crossTenantEmployeeCall.status, 403, 'calls must not use another workspace employee');
+
+  const inlineEmployeeWithoutId = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      phone: '+919849012347',
+      employee: { name: 'Unpersisted employee', opening_greeting: 'Client-controlled script' }
+    })
+  });
+  assert.equal(inlineEmployeeWithoutId.status, 400, 'client-supplied employee data must not authorize dispatch');
+
+  const inlineEmployeeWithUnknownId = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      phone: '+919849012348',
+      employee_id: 'not-saved-employee',
+      employee: { name: 'Unpersisted employee', opening_greeting: 'Client-controlled script' }
+    })
+  });
+  assert.equal(inlineEmployeeWithUnknownId.status, 404, 'an inline profile must not substitute for a saved employee');
+
+  const draftEmployeeCall = await fetch(`${baseUrl}/api/calls/dispatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${tenantA}` },
+    body: JSON.stringify({
+      phone: '+919849012349',
+      employee_id: 'tenant-a-draft-employee',
+      employee: { name: 'Draft Support Agent', opening_greeting: 'Client override' }
+    })
+  });
+  assert.equal(draftEmployeeCall.status, 400, 'draft employees must not be dispatched');
+  assert.equal(
+    testDb.prepare("SELECT COUNT(*) AS count FROM calls WHERE phone IN (?, ?, ?)").get(
+      '+919849012347',
+      '+919849012348',
+      '+919849012349'
+    ).count,
+    0,
+    'rejected employee profiles must not create call records'
+  );
 
   const originalFetch = globalThis.fetch;
   const originalNodeEnv = process.env.NODE_ENV;

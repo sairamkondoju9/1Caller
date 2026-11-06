@@ -140,6 +140,16 @@ export default function NewEmployeeView({
   // Main Stepper: 2 = 'describe', 3 = 'hear-refine', 4 = 'employee-detail'
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [employeeId, setEmployeeId] = useState(initialData?.id || null);
+  const [currentUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const accountName = currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Account');
+  const accountEmail = currentUser?.email || '';
+  const accountInitial = (accountName || 'A').charAt(0).toUpperCase();
 
   useEffect(() => {
     if (initialStep) {
@@ -458,8 +468,8 @@ export default function NewEmployeeView({
   const [trialCallAttemptId, setTrialCallAttemptId] = useState('');
   const [trialCallError, setTrialCallError] = useState('');
   const [isDispatchingCall, setIsDispatchingCall] = useState(false);
-  const [leadName, setLeadName] = useState('Sairam');
-  const [leadPhone, setLeadPhone] = useState('+918919112039');
+  const [leadName, setLeadName] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
   const [showPreCallModal, setShowPreCallModal] = useState(false);
   const [hasAgreedConsent, setHasAgreedConsent] = useState(true);
 
@@ -821,13 +831,6 @@ export default function NewEmployeeView({
       setIsDispatchingCall(false);
     }
 
-    setTimeout(() => {
-      setCallState('connected');
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().then(() => setIsPlayingAudio(true)).catch(() => setIsPlayingAudio(true));
-      }
-    }, 2800);
   };
 
   function endCallToSummary() {
@@ -1409,11 +1412,13 @@ export default function NewEmployeeView({
           {/* User Profile Pill */}
           <div className="flex items-center gap-2 pl-2 border-l border-[#e2e4ed]">
             <div className="w-7 h-7 rounded-full bg-[#7a50dc] text-white font-bold text-[12px] flex items-center justify-center">
-              S
+              {accountInitial}
             </div>
             <div className="text-left hidden md:block">
-              <div className="text-[12px] font-bold text-[#0f0e17] leading-tight">Sairam</div>
-              <div className="text-[10px] text-zinc-500 leading-tight">sairamkondoju9@gmail.com</div>
+              <div className="text-[12px] font-bold text-[#0f0e17] leading-tight">{accountName}</div>
+              {accountEmail && (
+                <div className="text-[10px] text-zinc-500 leading-tight">{accountEmail}</div>
+              )}
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
           </div>
@@ -1650,7 +1655,7 @@ export default function NewEmployeeView({
                 </div>
                 <div>
                   <div className="text-[13px] font-bold text-[#0f0e17]">{employeeName || 'AI Employee'}</div>
-                  <div className="text-[11.5px] text-[#6c6b7e]">{businessName || 'Sairam Jewellers'}</div>
+                  <div className="text-[11.5px] text-[#6c6b7e]">{businessName || 'Your business'}</div>
                 </div>
               </div>
               <div className="pt-2 border-t border-[#f0f1f6] flex items-center justify-between text-[11px] text-[#6c6b7e]">
@@ -2586,7 +2591,7 @@ export default function NewEmployeeView({
                     </div>
                     <div className="min-w-0">
                       <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'AI Employee'}</div>
-                      <div className="text-[11px] text-white/60 truncate">{businessName || 'Sairam Jewellers'}</div>
+                      <div className="text-[11px] text-white/60 truncate">{businessName || 'Your business'}</div>
                     </div>
                   </div>
                 </div>
@@ -2763,7 +2768,7 @@ export default function NewEmployeeView({
                     </div>
                     <div className="min-w-0">
                       <div className="text-[12.5px] font-bold text-white truncate">{employeeName || 'AI Employee'}</div>
-                      <div className="text-[11px] text-white/60 truncate">{businessName || 'Sairam Jewellers'}</div>
+                      <div className="text-[11px] text-white/60 truncate">{businessName || 'Your business'}</div>
                     </div>
                   </div>
                 </div>
@@ -3018,7 +3023,7 @@ export default function NewEmployeeView({
                               <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-amber-200/80 flex items-center justify-center mb-2 text-[#d99a2b]">
                                 <Sparkles className="w-7 h-7 text-[#7a50dc]" />
                               </div>
-                              <div className="text-[15px] font-bold text-zinc-800">{businessName || 'Sairam Jewellers'}</div>
+                              <div className="text-[15px] font-bold text-zinc-800">{businessName || 'Your business'}</div>
                               <div className="text-[11.5px] text-zinc-600 mt-1 font-medium">
                                 {aiSmallContext || `${businessName || 'Business'} Special Enquiry`}
                               </div>
@@ -3151,7 +3156,7 @@ export default function NewEmployeeView({
                       </div>
                     )}
 
-                    {/* RINGING INCOMING CALL SCREEN */}
+                    {/* Outbound attempt status and local preview controls */}
                     {callState === 'ringing' && (
                       <div className="flex-1 flex flex-col justify-between items-center py-12 px-6 bg-[#0f0e17] text-white">
                         <div className="text-center space-y-3 pt-6">
@@ -3163,11 +3168,11 @@ export default function NewEmployeeView({
                               {employeeName || 'AI Employee'}
                             </div>
                             <div className="text-[13px] text-[#a78bfa] font-medium">
-                              {businessName || 'Sairam Jewellers'} AI {employeeRole}
+                              {businessName || 'Your business'} AI {employeeRole}
                             </div>
                             {trialCallAttemptId ? (
                               <div className="text-[11px] text-emerald-300 font-mono mt-1 animate-pulse px-3 py-1 bg-emerald-950/40 rounded-lg">
-                                📞 Dialing {leadPhone} from +917965481367 (Attempt: {trialCallAttemptId.slice(0, 10)}...)
+                                Call attempt sent to {leadPhone} (ID: {trialCallAttemptId.slice(0, 10)}...)
                               </div>
                             ) : trialCallError ? (
                               <div className="text-[10.5px] text-amber-300 font-mono mt-1 px-3 py-1 bg-amber-950/40 rounded-lg">
@@ -3175,7 +3180,7 @@ export default function NewEmployeeView({
                               </div>
                             ) : (
                               <div className="text-[11px] text-emerald-400 font-mono mt-1 animate-pulse">
-                                Incoming call to {leadPhone}...
+                                Preparing outbound call to {leadPhone}...
                               </div>
                             )}
                           </div>
@@ -3190,7 +3195,7 @@ export default function NewEmployeeView({
                             <div className="w-14 h-14 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all">
                               <PhoneOff className="w-6 h-6" />
                             </div>
-                            <span className="text-[12px] text-white/70">Decline</span>
+                            <span className="text-[12px] text-white/70">End preview</span>
                           </button>
 
                           <button
@@ -3207,13 +3212,13 @@ export default function NewEmployeeView({
                             <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg animate-pulse active:scale-95 transition-all">
                               <PhoneCall className="w-6 h-6" />
                             </div>
-                            <span className="text-[12px] text-white/70">Accept</span>
+                            <span className="text-[12px] text-white/70">Play sample</span>
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* CONNECTED LIVE CALL SCREEN (PLAYING REAL CALL AUDIO) */}
+                    {/* Local sample-audio preview, not live telephony audio */}
                     {callState === 'connected' && (
                       <div className="flex-1 flex flex-col justify-between bg-[#0f0e1a] text-white p-4.5">
                         {/* Call Top Bar */}
@@ -3224,11 +3229,11 @@ export default function NewEmployeeView({
                           <div className="text-[15px] font-bold text-white font-display">{employeeName || 'AI Employee'}</div>
                           <div className="text-[11.5px] text-emerald-400 font-mono flex items-center justify-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            {formatTimer(Math.floor(audioCurrentTime))} / {formatTimer(audioDuration)} &bull; 412ms TTFT
+                            Sample audio preview &bull; {formatTimer(Math.floor(audioCurrentTime))} / {formatTimer(audioDuration)}
                           </div>
                         </div>
 
-                        {/* Live Synchronized Telugu Conversation Transcript */}
+                        {/* Sample conversation transcript */}
                         <div className="space-y-2.5 my-auto max-h-[340px] overflow-y-auto px-1">
                           {realCallTurns
                             .filter((turn) => audioCurrentTime >= turn.time)
@@ -3313,7 +3318,7 @@ export default function NewEmployeeView({
 
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-100 border border-zinc-200 text-[11px] text-zinc-700">
                               <Smile className="w-3.5 h-3.5 text-zinc-500" />
-                              <span>Neutral call &bull; Qualified</span>
+                            <span>Sample transcript &bull; No outcome recorded</span>
                             </div>
                           </div>
 
@@ -3349,7 +3354,7 @@ export default function NewEmployeeView({
                               DEMO SIMULATION
                             </div>
                             <p className="text-[11.5px] text-zinc-700 leading-relaxed">
-                              This is a local demo preview, not a real customer conversation. No call was placed, no customer outcome was recorded, and no message was sent.
+                              This is sample content, not a live call transcript. The provider call attempt and its outcome must be checked separately; this screen does not record customer results.
                             </p>
                           </div>
 
@@ -3861,7 +3866,7 @@ export default function NewEmployeeView({
                         J
                       </div>
                       <div>
-                        <div className="text-[13px] font-bold text-[#0f0e17]">+918919112039</div>
+                        <div className="text-[13px] font-bold text-[#0f0e17]">+91 98765 43210</div>
                         <div className="text-[11.5px] text-[#6c6b7e]">Today 4:47 pm &bull; 1:30</div>
                       </div>
                     </div>
@@ -3883,7 +3888,7 @@ export default function NewEmployeeView({
                         J
                       </div>
                       <div>
-                        <div className="text-[13px] font-bold text-[#0f0e17]">+918919112039</div>
+                        <div className="text-[13px] font-bold text-[#0f0e17]">+91 98765 43210</div>
                         <div className="text-[11.5px] text-[#6c6b7e]">Today 4:43 pm &bull; 0:04</div>
                       </div>
                     </div>

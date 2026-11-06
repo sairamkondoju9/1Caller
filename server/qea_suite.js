@@ -15,7 +15,10 @@ import { sarvam } from './sarvamClient.js';
 import { cartesia } from './cartesiaClient.js';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sarvam_production_secret_key_84920';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('Set JWT_SECRET before running the live smoke-check suite.');
+}
 
 async function runQEASuite() {
   console.log('================================================================');

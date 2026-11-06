@@ -6,16 +6,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
-  const [useOtp, setUseOtp] = useState(false);
   const googleButtonRef = useRef(null);
 
   // Form states
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [suggestedCode, setSuggestedCode] = useState('');
-  const [otpToken, setOtpToken] = useState('');
+  const [testLoginEnabled, setTestLoginEnabled] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testPassword, setTestPassword] = useState('');
 
   const handleGoogleCredential = async (credential) => {
     setLoading(true);
@@ -51,45 +51,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       return;
     }
 
-    if (useOtp) {
-      if (!codeSent) {
-        // Send OTP
-        return handleSendEmailCode();
-      }
-      // Verify OTP
-      return handleVerifyEmailCode();
-    }
-
-    // Direct password authentication
-    if (!password || password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/email/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to sign in. Please verify your credentials.');
-        return;
-      }
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('user_role', data.user.role || 'client');
-      onLoginSuccess(data.user);
-      onClose();
-    } catch {
-      setError('Connection failed. Please check your internet connection.');
-    } finally {
-      setLoading(false);
-    }
+    if (!codeSent) return handleSendEmailCode();
+    return handleVerifyEmailCode();
   };
 
   const handleSendEmailCode = async () => {
@@ -107,7 +70,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         return;
       }
       setCodeSent(true);
-      if (data.otpToken) setOtpToken(data.otpToken);
       if (data.code) {
         setSuggestedCode(data.code);
         setCode(data.code);
@@ -130,7 +92,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       const res = await fetch('/api/auth/email/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: code.trim(), otpToken })
+        body: JSON.stringify({ email, code: code.trim() })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -145,6 +107,42 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       onClose();
     } catch {
       setError('Unable to verify code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const persistSession = (data) => {
+    localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('user_role', data.user.role || 'client');
+    onLoginSuccess(data.user);
+    onClose();
+  };
+
+  const handleTestLogin = async (e) => {
+    e?.preventDefault();
+    if (!testEmail || !testPassword) {
+      setError('Enter the test email and password');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/test-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, password: testPassword })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Test sign-in failed');
+        return;
+      }
+      persistSession(data);
+    } catch {
+      setError('Unable to reach the test sign-in service.');
     } finally {
       setLoading(false);
     }
@@ -177,6 +175,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
     fetch('/api/config')
       .then(r => r.ok ? r.json() : {})
       .then(cfg => {
+        if (cfg.testLoginEnabled) setTestLoginEnabled(true);
         if (cfg.googleClientId && window.google?.accounts?.id) {
           setupGoogle(cfg.googleClientId);
         }
@@ -194,7 +193,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen bg-[#fafafa] p-4 sm:p-6 overflow-y-auto cursor-pointer animate-fadeIn font-sans relative"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen bg-[#fafafa] p-4 sm:p-6 overflow-y-auto cursor-pointer animate-fadeIn font-sans"
     >
       <HaikeiBackground variant="dots" opacity={0.65} />
       <HaikeiBackground variant="wave" opacity={0.4} />
@@ -274,7 +273,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </span>
           </div>
 
-          {/* Email + Password / OTP Form */}
+          {/* Email verification form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <div>
               <label className="block text-[12.5px] font-medium text-zinc-800 mb-1.5">
@@ -283,79 +282,93 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setCodeSent(false);
+                  setCode('');
+                  setSuggestedCode('');
+                }}
                 placeholder="you@business.com"
                 required
                 className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[12.5px] font-medium text-zinc-800">
-                  {useOtp ? 'Verification Code' : 'Password'}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseOtp(!useOtp);
-                    setError('');
-                    if (!useOtp && email && email.includes('@')) {
-                      handleSendEmailCode();
-                    }
-                  }}
-                  className="text-[12px] font-medium text-[#6e44ff] hover:underline cursor-pointer"
-                >
-                  {useOtp ? 'Use password instead' : 'Forgot password?'}
-                </button>
-              </div>
-
-              {useOtp ? (
-                <div>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="6-digit verification code"
-                    maxLength={6}
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 font-mono tracking-widest outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
-                  />
-                  {suggestedCode && (
-                    <div
-                      onClick={() => setCode(suggestedCode)}
-                      className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center justify-between cursor-pointer hover:bg-emerald-100 transition-colors"
-                    >
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        Code: <strong className="font-mono tracking-wider">{suggestedCode}</strong>
-                      </span>
-                      <span className="text-[10px] uppercase font-bold text-emerald-700 bg-white/70 px-1.5 py-0.5 rounded">
-                        Auto-Filled
-                      </span>
-                    </div>
-                  )}
+            {codeSent && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[12.5px] font-medium text-zinc-800">
+                    Verification code
+                  </label>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleSendEmailCode}
+                    className="text-[12px] font-medium text-[#6e44ff] hover:underline cursor-pointer disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
                 </div>
-              ) : (
                 <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit verification code"
+                  maxLength={6}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white focus:border-[#6e44ff] focus:ring-2 focus:ring-[#6e44ff]/15 text-[13.5px] text-zinc-900 font-mono tracking-widest outline-none transition-all placeholder:text-zinc-400 shadow-2xs"
                 />
-              )}
-            </div>
+                {suggestedCode && (
+                  <div className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Development code: <strong className="font-mono tracking-wider">{suggestedCode}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
               className="w-full py-2.5 rounded-xl bg-[#6e44ff] hover:bg-[#5f35eb] text-white font-semibold text-sm transition-all cursor-pointer shadow-md shadow-purple-500/25 active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? 'Signing in…' : (mode === 'signup' ? 'Create an account' : 'Sign in')}
+              {loading
+                ? (codeSent ? 'Verifying…' : 'Sending code…')
+                : (codeSent ? 'Verify and continue' : (mode === 'signup' ? 'Create account with email' : 'Continue with email'))}
             </button>
           </form>
+
+          {/* Temporary, environment-gated test access (hidden unless enabled server-side) */}
+          {testLoginEnabled && (
+            <form onSubmit={handleTestLogin} className="space-y-3 mt-6 p-4 rounded-2xl border border-amber-200 bg-amber-50/70">
+              <div className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
+                Test access
+              </div>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="test email"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-amber-200 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-300/30 text-[13px] text-zinc-900 outline-none transition-all"
+              />
+              <input
+                type="password"
+                value={testPassword}
+                onChange={(e) => setTestPassword(e.target.value)}
+                placeholder="test password"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-amber-200 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-300/30 text-[13px] text-zinc-900 outline-none transition-all"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? 'Signing in…' : 'Sign in with test credentials'}
+              </button>
+            </form>
+          )}
 
           {/* New here? Create an account */}
           <div className="text-center mt-5">

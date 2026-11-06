@@ -32,7 +32,7 @@ export class WhatsAppClient {
   async sendBrochureCatalog({
     recipientPhone,
     leadName = 'Customer',
-    businessName = 'Sairam Jewellers',
+    businessName = 'Your Business',
     employeeName = 'Jagan',
     catalogUrl = '',
     offerDetails = 'Exclusive zero GST and zero making charges offer'

@@ -243,7 +243,7 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
       // 4. Fallback to standard checkout modal if link not available
       if (window.Razorpay) {
         const options = {
-          key: orderData.keyId || 'rzp_live_TvJ7YXfy027Dyd',
+          key: orderData.keyId,
           amount: orderData.amount,
           currency: orderData.currency || 'INR',
           name: 'Sarvam Voice AI',
@@ -252,8 +252,8 @@ export default function BillingView({ currentUser, onBalanceUpdate }) {
           order_id: orderData.orderId,
           prefill: {
             name: currentUser?.name || companyName || 'Customer',
-            email: currentUser?.email || 'billing@sarvam.ai',
-            contact: (currentUser?.phone || '+918919112039').replace(/[^\d+]/g, '')
+            email: currentUser?.email || '',
+            contact: (currentUser?.phone || '').replace(/[^\d+]/g, '')
           },
           theme: {
             color: '#7a50dc'
@@ -705,14 +705,13 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
-                        <button
-                          type="button"
-                          onClick={() => alert(`Downloading Invoice ${tx.invoice_id} (GST compliant PDF)`)}
-                          className="flex items-center gap-1 text-[#0f0e17] hover:text-[#1f1e28] font-semibold cursor-pointer"
+                        <span
+                          title="Invoice PDF generation is not connected in this deployment."
+                          className="flex items-center gap-1 text-[#6c6b7e] cursor-not-allowed"
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>{tx.invoice_id}</span>
-                        </button>
+                        </span>
                       </td>
                       <td className="py-3.5 px-6 text-right">
                         <span className="text-[11px] font-bold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full border border-[#bbf7d0]">
@@ -774,13 +773,11 @@ Input Tax Credit (ITC) Eligible under CGST/SGST Act.
           <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
-              onClick={() => {
-                setSavedGst(true);
-                alert("GST profile updated successfully. Future tax invoices will reflect this information.");
-              }}
-              className="bg-[#0f0e17] hover:bg-[#1f1e28] text-white font-bold text-xs px-5 py-2 rounded-lg transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              disabled
+              title="Invoicing profile storage is not connected in this deployment."
+              className="bg-[#e2e4ed] text-[#6c6b7e] font-bold text-xs px-5 py-2 rounded-lg cursor-not-allowed"
             >
-              Save Invoicing Details
+              Saving unavailable
             </button>
             {savedGst && (
               <span className="text-xs font-semibold text-[#16a34a] flex items-center gap-1">

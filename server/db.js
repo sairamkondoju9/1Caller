@@ -260,8 +260,8 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS billing (
       id TEXT PRIMARY KEY,
       tenant_id TEXT DEFAULT 'default',
-      balance_credits REAL DEFAULT 50.0,
-      balance_inr REAL DEFAULT 50.0,
+      balance_credits REAL DEFAULT 0,
+      balance_inr REAL DEFAULT 0,
       rate_standard REAL DEFAULT 5.00,
       rate_premium REAL DEFAULT 6.80,
       rate_enterprise REAL DEFAULT 3.50
@@ -346,12 +346,12 @@ export function initDatabase() {
     db.prepare(`
       INSERT INTO users (id, email, name, role, tenant_id, avatar)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run('usr_owner_1', 'owner@outpero.com', 'Sairam (Platform Owner)', 'owner', 'platform', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop');
+    `).run('usr_owner_1', 'owner@example.com', 'Platform Owner', 'owner', 'platform', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop');
 
     db.prepare(`
       INSERT INTO users (id, email, name, role, tenant_id, avatar)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run('usr_tenant_1', 'sairamkondoju9@gmail.com', 'Sairam Kondoju', 'admin', 'default', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop');
+    `).run('usr_tenant_1', 'admin@example.com', 'Platform Admin', 'admin', 'default', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop');
   }
 
   const tenantCheck = db.prepare('SELECT COUNT(*) as count FROM tenants').get();

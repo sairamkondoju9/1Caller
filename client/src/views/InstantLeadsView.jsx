@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { getAuthHeaders } from '../utils/api';
 import {
   Zap,
-  Copy,
-  Check,
   ShieldCheck,
   ArrowRight,
   Bell,
@@ -30,12 +28,16 @@ import {
   Download
 } from 'lucide-react';
 
+function getCallOutcome(call) {
+  const outcome = String(call.outcome || call.status || '').trim().toLowerCase();
+  if (outcome.includes('qualified') || outcome === 'completed') return 'Qualified';
+  if (/voicemail|no[_ -]?answer|unanswered/.test(outcome)) return 'Voicemail';
+  if (/callback|call[_ -]?back/.test(outcome)) return 'Callback';
+  return 'Other';
+}
+
 export default function InstantLeadsView({ onNavigate, employees = [] }) {
   const primaryEmployee = employees && employees.length > 0 ? employees[0] : null;
-  // Banners & Webhook
-  const [copiedWebhook, setCopiedWebhook] = useState(false);
-  const webhookUrl = "https://api.sarvam.ai/v1/webhooks/incoming-leads";
-
   // Calling Policy State (from Screenshots 12 & 13)
   const [dialDelaySeconds, setDialDelaySeconds] = useState(10);
   const [callingHoursStart, setCallingHoursStart] = useState('09:00 AM');
@@ -50,7 +52,6 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
   const [respectDNC, setRespectDNC] = useState(true);
   const [maxAtOnce, setMaxAtOnce] = useState('Unlimited');
   const [duplicateWindowMinutes, setDuplicateWindowMinutes] = useState(5);
-  const [policySaved, setPolicySaved] = useState(false);
 
   // Filters State (Screenshots 13, 14, 18, 19)
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +93,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
               isHot: Boolean(c.is_hot || c.isHot),
               summary: c.summary || c.call_summary || 'Autonomous enquiry call handled by AI telecaller.',
               sentiment: c.sentiment || 'Neutral',
-              outcome: c.outcome || (c.status === 'completed' ? 'Qualified' : (c.status || 'Callback')),
+              outcome: getCallOutcome(c),
               duration: typeof c.duration === 'number'
                 ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}`
                 : (c.duration || '0:45'),
@@ -142,12 +143,6 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
     return true;
   });
 
-  const handleCopyWebhook = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopiedWebhook(true);
-    setTimeout(() => setCopiedWebhook(false), 2000);
-  };
-
   const handleToggleDay = (day) => {
     if (callingDays.includes(day)) {
       if (callingDays.length > 1) {
@@ -180,11 +175,6 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
 
   const handleRemoveHoliday = (h) => {
     setHolidays(holidays.filter(item => item !== h));
-  };
-
-  const handleSavePolicy = () => {
-    setPolicySaved(true);
-    setTimeout(() => setPolicySaved(false), 3000);
   };
 
   const handleToggleOutcome = (outcome) => {
@@ -236,12 +226,12 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
           </div>
           <h1 className="text-2xl font-bold text-[#0f0e17] tracking-tight flex items-center gap-2.5 font-display">
             Instant Leads
-            <span className="text-xs font-bold bg-[#fff7ed] text-[#c2410c] px-2.5 py-0.5 rounded-full border border-[#fed7aa] font-mono">
-              Sub-30s Response
+<span className="text-xs font-bold text-[#c2410c] px-2.5 py-0.5 rounded-full border border-[#fed7aa] font-mono">
+              Not connected
             </span>
           </h1>
           <p className="text-xs text-[#6c6b7e] mt-1 font-sans">
-            Calls brand-new leads within seconds of submission — before your competitor's human team even opens their CRM.
+            Lead intake and automatic dialing are not connected for this workspace.
           </p>
         </div>
 
@@ -264,10 +254,10 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
           </div>
           <div>
             <h4 className="text-xs font-bold text-[#0f0e17] font-sans">
-              Buy a phone number and assign it to start making calls in production
+              Phone number provisioning is not available
             </h4>
             <p className="text-[11px] text-[#6c6b7e]">
-              It won't dial yet, so you can test safely before flipping the live switch.
+              Connect a supported number provider before enabling production calls.
             </p>
           </div>
         </div>
@@ -287,11 +277,11 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
             <ShieldCheck className="w-4 h-4 text-[#0f0e17]" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-[#0f0e17] font-sans">
-              Get an API key to send leads into Sarvam from your own tools
+          <h4 className="text-xs font-bold text-[#0f0e17] font-sans">
+              Developer integrations are not enabled
             </h4>
             <p className="text-[11px] text-[#6c6b7e]">
-              Integrate with webhooks, Zapier, Make.com, or your custom CRM backends.
+              Lead-intake API credentials and webhook delivery are unavailable in this deployment.
             </p>
           </div>
         </div>
@@ -300,7 +290,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
           onClick={() => onNavigate && onNavigate('developers')}
           className="text-xs font-bold text-[#0f0e17] hover:text-[#3a3f5c] flex items-center gap-1 bg-[#f6f7fb] px-3 py-1.5 rounded-xl border border-[#e2e4ed] transition-colors shrink-0 cursor-pointer shadow-2xs font-mono"
         >
-          Get an API key <ArrowRight className="w-3 h-3" />
+          View developer status <ArrowRight className="w-3 h-3" />
         </button>
       </div>
 
@@ -309,19 +299,18 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <div className="text-[10px] font-mono font-medium text-[#6c6b7e] uppercase tracking-wider mb-0.5">
-              Instant Ingestion Webhook
+              Lead intake
             </div>
             <h3 className="text-sm font-bold text-[#0f0e17] font-display">
-              Connect your leads
+              Endpoint unavailable
             </h3>
             <p className="text-xs text-[#6c6b7e] mt-0.5">
-              {primaryEmployee?.name || 'Your AI telecaller'} calls new leads within seconds of submission — before your competitor's human team even opens their CRM.
+              {primaryEmployee?.name || 'An AI employee'} cannot receive incoming leads yet. The lead-intake endpoint is not implemented for this deployment.
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0] text-[#16a34a] text-[11px] font-mono font-medium self-start sm:self-auto">
-            <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"></span>
-            Listening on endpoint
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fff7ed] border border-[#fed7aa] text-[#c2410c] text-[11px] font-mono font-medium self-start sm:self-auto">
+            Not connected
           </div>
         </div>
 
@@ -329,26 +318,23 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
           <input
             type="text"
             readOnly
-            value={webhookUrl}
-            className="apple-glass-input flex-1 p-2.5 text-xs font-mono text-[#0f0e17] bg-white/90 select-all"
+            value="Lead intake endpoint is not configured for this deployment."
+            aria-label="Lead intake endpoint status"
+            className="apple-glass-input flex-1 p-2.5 text-xs font-mono text-[#6c6b7e] bg-white/90"
           />
           <button
-            onClick={handleCopyWebhook}
-            className="bg-[#0f0e17] hover:bg-[#1f1e28] text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+            type="button"
+            disabled
+            className="bg-[#e2e4ed] text-[#6c6b7e] font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-not-allowed shrink-0"
           >
-            {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            {copiedWebhook ? 'Copied' : 'Copy'}
+            Unavailable
           </button>
         </div>
 
-        {/* Supported Lead Sources */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#f0f2f8]">
-          <span className="text-[10px] font-mono text-[#6c6b7e] uppercase">Compatible with:</span>
-          {['Meta Lead Ads', 'Google Forms', 'Zapier', 'Make.com', 'Custom Webhooks'].map((src, i) => (
-            <span key={i} className="text-[11px] font-medium text-[#3a3f5c] bg-[#f6f7fb] border border-[#e2e4ed] px-2.5 py-0.5 rounded-md">
-              {src}
-            </span>
-          ))}
+          <span className="text-[10px] font-mono text-[#6c6b7e]">
+            CRM and form integrations require a working lead-intake endpoint.
+          </span>
         </div>
       </div>
 
@@ -356,22 +342,19 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
       <div className="apple-glass rounded-2xl p-6 border border-[#e2e4ed] space-y-6 shadow-xs">
         <div className="flex items-center justify-between border-b border-[#e2e4ed] pb-4">
           <div>
-            <h3 className="text-sm font-bold text-[#0f0e17] font-display">Calling policy</h3>
+            <h3 className="text-sm font-bold text-[#0f0e17] font-display">Calling policy preview</h3>
             <p className="text-xs text-[#6c6b7e]">
-              Set operational windows, dial pacing, retry backoffs, and compliance rules.
+              These settings are not saved or enforced because lead intake and campaign dispatch are not connected.
             </p>
           </div>
 
           <button
-            onClick={handleSavePolicy}
-            className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
-              policySaved
-                ? 'bg-[#16a34a] text-white'
-                : 'sarvam-btn-primary'
-            }`}
+            type="button"
+            disabled
+            title="Policy persistence is not implemented."
+            className="text-xs font-bold px-4 py-2 rounded-xl bg-[#e2e4ed] text-[#6c6b7e] cursor-not-allowed"
           >
-            {policySaved ? <Check className="w-3.5 h-3.5" /> : null}
-            {policySaved ? 'Calling policy saved!' : 'Save calling policy'}
+            Saving unavailable
           </button>
         </div>
 
@@ -390,7 +373,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
               />
               <span className="text-xs text-[#6c6b7e] font-mono">seconds</span>
             </div>
-            <p className="text-[11px] text-[#6c6b7e]">Wait before dialing newly captured leads.</p>
+            <p className="text-[11px] text-[#6c6b7e]">Preview value only; lead dialing is not connected.</p>
           </div>
 
           {/* Calling Hours */}
@@ -411,7 +394,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                 className="apple-glass-input w-24 p-2 text-xs font-mono font-medium text-[#0f0e17]"
               />
             </div>
-            <p className="text-[11px] text-[#6c6b7e]">Leads outside calling hours: Queue &amp; call at 09:00 AM next day.</p>
+            <p className="text-[11px] text-[#6c6b7e]">Scheduling is not enforced while lead intake is unavailable.</p>
           </div>
 
           {/* Retry No Answer */}
@@ -452,7 +435,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                 </div>
               )}
             </div>
-            <p className="text-[11px] text-[#6c6b7e]">Up to 3 attempts total.</p>
+            <p className="text-[11px] text-[#6c6b7e]">Retry settings are preview only; no calls are scheduled.</p>
           </div>
 
           {/* Calling Days */}
@@ -523,7 +506,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                   className="w-4 h-4 accent-[#0f0e17] cursor-pointer"
                 />
               </div>
-              <p className="text-[11px] text-[#6c6b7e]">Skip numbers your account has opted out.</p>
+              <p className="text-[11px] text-[#6c6b7e]">DNC preference is not enforced for incoming leads yet.</p>
             </div>
 
             <div>
@@ -539,22 +522,36 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                 />
                 <span className="text-xs text-[#6c6b7e]">min</span>
               </div>
-              <p className="text-[11px] text-[#6c6b7e]">Same number again within this many minutes is skipped.</p>
+              <p className="text-[11px] text-[#6c6b7e]">Duplicate suppression is not active for incoming leads.</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section 3: Lead Quality Breakdown & Analytics Donut (Matching Screenshot 13) */}
+      {/* Section 3: Lead Quality Breakdown */}
       <div className="apple-glass rounded-2xl p-6 border border-[#e2e4ed] shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold text-[#0f0e17] font-display">Lead quality breakdown</h3>
-            <p className="text-xs text-[#6c6b7e]">Distribution of outcomes from instant callbacks.</p>
+            <p className="text-xs text-[#6c6b7e]">Calculated from call outcomes recorded in this workspace.</p>
           </div>
 
           <div className="flex items-center gap-6">
-            {/* SVG Donut Chart */}
+            {(() => {
+              const outcomeBreakdown = [
+                { label: 'Qualified', color: '#10b981' },
+                { label: 'Voicemail', color: '#64748b' },
+                { label: 'Callback', color: '#d97757' },
+                { label: 'Other', color: '#94a3b8' }
+              ].map((item) => ({
+                ...item,
+                count: allCalls.filter((call) => call.outcome === item.label).length
+              })).filter((item) => item.count > 0);
+              const totalOutcomeCalls = allCalls.length;
+              let offset = 0;
+
+              return (
+                <>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
                 <path
@@ -564,52 +561,47 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                   fill="none"
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
-                {/* 50% Qualified (Emerald) */}
-                <path
-                  className="text-[#10b981]"
-                  strokeDasharray="50, 100"
-                  strokeWidth="3.8"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                {/* 50% Voicemail (Slate/Indigo) */}
-                <path
-                  className="text-[#64748b]"
-                  strokeDasharray="50, 100"
-                  strokeDashoffset="-50"
-                  strokeWidth="3.8"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
+                {outcomeBreakdown.map((item) => {
+                  const percentage = totalOutcomeCalls ? (item.count / totalOutcomeCalls) * 100 : 0;
+                  const pathOffset = offset;
+                  offset += percentage;
+                  return (
+                    <path
+                      key={item.label}
+                      strokeDasharray={`${percentage} ${100 - percentage}`}
+                      strokeDashoffset={`${-pathOffset}`}
+                      strokeWidth="3.8"
+                      strokeLinecap="round"
+                      stroke={item.color}
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  );
+                })}
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-sm font-bold text-[#0f0e17] font-mono leading-none">2</span>
+                <span className="text-sm font-bold text-[#0f0e17] font-mono leading-none">{totalOutcomeCalls}</span>
                 <span className="text-[8px] text-[#6c6b7e] uppercase font-mono mt-0.5">total</span>
               </div>
             </div>
 
-            {/* Breakdown Stats */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
-                <span className="font-semibold text-[#0f0e17]">1 Qualified</span>
-                <span className="text-[#6c6b7e] font-mono">(50%)</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#64748b]"></span>
-                <span className="font-semibold text-[#0f0e17]">1 Voicemail</span>
-                <span className="text-[#6c6b7e] font-mono">(50%)</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#d97757]"></span>
-                <span className="font-semibold text-[#0f0e17]">1 Callback</span>
-                <span className="text-[#6c6b7e] font-mono">(scheduled)</span>
-              </div>
+              {outcomeBreakdown.map((item) => (
+                <div key={item.label} className="flex items-center gap-2 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                  <span className="font-semibold text-[#0f0e17]">{item.count} {item.label}</span>
+                  <span className="text-[#6c6b7e] font-mono">({totalOutcomeCalls ? Math.round(item.count / totalOutcomeCalls * 100) : 0}%)</span>
+                </div>
+              ))}
+              {totalOutcomeCalls === 0 && (
+                <p className="text-xs text-[#6c6b7e]">
+                  {isLoadingCalls ? 'Loading call outcomes…' : 'No call outcomes yet.'}
+                </p>
+              )}
             </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -903,7 +895,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
               No instant lead calls yet
             </h4>
             <p className="text-xs text-[#6c6b7e] max-w-sm mx-auto">
-              Incoming leads from your webhook, CRM, or landing page will be automatically dialed within seconds. Copy your webhook URL above to connect your forms.
+                  Lead intake is not connected for this deployment, so incoming leads cannot be received or dialed.
             </p>
           </div>
         ) : (

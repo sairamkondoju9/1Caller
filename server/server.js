@@ -12,7 +12,7 @@ import crypto from 'node:crypto';
 import Razorpay from 'razorpay';
 import { db, turso, initDatabase, getLLMUsageStats } from './db.js';
 import { ensureTursoSchema, isTursoSchemaReady } from './tursoSchema.js';
-import { sanitizeBalance, calculateAdminOverview } from './financialGuard.js';
+import { sanitizeBalance, calculateAdminOverview, resolveCreditPackage } from './financialGuard.js';
 import { AudioSession } from './audioGateway.js';
 import { sarvam } from './sarvamClient.js';
 import { cartesia } from './cartesiaClient.js';
@@ -21,30 +21,26 @@ import { mistralClient } from './mistralClient.js';
 import { geminiClient } from './geminiClient.js';
 import { llmManager } from './llmManager.js';
 import { whatsappClient } from './whatsappClient.js';
-import { TelephonyService } from './telephony.js';
+import { TelephonyService, formatPhoneNumber } from './telephony.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PRIMARY_JWT_SECRET = process.env.JWT_SECRET || 'sarvam_production_secret_key_849203810293';
-const JWT_SECRET = PRIMARY_JWT_SECRET;
-const ACCEPTED_JWT_SECRETS = [
-  PRIMARY_JWT_SECRET,
-  'sarvam_production_secret_key_849203810293',
-  'sarvam_production_secret_key_84920',
-  'sarvam-super-secret-jwt-key-for-auth-tokens-2025',
-  'launch-guard-test-secret',
-  'local-development-only-secret'
-];
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required. Configure a unique secret before starting the server.');
+}
+if ((process.env.NODE_ENV === 'production' || process.env.VERCEL) && Buffer.byteLength(JWT_SECRET) < 32) {
+  throw new Error('JWT_SECRET must be at least 32 bytes in production deployments.');
+}
 
 function verifyJwtResilient(token) {
   if (!token) return null;
   const clean = String(token).trim();
-  for (const secret of ACCEPTED_JWT_SECRETS) {
-    try {
-      return jwt.verify(clean, secret);
-    } catch {}
+  try {
+    return jwt.verify(clean, JWT_SECRET);
+  } catch {
+    return null;
   }
-  return null;
 }
 
 initDatabase();
@@ -153,10 +149,8 @@ function invalidateTenantCache(tenantId) {
 wss.on('connection', (ws, request) => {
   const connectionUrl = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   const token = connectionUrl.searchParams.get('token');
-  let user;
-  try {
-    user = jwt.verify(token || '', JWT_SECRET);
-  } catch {
+  const user = verifyJwtResilient(token);
+  if (!user) {
     ws.close(1008, 'Authentication required');
     return;
   }
@@ -311,7 +305,8 @@ app.get('/api/config', (req, res) => {
     nodeEnv: process.env.NODE_ENV || 'production',
     environment: process.env.NODE_ENV || 'production',
     preferredTtsEngine: process.env.CARTESIA_API_KEY ? 'cartesia' : 'sarvam',
-    preferredTelephony: 'sarvam'
+    preferredTelephony: 'sarvam',
+    testLoginEnabled: Boolean(process.env.TEST_LOGIN_CREDENTIALS)
   });
 });
 
@@ -474,100 +469,137 @@ app.post('/api/auth/google', async (req, res) => {
 // One-Click Login & Role Switching
 // One-Click Login & Role Switching
 
-// Email + Password Direct Authentication (Outpero Unified Login)
+// Password login remains disabled until verified password credentials exist.
 app.post('/api/auth/email/password', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'Valid email address is required' });
-    }
-    const cleanEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ error: 'Please enter a valid email address' });
-    }
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
-    let user = null;
-    if (turso) {
-      const result = await turso.execute({
-        sql: 'SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1',
-        args: [cleanEmail]
-      });
-      user = result.rows && result.rows.length > 0 ? result.rows[0] : null;
-    } else {
-      user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1').get(cleanEmail);
-    }
-
-    if (!user) {
-      const tenantId = `tenant_${crypto.randomBytes(6).toString('hex')}`;
-      const userId = `usr_${crypto.randomBytes(6).toString('hex')}`;
-      const userName = name || cleanEmail.split('@')[0];
-      const role = 'client';
-
-      if (turso) {
-        await turso.execute({
-          sql: 'INSERT INTO tenants (id, name, balance_credits) VALUES (?, ?, 50.0)',
-          args: [tenantId, `${userName}'s Workspace`]
-        });
-        await turso.execute({
-          sql: "INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id) VALUES (?, ?, ?, ?, ?, '', '')",
-          args: [userId, cleanEmail, userName, role, tenantId]
-        });
-      } else {
-        db.prepare('INSERT INTO tenants (id, name, balance_credits) VALUES (?, ?, 50.0)').run(tenantId, `${userName}'s Workspace`);
-        db.prepare("INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id) VALUES (?, ?, ?, ?, ?, '', '')").run(userId, cleanEmail, userName, role, tenantId);
-      }
-
-      user = {
-        id: userId,
-        email: cleanEmail,
-        name: userName,
-        role: role,
-        tenant_id: tenantId,
-        avatar: ''
-      };
-    }
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        tenant_id: user.tenant_id
-      },
-      JWT_SECRET,
-      { expiresIn: '60d' }
-    );
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        tenantId: user.tenant_id,
-        avatar: user.avatar || ''
-      }
-    });
-  } catch (err) {
-    console.error('Password login error:', err);
-    res.status(500).json({ error: 'Authentication service encountered an error' });
-  }
+  return res.status(410).json({ error: 'Password sign-in is disabled. Use a verified email code or Google sign-in.' });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   return res.status(410).json({ error: 'Email-only sign-in has been disabled. Use verified Google sign-in.' });
 });
 
-// Secure Email Verification Code (OTP) Storage
-const emailOtpStore = new Map();
+// Temporary, environment-gated smoke-test sign-in.
+// The route only exists when TEST_LOGIN_CREDENTIALS is set as "email:password,email:password".
+// Unset the variable (or delete the users) to remove this capability entirely.
+function getTestLoginCredentials() {
+  const raw = process.env.TEST_LOGIN_CREDENTIALS || '';
+  return raw
+    .split(',')
+    .map(pair => pair.trim())
+    .filter(Boolean)
+    .map(pair => {
+      const separator = pair.indexOf(':');
+      if (separator === -1) return null;
+      return {
+        email: pair.slice(0, separator).trim().toLowerCase(),
+        password: pair.slice(separator + 1)
+      };
+    })
+    .filter(cred => cred && cred.email && cred.password);
+}
 
-// Request Email Verification Code
+app.post('/api/auth/test-login', async (req, res) => {
+  try {
+    const credentials = getTestLoginCredentials();
+    if (credentials.length === 0) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const { email, password } = req.body || {};
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const match = credentials.find(cred => cred.email === cleanEmail);
+    if (!match || match.password !== password) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    if (process.env.VERCEL && process.env.NODE_ENV === 'production' && !turso) {
+      return res.status(503).json({ error: 'Persistent account storage is not configured.' });
+    }
+
+    const cleanName = cleanEmail.split('@')[0];
+    const ownerEmails = new Set((process.env.OWNER_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
+    const role = ownerEmails.has(cleanEmail) ? 'owner' : 'client';
+
+    let user = null;
+    if (turso) {
+      const result = await turso.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [cleanEmail] });
+      if (result.rows && result.rows.length > 0) user = result.rows[0];
+    } else {
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
+    }
+
+    if (!user) {
+      const id = `usr_${crypto.randomUUID()}`;
+      const tenantId = `tenant_${crypto.randomUUID()}`;
+      if (turso) {
+        let tx;
+        try {
+          tx = await turso.transaction('write');
+          await tx.execute({
+            sql: `INSERT INTO tenants (id, name, email, plan, status) VALUES (?, ?, ?, 'growth', 'active')`,
+            args: [tenantId, `${cleanName}'s Workspace`, cleanEmail]
+          });
+          await tx.execute({
+            sql: `INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id) VALUES (?, ?, ?, ?, ?, '', '')`,
+            args: [id, cleanEmail, cleanName, role, tenantId]
+          });
+          await tx.execute({
+            sql: 'INSERT INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, 50, 0)',
+            args: [`b_${tenantId}`, tenantId]
+          });
+          await tx.execute({
+            sql: `INSERT INTO transactions (id, tenant_id, type, amount, credits, description, status)
+                  VALUES (?, ?, 'signup_bonus', 0, 50, '50 free signup credits', 'success')`,
+            args: [`signup_bonus_${tenantId}`, tenantId]
+          });
+          await tx.commit();
+          user = { id, email: cleanEmail, name: cleanName, role, tenant_id: tenantId, avatar: '', google_id: '' };
+        } catch (e) {
+          if (tx) await tx.rollback().catch(() => {});
+          console.error('[TestLogin] Turso user create error:', e.message);
+          return res.status(503).json({ error: 'Could not create the test account. Please retry.' });
+        }
+      } else {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          db.prepare('INSERT INTO tenants (id, name, email, plan, status) VALUES (?, ?, ?, ?, ?)')
+            .run(tenantId, `${cleanName}'s Workspace`, cleanEmail, 'growth', 'active');
+          db.prepare(`
+            INSERT INTO billing (id, tenant_id, balance_credits, balance_inr, rate_standard, rate_premium, rate_enterprise)
+            VALUES (?, ?, 50, 0, 5.00, 6.80, 3.50)
+          `).run(`b_${tenantId}`, tenantId);
+          db.prepare(`
+            INSERT INTO transactions (id, tenant_id, type, amount, credits, description, status)
+            VALUES (?, ?, 'signup_bonus', 0, 50, '50 free signup credits', 'success')
+          `).run(`signup_bonus_${tenantId}`, tenantId);
+          db.prepare(`
+            INSERT INTO users (id, email, name, role, tenant_id, avatar, google_id)
+            VALUES (?, ?, ?, ?, ?, '', '')
+          `).run(id, cleanEmail, cleanName, role, tenantId);
+          db.exec('COMMIT');
+        } catch (err) {
+          db.exec('ROLLBACK');
+          throw err;
+        }
+        user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+      }
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ success: true, token, user: { ...user, role: user.role || role } });
+  } catch (err) {
+    console.error('[TestLogin] Unexpected error:', err.message);
+    res.status(500).json({ error: 'Test sign-in failed' });
+  }
+});
+
+// Email OTPs are persisted server-side and consumed once after verification.
 app.post('/api/auth/email/send-code', async (req, res) => {
   try {
     const { email } = req.body;
@@ -579,105 +611,119 @@ app.post('/api/auth/email/send-code', async (req, res) => {
     if (!emailRegex.test(cleanEmail)) {
       return res.status(400).json({ error: 'Please enter a valid email address' });
     }
+    const isProductionDeployment = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+    if (isProductionDeployment && (!process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM)) {
+      return res.status(503).json({ error: 'Email verification is not configured. Use Google sign-in or contact support.' });
+    }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = String(crypto.randomInt(100000, 1000000));
     const expiresAt = Date.now() + 15 * 60 * 1000;
-    emailOtpStore.set(cleanEmail, { code, expiresAt });
-
-    // Stateless HMAC verification token for serverless multi-container environments
-    const otpPayload = `${cleanEmail}:${code}:${expiresAt}`;
-    const otpSig = crypto.createHmac('sha256', JWT_SECRET).update(otpPayload).digest('hex');
-    const otpToken = Buffer.from(JSON.stringify({ email: cleanEmail, expiresAt, sig: otpSig })).toString('base64');
-
-    // Also persist to DB as backup
     if (turso) {
-      turso.execute({
+      await turso.execute({
         sql: `INSERT INTO email_verifications (email, code, expires_at) VALUES (?, ?, ?)
               ON CONFLICT(email) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at`,
         args: [cleanEmail, code, expiresAt]
-      }).catch(e => console.warn('[Turso OTP persist warning]:', e.message));
+      });
+    } else {
+      db.prepare('INSERT OR REPLACE INTO email_verifications (email, code, expires_at) VALUES (?, ?, ?)')
+        .run(cleanEmail, code, expiresAt);
     }
-    try {
-      db.prepare(`INSERT OR REPLACE INTO email_verifications (email, code, expires_at) VALUES (?, ?, ?)`).run(cleanEmail, code, expiresAt);
-    } catch {}
 
-    console.log(`[Auth] Verification OTP for ${cleanEmail}: ${code}`);
-    res.json({
+    if (isProductionDeployment) {
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: process.env.AUTH_EMAIL_FROM,
+          to: [cleanEmail],
+          subject: 'Your Sarvam verification code',
+          text: `Your verification code is ${code}. It expires in 15 minutes. If you did not request this code, you can ignore this email.`
+        })
+      });
+      if (!emailResponse.ok) {
+        if (turso) {
+          await turso.execute({ sql: 'DELETE FROM email_verifications WHERE email = ?', args: [cleanEmail] });
+        } else {
+          db.prepare('DELETE FROM email_verifications WHERE email = ?').run(cleanEmail);
+        }
+        console.error('[Auth] Verification email provider returned:', emailResponse.status);
+        return res.status(502).json({ error: 'Could not send the verification email. Please retry.' });
+      }
+    } else {
+      console.info(`[Auth] Development verification code created for ${cleanEmail}.`);
+    }
+
+    const response = {
       success: true,
-      message: 'Verification code generated successfully',
-      code: code,
-      otpToken: otpToken
-    });
+      message: 'If this address can receive verification mail, a code has been sent.'
+    };
+    if (!isProductionDeployment) response.code = code;
+    return res.json(response);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[Auth] Verification code delivery failed:', err.message);
+    return res.status(503).json({ error: 'Email verification is temporarily unavailable.' });
   }
 });
 
 // Verify Email Code & Issue Session JWT
 app.post('/api/auth/email/verify-code', async (req, res) => {
   try {
-    const { email, code, otpToken } = req.body;
-    if (!email || !code) {
+    const { email, code } = req.body;
+    if (typeof email !== 'string' || typeof code !== 'string' || !/^\d{6}$/.test(code.trim())) {
       return res.status(400).json({ error: 'Email and verification code are required' });
     }
     const cleanEmail = email.trim().toLowerCase();
     const enteredCode = String(code).trim();
-    let isValidCode = enteredCode === '123456';
-
-    // 1. Stateless HMAC token validation (zero container affinity requirement, 0ms)
-    if (!isValidCode && otpToken) {
-      try {
-        const decoded = JSON.parse(Buffer.from(otpToken, 'base64').toString('utf8'));
-        if (decoded.email === cleanEmail && Date.now() <= decoded.expiresAt) {
-          const expectedSig = crypto.createHmac('sha256', JWT_SECRET)
-            .update(`${cleanEmail}:${enteredCode}:${decoded.expiresAt}`)
-            .digest('hex');
-          if (expectedSig === decoded.sig) {
-            isValidCode = true;
-          }
-        }
-      } catch {}
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
     }
-
-    // 2. In-memory fallback
-    if (!isValidCode) {
-      const record = emailOtpStore.get(cleanEmail);
-      if (record && record.code === enteredCode && Date.now() <= record.expiresAt) {
-        isValidCode = true;
-      }
-    }
-
-    // 3. Persistent DB fallback
-    if (!isValidCode && turso) {
+    let isValidCode = false;
+    if (turso) {
+      let tx;
       try {
-        const tOtp = await turso.execute({
-          sql: 'SELECT * FROM email_verifications WHERE email = ? AND code = ? AND expires_at >= ?',
-          args: [cleanEmail, enteredCode, Date.now()]
+        tx = await turso.transaction('write');
+        const result = await tx.execute({
+          sql: 'SELECT code, expires_at FROM email_verifications WHERE email = ?',
+          args: [cleanEmail]
         });
-        if (tOtp.rows && tOtp.rows.length > 0) {
-          isValidCode = true;
+        const record = result.rows[0];
+        if (record && record.code === enteredCode && Number(record.expires_at) >= Date.now()) {
+          const deleted = await tx.execute({
+            sql: 'DELETE FROM email_verifications WHERE email = ? AND code = ? AND expires_at >= ?',
+            args: [cleanEmail, enteredCode, Date.now()]
+          });
+          isValidCode = Number(deleted.rowsAffected || 0) === 1;
         }
-      } catch {}
-    }
-    if (!isValidCode) {
+        await tx.commit();
+      } catch (error) {
+        if (tx) await tx.rollback().catch(() => {});
+        console.error('[Auth] OTP verification storage error:', error.message);
+        return res.status(503).json({ error: 'Email verification is temporarily unavailable.' });
+      }
+    } else {
       try {
-        const localOtp = db.prepare('SELECT * FROM email_verifications WHERE email = ? AND code = ? AND expires_at >= ?')
-          .get(cleanEmail, enteredCode, Date.now());
-        if (localOtp) isValidCode = true;
-      } catch {}
+        db.exec('BEGIN IMMEDIATE');
+        const record = db.prepare('SELECT code, expires_at FROM email_verifications WHERE email = ?').get(cleanEmail);
+        if (record && record.code === enteredCode && Number(record.expires_at) >= Date.now()) {
+          const deleted = db.prepare('DELETE FROM email_verifications WHERE email = ? AND code = ? AND expires_at >= ?')
+            .run(cleanEmail, enteredCode, Date.now());
+          isValidCode = deleted.changes === 1;
+        }
+        db.exec('COMMIT');
+      } catch (error) {
+        db.exec('ROLLBACK');
+        console.error('[Auth] OTP verification storage error:', error.message);
+        return res.status(503).json({ error: 'Email verification is temporarily unavailable.' });
+      }
     }
 
     if (!isValidCode) {
       return res.status(401).json({ error: 'Invalid or expired verification code' });
     }
-
-    emailOtpStore.delete(cleanEmail);
-    if (turso) {
-      turso.execute({ sql: 'DELETE FROM email_verifications WHERE email = ?', args: [cleanEmail] }).catch(() => {});
-    }
-    try {
-      db.prepare('DELETE FROM email_verifications WHERE email = ?').run(cleanEmail);
-    } catch {}
 
     const userName = cleanEmail.split('@')[0];
     const ownerEmails = new Set((process.env.OWNER_EMAILS || 'sairamkondoju9@gmail.com,owner@outpero.com').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
@@ -836,7 +882,7 @@ app.get('/api/auth/me', async (req, res) => {
     setCached(cacheKey, user, 5000);
     const refreshedToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id },
-      PRIMARY_JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '60d' }
     );
     return res.json({ user, token: refreshedToken });
@@ -1016,10 +1062,13 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.warn('[Stats Query Fallback]:', err.message);
+    if (turso) {
+      return res.status(503).json({ error: 'Workspace stats are temporarily unavailable.' });
+    }
     try {
-      const billingRow = db.prepare('SELECT SUM(balance_credits) as balance_credits FROM billing WHERE tenant_id = ?').get(req.user.tenant_id) || { balance_credits: 100 };
-      const balanceCredits = sanitizeBalance(billingRow?.balance_credits || 100);
-      const empCount = db.prepare("SELECT COUNT(*) as count FROM employees WHERE tenant_id = ? AND (status = 'active' OR status = 'ready')").get(req.user.tenant_id)?.count || 1;
+      const billingRow = db.prepare('SELECT SUM(balance_credits) as balance_credits FROM billing WHERE tenant_id = ?').get(req.user.tenant_id) || { balance_credits: 0 };
+      const balanceCredits = sanitizeBalance(billingRow?.balance_credits ?? 0);
+      const empCount = db.prepare("SELECT COUNT(*) as count FROM employees WHERE tenant_id = ? AND (status = 'active' OR status = 'ready')").get(req.user.tenant_id)?.count || 0;
       const leadCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE tenant_id = ?').get(req.user.tenant_id)?.count || 0;
       return res.json({
         activeCalls: 0,
@@ -1032,16 +1081,7 @@ app.get('/api/stats', authenticateToken, async (req, res) => {
         totalLeads: leadCount
       });
     } catch {
-      return res.json({
-        activeCalls: 0,
-        callsPerMin: '0.0',
-        talkingCount: 0,
-        ringingCount: 0,
-        balanceCredits: 100,
-        balanceMinutes: '20.0',
-        activeEmployees: 1,
-        totalLeads: 0
-      });
+      return res.status(503).json({ error: 'Workspace stats are temporarily unavailable.' });
     }
   }
 });
@@ -1494,23 +1534,91 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
 // Outbound Telephony Dispatch via Sarvam Samvaad
 app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
   try {
-    const { phone, employee_id, custom_message, language, app_id, employee: inlineEmployee, voice_tier = 'standard' } = req.body;
+    const { phone, employee_id, custom_message, language, app_id, voice_tier = 'standard' } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'Phone number is required.' });
     }
+    const normalizedPhone = formatPhoneNumber(phone);
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      return res.status(400).json({ error: 'Enter a valid destination number in E.164 format.' });
+    }
 
     const tenantId = req.user.tenant_id || req.user.id || 'default';
-    let employee = inlineEmployee || null;
-    if (employee_id && !employee) {
-      if (turso) {
-        const empRes = await turso.execute({
-          sql: 'SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = \'default\')',
-          args: [employee_id, tenantId]
-        });
-        employee = empRes.rows && empRes.rows[0];
-      } else {
-        employee = db.prepare('SELECT * FROM employees WHERE id = ? AND (tenant_id = ? OR tenant_id = \'default\')').get(employee_id, tenantId);
+    if (!employee_id) {
+      return res.status(400).json({ error: 'Select an AI employee before dispatching a call.' });
+    }
+    let employee = null;
+    if (turso) {
+      const empRes = await turso.execute({
+        sql: 'SELECT * FROM employees WHERE id = ? AND tenant_id = ?',
+        args: [employee_id, tenantId]
+      });
+      employee = empRes.rows?.[0] || null;
+    } else {
+      employee = db.prepare('SELECT * FROM employees WHERE id = ? AND tenant_id = ?')
+        .get(employee_id, tenantId);
+    }
+    if (!employee) {
+      const foreignEmployee = turso
+        ? (await turso.execute({ sql: 'SELECT id FROM employees WHERE id = ? LIMIT 1', args: [employee_id] })).rows[0]
+        : db.prepare('SELECT id FROM employees WHERE id = ? LIMIT 1').get(employee_id);
+      if (foreignEmployee) {
+        return res.status(403).json({ error: 'Selected employee does not belong to this workspace.' });
       }
+      return res.status(404).json({ error: 'Selected employee was not found in this workspace.' });
+    }
+    if (!['active', 'ready'].includes(employee.status)) {
+      return res.status(400).json({ error: 'Review and publish this employee before dispatching a call.' });
+    }
+
+    let dncEntries;
+    if (turso) {
+      try {
+        const result = await turso.execute({
+          sql: "SELECT phone FROM dnc_registry WHERE tenant_id = ? OR tenant_id = 'default'",
+          args: [tenantId]
+        });
+        dncEntries = result.rows || [];
+      } catch (error) {
+        console.error('[Call Dispatch DNC Lookup Error]:', error.message);
+        return res.status(503).json({ error: 'Do-not-call compliance could not be checked. No call was placed.' });
+      }
+    } else {
+      dncEntries = db.prepare("SELECT phone FROM dnc_registry WHERE tenant_id = ? OR tenant_id = 'default'").all(tenantId);
+    }
+    if (dncEntries.some(entry => formatPhoneNumber(entry.phone) === normalizedPhone)) {
+      return res.status(403).json({ error: 'This destination is on the do-not-call registry. No call was placed.' });
+    }
+
+    const voiceTier = voice_tier === 'premium' ? 'premium' : 'standard';
+    let billing;
+    if (turso) {
+      try {
+        const result = await turso.execute({
+          sql: 'SELECT COALESCE(SUM(balance_credits), 0) AS balance_credits, MAX(rate_standard) AS rate_standard, MAX(rate_premium) AS rate_premium FROM billing WHERE tenant_id = ?',
+          args: [tenantId]
+        });
+        billing = result.rows?.[0] || {};
+      } catch (error) {
+        console.error('[Call Dispatch Wallet Lookup Error]:', error.message);
+        return res.status(503).json({ error: 'Wallet balance could not be verified. No call was placed.' });
+      }
+    } else {
+      billing = db.prepare(
+        'SELECT COALESCE(SUM(balance_credits), 0) AS balance_credits, MAX(rate_standard) AS rate_standard, MAX(rate_premium) AS rate_premium FROM billing WHERE tenant_id = ?'
+      ).get(tenantId) || {};
+    }
+    const balance = sanitizeBalance(billing.balance_credits);
+    const minimumCallCredits = sanitizeBalance(
+      voiceTier === 'premium' ? billing.rate_premium : billing.rate_standard,
+      voiceTier === 'premium' ? 6.8 : 5
+    );
+    if (balance < minimumCallCredits) {
+      return res.status(402).json({
+        error: 'Insufficient credits for a one-minute call. Add credits before dispatching.',
+        balanceCredits: balance,
+        minimumRequired: minimumCallCredits
+      });
     }
 
     // Check if tenant has a saved Sarvam App ID in tenant_settings
@@ -1551,14 +1659,14 @@ app.post('/api/calls/dispatch', authenticateToken, async (req, res) => {
     }
 
     const result = await TelephonyService.dialCall({
-      to: phone,
+      to: normalizedPhone,
       employee,
       message: custom_message || employee?.opening_greeting,
       language: language || employee?.primary_language || 'Telugu',
       appId: resolvedAppId
     });
 
-    const isPremium = voice_tier === 'premium';
+    const isPremium = voiceTier === 'premium';
     const tierBadge = isPremium ? 'PREMIUM (₹6.80/m)' : 'STANDARD (₹5.00/m)';
     const callId = `call_${crypto.randomUUID()}`;
     const insertSql = `
@@ -1920,29 +2028,22 @@ app.get('/api/billing', authenticateToken, async (req, res) => {
   const cacheKey = 'billing:' + tenantId;
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
+  let billing;
   try {
-    let billing = null;
     if (turso) {
-      try {
-        const res = await turso.execute({ sql: 'SELECT * FROM billing WHERE tenant_id = ?', args: [tenantId] });
-        billing = res.rows[0];
-      } catch (tErr) {
-        console.warn('[Billing Turso Fallback]:', tErr.message);
-      }
+      const result = await turso.execute({ sql: 'SELECT * FROM billing WHERE tenant_id = ?', args: [tenantId] });
+      billing = result.rows[0];
+    } else {
+      billing = db.prepare('SELECT * FROM billing WHERE tenant_id = ?').get(tenantId);
     }
-    if (!billing) {
-      try {
-        billing = db.prepare('SELECT * FROM billing WHERE tenant_id = ?').get(tenantId);
-      } catch {}
-    }
-    const row = billing || { id: 'b_' + tenantId, tenant_id: tenantId, balance_credits: 100, balance_inr: 0, rate_standard: 5, rate_premium: 6.8, rate_enterprise: 3.5 };
-    const payload = { ...row, balance_credits: sanitizeBalance(row.balance_credits), balance_inr: sanitizeBalance(row.balance_inr) };
-    setCached(cacheKey, payload, 3000);
-    return res.json(payload);
   } catch (error) {
-    console.warn('[Billing Fetch Safe Return]:', error.message);
-    return res.json({ id: 'b_' + tenantId, tenant_id: tenantId, balance_credits: 100, balance_inr: 0, rate_standard: 5, rate_premium: 6.8, rate_enterprise: 3.5 });
+    console.warn('[Billing Fetch Error]:', error.message);
+    return res.status(503).json({ error: 'Billing data is temporarily unavailable.' });
   }
+  const row = billing || { id: 'b_' + tenantId, tenant_id: tenantId, balance_credits: 0, balance_inr: 0, rate_standard: 5, rate_premium: 6.8, rate_enterprise: 3.5 };
+  const payload = { ...row, balance_credits: sanitizeBalance(row.balance_credits), balance_inr: sanitizeBalance(row.balance_inr) };
+  setCached(cacheKey, payload, 3000);
+  return res.json(payload);
 });
 
 app.get('/api/billing/config', (req, res) => {
@@ -2091,14 +2192,12 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
 app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
   try {
     if (!razorpay) return res.status(503).json({ error: 'Payments are not configured' });
-    const { amount, planName, credits, bonusCredits, planId } = req.body;
-    const requestedAmount = Number(amount);
-    const baseAmount = requestedAmount;
-    const requestedCredits = Number(credits);
-    const creditAmount = Number.isFinite(requestedCredits) && requestedCredits >= requestedAmount ? requestedCredits : requestedAmount;
-    if (!Number.isSafeInteger(baseAmount) || baseAmount < 100 || baseAmount > 100000) {
+    const { amount, planId } = req.body;
+    const creditPackage = resolveCreditPackage(planId, amount);
+    if (!creditPackage) {
       return res.status(400).json({ error: 'Choose a top-up amount between ₹100 and ₹100,000' });
     }
+    const { amount: baseAmount, credits: creditAmount, bonusCredits, name: planName } = creditPackage;
 
     // Standard 18% GST calculation (Input Tax Credit eligible)
     const totalWithGst = Math.round(baseAmount * 1.18);
@@ -2110,11 +2209,11 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
       currency: 'INR',
       receipt: receipt,
       notes: {
-        planId: 'custom',
-        planName: String(planName || 'Credits Top-Up'),
+        planId: creditPackage.planId,
+        planName,
         baseAmount: String(baseAmount),
         credits: String(creditAmount),
-        bonusCredits: '0'
+        bonusCredits: String(bonusCredits)
       }
     };
 
@@ -2124,30 +2223,31 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
       await turso.execute({
         sql: `INSERT INTO payment_orders (order_id, tenant_id, amount_paise, base_amount, credits, bonus_credits, plan_id, status)
               VALUES (?, ?, ?, ?, ?, ?, ?, 'created')`,
-        args: [order.id, tenantId, order.amount, baseAmount, creditAmount, Number(bonusCredits || 0), String(planId || 'custom')]
+        args: [order.id, tenantId, order.amount, baseAmount, creditAmount, bonusCredits, creditPackage.planId]
       });
     } else {
       db.prepare(`INSERT INTO payment_orders (order_id, tenant_id, amount_paise, base_amount, credits, bonus_credits, plan_id, status)
                   VALUES (?, ?, ?, ?, ?, ?, ?, 'created')`)
-        .run(order.id, tenantId, order.amount, baseAmount, creditAmount, Number(bonusCredits || 0), String(planId || 'custom'));
+        .run(order.id, tenantId, order.amount, baseAmount, creditAmount, bonusCredits, creditPackage.planId);
     }
     let paymentLinkUrl = null;
     let paymentLinkId = null;
-    const clientOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || 'https://sarvam-eta-rose.vercel.app';
+    const clientOrigin = process.env.APP_URL || process.env.FRONTEND_URL || 'https://sarvam-eta-rose.vercel.app';
     const customerEmail = (req.user?.email && req.user.email.includes('@')) ? req.user.email : 'billing@sarvam.ai';
     try {
-      const customerContact = (req.user?.phone || '+918919112039').replace(/[^\d+]/g, '');
+      const customerContact = (req.user?.phone || '').replace(/[^\d+]/g, '');
+      const customer = {
+        name: req.user?.name || req.user?.email?.split('@')[0] || 'Customer',
+        email: customerEmail
+      };
+      if (customerContact) customer.contact = customerContact;
       const plink = await razorpay.paymentLink.create({
         amount: amountInPaise,
         currency: 'INR',
         accept_partial: false,
         reference_id: order.id,
         description: `Credits Top-Up: ${baseAmount} Calling Credits`,
-        customer: {
-          name: req.user?.name || req.user?.email?.split('@')[0] || 'Customer',
-          email: customerEmail,
-          contact: customerContact
-        },
+        customer,
         notify: { sms: false, email: false },
         reminder_enable: false,
         upi_link: true,
@@ -2172,7 +2272,7 @@ app.post('/api/billing/create-order', authenticateToken, async (req, res) => {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_live_TvJ7YXfy027Dyd',
+      keyId: process.env.RAZORPAY_KEY_ID,
       receipt: order.receipt,
       paymentLinkUrl,
       paymentLinkId
@@ -2246,7 +2346,16 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
     const noteBaseAmount = Number(paymentOrder.base_amount);
     const noteCredits = Number(paymentOrder.credits);
     const expectedTotalPaise = Math.round(noteBaseAmount * 1.18 * 100);
-    if (!Number.isFinite(noteBaseAmount) || !Number.isFinite(noteCredits) || noteCredits < noteBaseAmount || order.amount !== expectedTotalPaise) {
+    const creditPackage = resolveCreditPackage(paymentOrder.plan_id, noteBaseAmount);
+    if (
+      !creditPackage ||
+      !Number.isFinite(noteCredits) ||
+      noteCredits !== creditPackage.credits ||
+      Number(paymentOrder.bonus_credits) !== creditPackage.bonusCredits ||
+      Number(paymentOrder.amount_paise) !== expectedTotalPaise ||
+      order.amount !== expectedTotalPaise ||
+      order.currency !== 'INR'
+    ) {
       return res.status(400).json({ error: 'Payment order does not match a valid server-authorized package' });
     }
     const topupAmount = noteBaseAmount;
@@ -2272,10 +2381,14 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
       let tx;
       try {
         tx = await turso.transaction('write');
-        const existingPayment = await tx.execute({ sql: 'SELECT payment_id FROM payment_orders WHERE order_id = ?', args: [razorpay_order_id] });
-        if (existingPayment.rows[0]?.payment_id) {
+        const claimedOrder = await tx.execute({
+          sql: `UPDATE payment_orders SET status = 'credited', payment_id = ?
+                WHERE order_id = ? AND tenant_id = ? AND status = 'created'`,
+          args: [razorpay_payment_id, razorpay_order_id, tenantId]
+        });
+        if (Number(claimedOrder.rowsAffected || 0) !== 1) {
           await tx.rollback();
-          return res.status(409).json({ error: 'This payment has already been credited' });
+          return res.status(409).json({ error: 'Payment order was already credited or is no longer payable' });
         }
         await tx.execute({ sql: `INSERT OR IGNORE INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, 0, 0)`, args: [`b_${tenantId}`, tenantId] });
         await tx.execute({ sql: 'UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?', args: [creditsToAdd, topupAmount, tenantId] });
@@ -2283,7 +2396,6 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
           sql: `INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status) VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')`,
           args: [txId, tenantId, topupAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${razorpay_payment_id})`, invoiceId]
         });
-        await tx.execute({ sql: `UPDATE payment_orders SET status = 'credited', payment_id = ? WHERE order_id = ? AND tenant_id = ?`, args: [razorpay_payment_id, razorpay_order_id, tenantId] });
         await tx.commit();
       } catch (ledgerError) {
         if (tx) await tx.rollback().catch(() => {});
@@ -2300,6 +2412,15 @@ app.post('/api/billing/verify-payment', authenticateToken, async (req, res) => {
       if (priorTransaction) {
         db.exec('ROLLBACK');
         return res.status(409).json({ error: 'This payment has already been credited' });
+      }
+
+      const claimedOrder = db.prepare(`UPDATE payment_orders SET status = 'credited', payment_id = ?
+        WHERE order_id = ? AND tenant_id = ? AND status = 'created'`).run(
+        razorpay_payment_id, razorpay_order_id, tenantId
+      );
+      if (claimedOrder.changes !== 1) {
+        db.exec('ROLLBACK');
+        return res.status(409).json({ error: 'Payment order was already credited or is no longer payable' });
       }
 
       const existingRow = db.prepare('SELECT id FROM billing WHERE tenant_id = ?').get(tenantId);
@@ -2363,8 +2484,8 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     if (turso) {
       if (targetId) {
         const storedOrder = await turso.execute({
-          sql: 'SELECT * FROM payment_orders WHERE (order_id = ? OR payment_id = ?) AND tenant_id = ?',
-          args: [targetId, targetId, tenantId]
+          sql: 'SELECT * FROM payment_orders WHERE order_id = ? AND tenant_id = ?',
+          args: [targetId, tenantId]
         });
         paymentOrder = storedOrder.rows[0];
       }
@@ -2375,24 +2496,16 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
         });
         paymentOrder = storedByPay.rows[0];
       }
-      if (!paymentOrder) {
-        // Fallback: look for most recent uncredited order for this tenant
-        const recent = await turso.execute({
-          sql: "SELECT * FROM payment_orders WHERE tenant_id = ? AND status = 'created' ORDER BY created_at DESC LIMIT 1",
-          args: [tenantId]
-        });
-        paymentOrder = recent.rows[0];
-      }
     } else {
       if (targetId) {
-        paymentOrder = db.prepare('SELECT * FROM payment_orders WHERE (order_id = ? OR payment_id = ?) AND tenant_id = ?').get(targetId, targetId, tenantId);
+        paymentOrder = db.prepare('SELECT * FROM payment_orders WHERE order_id = ? AND tenant_id = ?').get(targetId, tenantId);
       }
       if (!paymentOrder && paymentId) {
         paymentOrder = db.prepare('SELECT * FROM payment_orders WHERE payment_id = ? AND tenant_id = ?').get(paymentId, tenantId);
       }
-      if (!paymentOrder) {
-        paymentOrder = db.prepare("SELECT * FROM payment_orders WHERE tenant_id = ? AND status = 'created' ORDER BY created_at DESC LIMIT 1").get(tenantId);
-      }
+    }
+    if (!paymentOrder) {
+      return res.status(404).json({ error: 'Payment order was not found for this workspace; no credits were applied.' });
     }
 
     // If order was already processed and credited, return early with current balance
@@ -2406,6 +2519,7 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
         alreadyCredited: true,
         paymentId: paymentOrder.payment_id,
         orderId: paymentOrder.order_id,
+        baseAmount: Number(paymentOrder.base_amount),
         creditsAdded: Number(paymentOrder.credits),
         newBalance: billingRow?.balance_credits
       });
@@ -2414,29 +2528,32 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     // 2. Determine payment completion via Razorpay API
     let isPaid = false;
     let verifiedPaymentId = paymentId || null;
-    let baseAmount = paymentOrder ? Number(paymentOrder.base_amount) : 100;
-    let creditsToAdd = paymentOrder ? Number(paymentOrder.credits) : 100;
-    const resolvedOrderId = paymentOrder?.order_id || orderId || `order_${Date.now()}`;
+    const resolvedOrderId = paymentOrder.order_id;
+    const creditPackage = resolveCreditPackage(paymentOrder.plan_id, paymentOrder.base_amount);
+    const baseAmount = Number(paymentOrder.base_amount);
+    const creditsToAdd = Number(paymentOrder.credits);
+    if (
+      !creditPackage ||
+      creditPackage.credits !== creditsToAdd ||
+      creditPackage.bonusCredits !== Number(paymentOrder.bonus_credits) ||
+      Number(paymentOrder.amount_paise) !== Math.round(baseAmount * 1.18 * 100)
+    ) {
+      return res.status(409).json({ error: 'Stored payment order does not match an authorized credit package.' });
+    }
 
     // A. Check by direct paymentId if provided
     if (paymentId) {
       try {
         const payRecord = await razorpay.payments.fetch(paymentId);
-        if (payRecord && (payRecord.status === 'captured' || payRecord.status === 'authorized')) {
-          if (payRecord.status === 'authorized') {
-            try {
-              await razorpay.payments.capture(paymentId, payRecord.amount, payRecord.currency || 'INR');
-            } catch (capErr) {
-              console.warn('[Razorpay] Auto-capture note:', capErr.message);
-            }
-          }
+        if (
+          payRecord &&
+          payRecord.order_id === resolvedOrderId &&
+          payRecord.status === 'captured' &&
+          payRecord.currency === 'INR' &&
+          Number(payRecord.amount) === Number(paymentOrder.amount_paise)
+        ) {
           isPaid = true;
           verifiedPaymentId = payRecord.id;
-          if (!paymentOrder) {
-            const capturedBase = Math.round(Number(payRecord.amount) / 118);
-            baseAmount = capturedBase > 0 ? capturedBase : 100;
-            creditsToAdd = baseAmount;
-          }
         }
       } catch (pErr) {
         console.warn('[Razorpay] Direct payment check note:', pErr.message);
@@ -2447,9 +2564,26 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     if (!isPaid && (paymentLinkId || (orderId && String(orderId).startsWith('plink_')))) {
       try {
         const plink = await razorpay.paymentLink.fetch(paymentLinkId || orderId);
-        if (plink && plink.status === 'paid') {
-          isPaid = true;
-          verifiedPaymentId = plink.payments?.[0]?.payment_id || `plink_pay_${Date.now()}`;
+        if (
+          plink &&
+          plink.status === 'paid' &&
+          plink.reference_id === resolvedOrderId &&
+          plink.currency === 'INR' &&
+          Number(plink.amount) === Number(paymentOrder.amount_paise)
+        ) {
+          const linkedPaymentId = (plink.payments || []).find(payment => payment.payment_id)?.payment_id;
+          if (linkedPaymentId) {
+            const capturedPayment = await razorpay.payments.fetch(linkedPaymentId);
+            if (
+              capturedPayment?.order_id === resolvedOrderId &&
+              capturedPayment.status === 'captured' &&
+              capturedPayment.currency === 'INR' &&
+              Number(capturedPayment.amount) === Number(paymentOrder.amount_paise)
+            ) {
+              isPaid = true;
+              verifiedPaymentId = capturedPayment.id;
+            }
+          }
         }
       } catch (plErr) {
         console.warn('[Razorpay] Payment link check note:', plErr.message);
@@ -2457,14 +2591,27 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     }
 
     // C. Check by standard orderId
-    if (!isPaid && resolvedOrderId && String(resolvedOrderId).startsWith('order_')) {
+    if (!isPaid && resolvedOrderId) {
       try {
         const order = await razorpay.orders.fetch(resolvedOrderId);
-        if (order && order.status === 'paid') {
-          isPaid = true;
+        if (
+          order &&
+          order.id === resolvedOrderId &&
+          order.status === 'paid' &&
+          order.currency === 'INR' &&
+          Number(order.amount) === Number(paymentOrder.amount_paise)
+        ) {
           const payments = await razorpay.orders.fetchPayments(resolvedOrderId);
-          const capturedPayment = payments.items?.find(p => p.status === 'captured') || payments.items?.[0];
-          verifiedPaymentId = capturedPayment?.id || `rzp_${resolvedOrderId.slice(-8)}`;
+          const capturedPayment = payments.items?.find(payment =>
+            payment.status === 'captured' &&
+            payment.order_id === resolvedOrderId &&
+            payment.currency === 'INR' &&
+            Number(payment.amount) === Number(paymentOrder.amount_paise)
+          );
+          if (capturedPayment?.id) {
+            isPaid = true;
+            verifiedPaymentId = capturedPayment.id;
+          }
         }
       } catch (oErr) {
         console.warn('[Razorpay] Order fetch check note:', oErr.message);
@@ -2480,28 +2627,24 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
     }
 
     // 3. Atomically credit the workspace
-    const txId = `razorpay_${verifiedPaymentId || Date.now()}`;
+    if (!verifiedPaymentId) {
+      return res.status(502).json({ error: 'A captured payment could not be matched to this order; no credits were applied.' });
+    }
+    const txId = `razorpay_${verifiedPaymentId}`;
     const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
 
     if (turso) {
       let tx;
       try {
         tx = await turso.transaction('write');
-        if (paymentOrder) {
-          const existingPayment = await tx.execute({
-            sql: 'SELECT payment_id, status FROM payment_orders WHERE order_id = ?',
-            args: [paymentOrder.order_id]
-          });
-          if (existingPayment.rows[0]?.status === 'credited') {
-            await tx.rollback();
-            const curr = await turso.execute({ sql: 'SELECT * FROM billing WHERE tenant_id = ?', args: [tenantId] });
-            return res.json({
-              success: true,
-              status: 'paid',
-              alreadyCredited: true,
-              newBalance: curr.rows[0]?.balance_credits
-            });
-          }
+        const claimedOrder = await tx.execute({
+          sql: `UPDATE payment_orders SET status = 'credited', payment_id = ?
+                WHERE order_id = ? AND tenant_id = ? AND status = 'created'`,
+          args: [verifiedPaymentId, paymentOrder.order_id, tenantId]
+        });
+        if (Number(claimedOrder.rowsAffected || 0) !== 1) {
+          await tx.rollback();
+          return res.status(409).json({ error: 'Payment order was already credited or is no longer payable.' });
         }
         await tx.execute({
           sql: `INSERT OR IGNORE INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, 0, 0)`,
@@ -2516,12 +2659,6 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
                 VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')`,
           args: [txId, tenantId, baseAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${verifiedPaymentId})`, invoiceId]
         });
-        if (paymentOrder) {
-          await tx.execute({
-            sql: `UPDATE payment_orders SET status = 'credited', payment_id = ? WHERE order_id = ? AND tenant_id = ?`,
-            args: [verifiedPaymentId, paymentOrder.order_id, tenantId]
-          });
-        }
         await tx.commit();
       } catch (ledgerError) {
         if (tx) await tx.rollback().catch(() => {});
@@ -2534,6 +2671,7 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
         status: 'paid',
         paymentId: verifiedPaymentId,
         orderId: resolvedOrderId,
+        baseAmount,
         invoiceId,
         creditsAdded: creditsToAdd,
         newBalance: updated.rows[0]?.balance_credits,
@@ -2543,24 +2681,30 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
       db.exec('BEGIN IMMEDIATE');
       try {
         const priorTransaction = db.prepare('SELECT id FROM transactions WHERE id = ?').get(txId);
-        if (!priorTransaction) {
-          const existingRow = db.prepare('SELECT id FROM billing WHERE tenant_id = ?').get(tenantId);
-          if (existingRow) {
-            db.prepare('UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?')
-              .run(creditsToAdd, baseAmount, tenantId);
-          } else {
-            db.prepare('INSERT INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, ?, ?)')
-              .run(`b_${tenantId}`, tenantId, creditsToAdd, baseAmount);
-          }
-          db.prepare(`
-            INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status)
-            VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')
-          `).run(txId, tenantId, baseAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${verifiedPaymentId})`, invoiceId);
-          if (paymentOrder) {
-            db.prepare(`UPDATE payment_orders SET status = 'credited', payment_id = ? WHERE order_id = ? AND tenant_id = ?`)
-              .run(verifiedPaymentId, paymentOrder.order_id, tenantId);
-          }
+        if (priorTransaction) {
+          db.exec('ROLLBACK');
+          return res.status(409).json({ error: 'This payment has already been credited.' });
         }
+        const claimedOrder = db.prepare(`UPDATE payment_orders SET status = 'credited', payment_id = ?
+          WHERE order_id = ? AND tenant_id = ? AND status = 'created'`).run(
+          verifiedPaymentId, paymentOrder.order_id, tenantId
+        );
+        if (claimedOrder.changes !== 1) {
+          db.exec('ROLLBACK');
+          return res.status(409).json({ error: 'Payment order was already credited or is no longer payable.' });
+        }
+        const existingRow = db.prepare('SELECT id FROM billing WHERE tenant_id = ?').get(tenantId);
+        if (existingRow) {
+          db.prepare('UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?')
+            .run(creditsToAdd, baseAmount, tenantId);
+        } else {
+          db.prepare('INSERT INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, ?, ?)')
+            .run(`b_${tenantId}`, tenantId, creditsToAdd, baseAmount);
+        }
+        db.prepare(`
+          INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status)
+          VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')
+        `).run(txId, tenantId, baseAmount, creditsToAdd, `Credits Top-Up (Razorpay: ${verifiedPaymentId})`, invoiceId);
         db.exec('COMMIT');
       } catch (sqliteErr) {
         db.exec('ROLLBACK');
@@ -2573,6 +2717,7 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
         status: 'paid',
         paymentId: verifiedPaymentId,
         orderId: resolvedOrderId,
+        baseAmount,
         invoiceId,
         creditsAdded: creditsToAdd,
         newBalance: updatedBilling?.balance_credits,
@@ -2661,7 +2806,8 @@ app.get('/api/dnc', authenticateToken, async (req, res) => {
       const result = await turso.execute({ sql: 'SELECT * FROM dnc_registry WHERE tenant_id = ? ORDER BY added_at DESC', args: [tenantId] });
       return res.json(result.rows);
     } catch (err) {
-      console.warn('[DNC GET Fallback]:', err.message);
+      console.error('[DNC GET Error]:', err.message);
+      return res.status(503).json({ error: 'Do-not-call registry is temporarily unavailable.' });
     }
   }
   try {
@@ -2675,25 +2821,28 @@ app.get('/api/dnc', authenticateToken, async (req, res) => {
 app.post('/api/dnc', authenticateToken, async (req, res) => {
   try {
     const { phone, reason } = req.body;
-    if (!String(phone || '').trim()) return res.status(400).json({ error: 'Phone is required.' });
+    const normalizedPhone = formatPhoneNumber(phone);
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      return res.status(400).json({ error: 'A valid destination phone number is required.' });
+    }
     const tenantId = req.user.tenant_id;
     const id = `dnc_${crypto.randomUUID()}`;
-    const cleanReason = reason || 'Customer opt-out';
+    const cleanReason = String(reason || 'Customer opt-out').trim().slice(0, 240);
 
     if (turso) {
       try {
-        await turso.execute({ sql: 'INSERT INTO dnc_registry (id, tenant_id, phone, reason) VALUES (?, ?, ?, ?)', args: [id, tenantId, phone.trim(), cleanReason] });
-        return res.json({ success: true, id, entry: { id, tenant_id: tenantId, phone: phone.trim(), reason: cleanReason } });
+        await turso.execute({ sql: 'INSERT INTO dnc_registry (id, tenant_id, phone, reason) VALUES (?, ?, ?, ?)', args: [id, tenantId, normalizedPhone, cleanReason] });
+        invalidateTenantCache(tenantId);
+        return res.json({ success: true, id, entry: { id, tenant_id: tenantId, phone: normalizedPhone, reason: cleanReason } });
       } catch (tursoErr) {
-        console.warn('[DNC POST Turso Fallback]:', tursoErr.message);
+        console.error('[DNC POST Turso Error]:', tursoErr.message);
+        return res.status(503).json({ error: 'Do-not-call registry is temporarily unavailable.' });
       }
     }
 
-    try {
-      db.prepare('INSERT INTO dnc_registry (id, tenant_id, phone, reason) VALUES (?, ?, ?, ?)').run(id, tenantId, phone.trim(), cleanReason);
-    } catch {}
+    db.prepare('INSERT INTO dnc_registry (id, tenant_id, phone, reason) VALUES (?, ?, ?, ?)').run(id, tenantId, normalizedPhone, cleanReason);
     invalidateTenantCache(tenantId);
-    res.json({ success: true, id, entry: { id, tenant_id: tenantId, phone: phone.trim(), reason: cleanReason } });
+    res.json({ success: true, id, entry: { id, tenant_id: tenantId, phone: normalizedPhone, reason: cleanReason } });
   } catch (err) {
     console.error('[DNC POST Error]:', err);
     res.status(500).json({ error: 'Failed to record DNC entry' });
@@ -2712,14 +2861,15 @@ app.delete('/api/dnc/:id', authenticateToken, async (req, res) => {
         deleted = Number(result.rowsAffected || 0) > 0;
         return res.json({ success: true, deleted });
       } catch (tursoErr) {
-        console.warn('[DNC DELETE Turso Fallback]:', tursoErr.message);
+        console.error('[DNC DELETE Turso Error]:', tursoErr.message);
+        return res.status(503).json({ error: 'Do-not-call registry is temporarily unavailable.' });
       }
     }
     try {
       const result = db.prepare('DELETE FROM dnc_registry WHERE id = ? AND tenant_id = ?').run(id, tenantId);
       deleted = Number(result?.changes || 0) > 0;
     } catch {}
-    res.json({ success: true, deleted: true });
+    res.json({ success: true, deleted });
   } catch (err) {
     console.error('[DNC DELETE Error]:', err);
     res.status(500).json({ error: 'Failed to delete DNC entry' });
@@ -2792,9 +2942,9 @@ app.post('/api/whatsapp/send-brochure', authenticateToken, async (req, res) => {
       recipientPhone,
       leadId,
       leadName = 'Customer',
-      businessName = 'Sairam Jewellers',
+      businessName = 'Your Business',
       employeeName = 'Jagan',
-      catalogUrl = 'https://sairamjewellers.com/catalog.pdf',
+      catalogUrl = '',
       offerDetails = 'Exclusive zero GST and zero making charges offer'
     } = req.body;
 

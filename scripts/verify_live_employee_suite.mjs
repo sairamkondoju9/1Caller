@@ -1,7 +1,8 @@
-import jwt from 'jsonwebtoken';
-
-const BASE_URL = 'https://sarvam-eta-rose.vercel.app';
-const JWT_SECRET = 'sarvam_production_secret_key_849203810293';
+const BASE_URL = process.env.SARVAM_LIVE_TEST_BASE_URL;
+const ACCESS_TOKEN = process.env.SARVAM_LIVE_TEST_TOKEN;
+if (!BASE_URL || !ACCESS_TOKEN) {
+  throw new Error('Set SARVAM_LIVE_TEST_BASE_URL and SARVAM_LIVE_TEST_TOKEN to run this mutating smoke test.');
+}
 
 async function runVerification() {
   console.log(`Starting Live Employee Suite Verification on ${BASE_URL}...`);
@@ -11,22 +12,10 @@ async function runVerification() {
   const healthData = await healthRes.json();
   console.log('1. Health check status:', healthRes.status, 'db backend:', healthData.database?.backend, 'status:', healthData.database?.status);
 
-  // 2. Generate signed JWT matching production secret
-  const token = jwt.sign(
-    {
-      id: 'usr_owner_demo',
-      email: 'owner@telugudemo.com',
-      role: 'owner',
-      tenant_id: 'tenant_demo_owner'
-    },
-    JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-  console.log('2. Production JWT token generated for tenant: tenant_demo_owner');
-
+  // 2. Use an explicitly supplied test account token.
   const authHeaders = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'Authorization': `Bearer ${ACCESS_TOKEN}`
   };
 
   // 3. Test Swara Copilot script rewrite

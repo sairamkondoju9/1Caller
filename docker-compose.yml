@@ -10,7 +10,7 @@ services:
     environment:
       - PORT=3001
       - NODE_ENV=production
-      - JWT_SECRET=sarvam_production_secret_key_849203810293
+      - JWT_SECRET=${JWT_SECRET:?Set a unique JWT_SECRET of at least 32 characters}
       # To use postgres, uncomment below and set DATABASE_URL:
       # - DATABASE_URL=postgresql://sarvam_user:sarvam_pass@postgres:5432/sarvam_db
     volumes:

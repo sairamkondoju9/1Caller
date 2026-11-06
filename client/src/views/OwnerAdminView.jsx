@@ -120,7 +120,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
           prompt: testPrompt,
           language: 'te',
           industry: 'Jewellery',
-          businessName: 'Sairam Jewellers'
+          businessName: 'Demo Business'
         })
       });
       const data = await res.json();

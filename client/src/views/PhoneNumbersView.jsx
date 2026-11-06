@@ -138,8 +138,8 @@ export default function PhoneNumbersView({ employees = [], onBuyNumber, onBalanc
         <div>
           <div className="text-[11px] font-bold text-[#6c6b7e] uppercase tracking-wider mb-1 flex items-center gap-1.5 font-mono">
             <span>Setup • Telephony Lines</span>
-            <span className="text-[10px] font-bold bg-[#f0fdf4] text-[#16a34a] px-2 py-0.5 rounded-full border border-[#bbf7d0] uppercase">
-              Carrier inventory
+              <span className="text-[10px] font-bold bg-[#fff7ed] text-[#c2410c] px-2 py-0.5 rounded-full border border-[#fed7aa] uppercase">
+              Provider unavailable
             </span>
           </div>
           <h1 className="text-2xl font-bold text-[#0f0e17] tracking-tight font-display">
@@ -152,22 +152,20 @@ export default function PhoneNumbersView({ employees = [], onBuyNumber, onBalanc
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={() => {
-              setModalMode('link_existing');
-              setShowBuyModal(true);
-            }}
-            className="border border-[#e2e4ed] hover:bg-[#f8f9fc] text-[#0f0e17] font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+            type="button"
+            disabled
+            title="Carrier linking is not available until a provider is connected."
+            className="border border-[#e2e4ed] bg-[#f6f7fb] text-[#6c6b7e] font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-not-allowed"
           >
-            <Link2 className="w-4 h-4 text-[#7a50dc]" /> Link Sarvam Number
+            <Link2 className="w-4 h-4" /> Linking unavailable
           </button>
           <button
-            onClick={() => {
-              setModalMode('order_new');
-              setShowBuyModal(true);
-            }}
-            className="bg-[#0f0e17] hover:bg-[#1f1e28] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+            type="button"
+            disabled
+            title="Carrier ordering is not available in this deployment."
+            className="bg-[#e2e4ed] text-[#6c6b7e] font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-not-allowed"
           >
-            <Plus className="w-4 h-4" /> Order Dedicated Line
+            <Plus className="w-4 h-4" /> Ordering unavailable
           </button>
         </div>
       </div>
@@ -179,9 +177,9 @@ export default function PhoneNumbersView({ employees = [], onBuyNumber, onBalanc
         </div>
 
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0] text-xs font-bold text-[#16a34a]">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Carrier integration</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fff7ed] border border-[#fed7aa] text-xs font-bold text-[#c2410c]">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Carrier provider not connected</span>
           </div>
           <h2 className="text-xl font-bold text-[#0f0e17] tracking-tight">
             Workspace phone lines

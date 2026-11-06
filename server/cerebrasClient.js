@@ -57,7 +57,7 @@ export class CerebrasClient {
     }
   }
 
-  async generateCallScript({ prompt, language = 'te', industry = 'Jewellery', businessName = 'Sairam Jewellers', offers = 'No GST, No Making Charges' }) {
+  async generateCallScript({ prompt, language = 'te', industry = 'Jewellery', businessName = 'Your Business', offers = 'No GST, No Making Charges' }) {
     if (!this.apiKey) return null;
 
     const cacheKey = `crb_${prompt.toLowerCase().trim()}_${language}`;

@@ -2861,39 +2861,19 @@ export default function LandingPageView({ onLaunchConsole, onTalkToAgent, onOpen
             <div className="p-6 sm:p-8 flex flex-col justify-center">
               
               <h2 className="mt-3 text-[clamp(1.4rem,2.6vw,1.9rem)] leading-tight tracking-[-0.03em] font-semibold text-ink text-balance">
-                Build on Sarvam AI with our API.
+                Developer integrations
               </h2>
               <p className="mt-2 text-[15px] leading-relaxed text-muted max-w-[460px]">
-                Send leads in with one request, get every call&apos;s outcome back by webhook.
+                Lead intake and call-outcome webhooks are not available in this deployment yet. Confirm integration readiness before planning a launch.
               </p>
-              <div className="mt-5 flex flex-wrap gap-2.5">
-                <a
-                  href="https://sarvam.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors select-none btn-fill magnet hover:shadow-[0_14px_30px_-12px_rgba(15,14,23,0.3)] bg-ink text-white hover:bg-ink-2 shadow-[0_1px_0_rgba(255,255,255,0.18)_inset] text-[13px] gap-1.5 h-10 px-4.5 rounded-full"
-                >
-                  Read the API docs
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
             </div>
 
-            {/* Code Box */}
-            <div className="bg-[#0f0e1a] text-white p-5 sm:p-6 font-mono text-[13px] leading-relaxed flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/10">
-              <div className="text-white/40 mb-2">// Send a lead for instant outbound call</div>
-              <div className="text-brand-300 font-bold">POST /lead-intake/&#123;slug&#125;</div>
-              <div className="text-white/60 text-[12px] mt-1">X-Sarvam-Lead-Secret: [configured]</div>
-              <pre className="mt-3 text-emerald-400 text-[12.5px] overflow-x-auto">
-{`{
-  "phone": "+919876543210",
-  "name": "Rahul Verma",
-  "variables": {
-    "property": "Sector 150",
-    "budget": "90L"
-  }
-}`}
-              </pre>
+            <div className="bg-[#0f0e1a] text-white p-5 sm:p-6 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-white/10">
+              <div className="text-white/50 text-xs font-mono uppercase tracking-wider mb-2">Integration status</div>
+              <div className="text-amber-300 font-semibold">Not enabled</div>
+              <p className="text-white/70 text-sm mt-2 leading-relaxed">
+                No production lead endpoint or webhook secret is configured for this workspace.
+              </p>
             </div>
           </div>
         </div>
