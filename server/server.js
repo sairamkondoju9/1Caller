@@ -2730,9 +2730,151 @@ app.post('/api/billing/verify-order-status', authenticateToken, async (req, res)
   }
 });
 
-// Razorpay Webhook Endpoint
-app.post('/api/billing/webhook', (req, res) => {
-  return res.status(503).json({ error: 'Webhook processing is not configured' });
+// Razorpay Webhook Endpoint — server-to-server settlement (authoritative, idempotent credit source)
+app.post('/api/billing/webhook', async (req, res) => {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return res.status(503).json({ error: 'Webhook processing is not configured' });
+  }
+  const signature = String(req.headers['x-razorpay-signature'] || '');
+  if (!signature || !req.rawBody) {
+    return res.status(401).json({ error: 'Missing webhook signature' });
+  }
+  const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(req.rawBody).digest('hex');
+  const sigBuffer = Buffer.from(signature);
+  const expBuffer = Buffer.from(expectedSignature);
+  if (sigBuffer.length !== expBuffer.length || !crypto.timingSafeEqual(sigBuffer, expBuffer)) {
+    console.error('[Razorpay Webhook] Signature mismatch');
+    return res.status(401).json({ error: 'Invalid webhook signature' });
+  }
+
+  const event = req.body?.event;
+  const paymentEntity = req.body?.payload?.payment?.entity || null;
+  const orderEntity = req.body?.payload?.order?.entity || null;
+  if (!['payment.captured', 'order.paid'].includes(event) || (!paymentEntity && !orderEntity)) {
+    return res.json({ received: true, ignored: event || 'unknown' });
+  }
+
+  const orderId = paymentEntity?.order_id || orderEntity?.id;
+  const paymentId = paymentEntity?.id || null;
+  if (!orderId) return res.json({ received: true, ignored: 'no_order_reference' });
+
+  try {
+    let paymentOrder;
+    if (turso) {
+      const found = await turso.execute({ sql: 'SELECT * FROM payment_orders WHERE order_id = ?', args: [orderId] });
+      paymentOrder = found.rows[0];
+    } else {
+      paymentOrder = db.prepare('SELECT * FROM payment_orders WHERE order_id = ?').get(orderId);
+    }
+    if (!paymentOrder) return res.json({ received: true, ignored: 'unknown_order' });
+    if (paymentOrder.status !== 'created') return res.json({ received: true, alreadyProcessed: true });
+
+    const tenantId = paymentOrder.tenant_id;
+    const noteBaseAmount = Number(paymentOrder.base_amount);
+    const noteCredits = Number(paymentOrder.credits);
+    const expectedTotalPaise = Math.round(noteBaseAmount * 1.18 * 100);
+    const creditPackage = resolveCreditPackage(paymentOrder.plan_id, noteBaseAmount);
+    if (
+      !creditPackage ||
+      !Number.isFinite(noteCredits) ||
+      noteCredits !== creditPackage.credits ||
+      Number(paymentOrder.bonus_credits) !== creditPackage.bonusCredits ||
+      Number(paymentOrder.amount_paise) !== expectedTotalPaise
+    ) {
+      console.error('[Razorpay Webhook] Order does not match a server-authorized package:', orderId);
+      return res.status(400).json({ error: 'Webhook order does not match a server-authorized package' });
+    }
+
+    // Confirm the captured amount with Razorpay authority; never trust the webhook body alone.
+    let capturedAmountPaise = Number(paymentEntity?.amount);
+    let capturedStatus = paymentEntity?.status;
+    if (paymentId && razorpay) {
+      try {
+        const authoritative = await razorpay.payments.fetch(paymentId);
+        if (authoritative) {
+          if (authoritative.order_id !== orderId) {
+            return res.status(400).json({ error: 'Payment does not belong to the referenced order' });
+          }
+          capturedAmountPaise = authoritative.amount;
+          capturedStatus = authoritative.status;
+        }
+      } catch (fetchErr) {
+        console.warn('[Razorpay Webhook] Authoritative payment lookup failed:', fetchErr.message);
+      }
+    }
+    if (capturedAmountPaise !== expectedTotalPaise || !['captured', 'authorized'].includes(String(capturedStatus))) {
+      return res.status(400).json({ error: 'Captured payment amount does not match the authorized order' });
+    }
+
+    const creditsToAdd = noteCredits;
+    const topupAmount = noteBaseAmount;
+    const txId = `razorpay_${paymentId || orderId}`;
+    const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
+    const description = `Credits Top-Up (Razorpay webhook: ${paymentId || orderId})`;
+
+    if (turso) {
+      let tx;
+      try {
+        tx = await turso.transaction('write');
+        const claimedOrder = await tx.execute({
+          sql: `UPDATE payment_orders SET status = 'credited', payment_id = ?
+                WHERE order_id = ? AND tenant_id = ? AND status = 'created'`,
+          args: [paymentId, orderId, tenantId]
+        });
+        if (Number(claimedOrder.rowsAffected || 0) !== 1) {
+          await tx.rollback();
+          return res.json({ received: true, alreadyProcessed: true });
+        }
+        await tx.execute({ sql: `INSERT OR IGNORE INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, 0, 0)`, args: [`b_${tenantId}`, tenantId] });
+        await tx.execute({ sql: 'UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?', args: [creditsToAdd, topupAmount, tenantId] });
+        await tx.execute({
+          sql: `INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status) VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')`,
+          args: [txId, tenantId, topupAmount, creditsToAdd, description, invoiceId]
+        });
+        await tx.commit();
+      } catch (ledgerError) {
+        if (tx) await tx.rollback().catch(() => {});
+        throw ledgerError;
+      }
+      invalidateTenantCache(tenantId);
+      return res.json({ received: true, credited: creditsToAdd, tenantId });
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const priorTransaction = db.prepare('SELECT id FROM transactions WHERE id = ?').get(txId);
+      if (priorTransaction) {
+        db.exec('ROLLBACK');
+        return res.json({ received: true, alreadyProcessed: true });
+      }
+      const claimedOrder = db.prepare(`UPDATE payment_orders SET status = 'credited', payment_id = ?
+        WHERE order_id = ? AND tenant_id = ? AND status = 'created'`).run(paymentId, orderId, tenantId);
+      if (claimedOrder.changes !== 1) {
+        db.exec('ROLLBACK');
+        return res.json({ received: true, alreadyProcessed: true });
+      }
+      const existingRow = db.prepare('SELECT id FROM billing WHERE tenant_id = ?').get(tenantId);
+      if (existingRow) {
+        db.prepare('UPDATE billing SET balance_credits = balance_credits + ?, balance_inr = balance_inr + ? WHERE tenant_id = ?').run(creditsToAdd, topupAmount, tenantId);
+      } else {
+        db.prepare('INSERT INTO billing (id, tenant_id, balance_credits, balance_inr) VALUES (?, ?, ?, ?)').run(`b_${tenantId}`, tenantId, creditsToAdd, topupAmount);
+      }
+      db.prepare(`
+        INSERT INTO transactions (id, tenant_id, type, amount, credits, description, invoice_id, status)
+        VALUES (?, ?, 'topup', ?, ?, ?, ?, 'success')
+      `).run(txId, tenantId, topupAmount, creditsToAdd, description, invoiceId);
+      db.exec('COMMIT');
+    } catch (ledgerError) {
+      db.exec('ROLLBACK');
+      throw ledgerError;
+    }
+    invalidateTenantCache(tenantId);
+    return res.json({ received: true, credited: creditsToAdd, tenantId });
+  } catch (err) {
+    console.error('[Razorpay Webhook Error]:', err.message);
+    return res.status(500).json({ error: 'Webhook processing failed' });
+  }
 });
 
 app.post('/api/billing/topup', authenticateToken, (req, res) => {

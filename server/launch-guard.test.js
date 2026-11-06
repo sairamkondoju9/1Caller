@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const testDbDir = path.join(currentDir, '..', 'data', 'launch-guard-test');
@@ -464,6 +465,33 @@ test('public API rejects unverified login and direct wallet top-ups', async () =
     body: JSON.stringify({ amount: 100 })
   });
   assert.equal(unavailablePayment.status, 503, 'payment test must fail before contacting Razorpay when credentials are absent');
+
+  const unconfiguredWebhook = await fetch(`${baseUrl}/api/billing/webhook`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ event: 'payment.captured' })
+  });
+  assert.equal(unconfiguredWebhook.status, 503, 'webhook settlement must stay disabled until RAZORPAY_WEBHOOK_SECRET is configured');
+
+  process.env.RAZORPAY_WEBHOOK_SECRET = 'launch-guard-webhook-secret';
+  const forgedWebhook = await fetch(`${baseUrl}/api/billing/webhook`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-razorpay-signature': 'deadbeef' },
+    body: JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_x', order_id: 'order_x', amount: 59000, status: 'captured' } } } })
+  });
+  assert.equal(forgedWebhook.status, 401, 'webhook must reject a forged signature before touching the ledger');
+
+  const unknownOrderRaw = JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_x', order_id: 'order_unknown', amount: 59000, status: 'captured' } } } });
+  const unknownOrderSignature = crypto.createHmac('sha256', 'launch-guard-webhook-secret').update(unknownOrderRaw).digest('hex');
+  const unknownOrderWebhook = await fetch(`${baseUrl}/api/billing/webhook`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-razorpay-signature': unknownOrderSignature },
+    body: unknownOrderRaw
+  });
+  assert.equal(unknownOrderWebhook.status, 200, 'a signed webhook for an unknown order is acknowledged without crediting');
+  const unknownOrderBody = await unknownOrderWebhook.json();
+  assert.equal(unknownOrderBody.ignored, 'unknown_order');
+  delete process.env.RAZORPAY_WEBHOOK_SECRET;
 
   for (const provider of ['sarvam', 'cartesia']) {
     const unavailableVoiceTest = await fetch(`${baseUrl}/api/voice/test-${provider}`, {
