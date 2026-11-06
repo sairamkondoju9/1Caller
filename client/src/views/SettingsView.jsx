@@ -153,7 +153,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
 
   const handleDeleteDnc = async (id) => {
     try {
-      await fetch(`/api/dnc/${id}`, { method: 'DELETE' });
+      await fetch(`/api/dnc/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
       fetchSettingsAndDnc();
     } catch (err) {
       console.error(err);
@@ -510,7 +510,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
                   Cross-Campaign Caller Memory
                 </div>
                 <p className="text-xs text-[#6c6b7e] leading-relaxed max-w-xl">
-                  When a lead calls back or answers a second campaign, the AI remembers their previous answers (e.g. "Hi Sairam, following up on the 3 BHK villa in Gachibowli we discussed earlier!").
+                  When a lead calls back or answers a second campaign, the AI remembers their previous answers (e.g. "Hi Ramesh, following up on the 3 BHK villa in Gachibowli we discussed earlier!").
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">

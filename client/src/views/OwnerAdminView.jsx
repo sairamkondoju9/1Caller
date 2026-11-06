@@ -39,6 +39,13 @@ import { AgentFlowBuilder } from '../components/screens/AgentFlowBuilder';
 import { FleetManager } from '../components/screens/FleetManager';
 import { ExecutiveAnalytics } from '../components/screens/ExecutiveAnalytics';
 
+// Admin console passcodes. Override at build/deploy time via VITE_ADMIN_PASSCODES
+// (comma-separated) to remove the defaults before handover.
+const ADMIN_PASSCODES = (import.meta.env.VITE_ADMIN_PASSCODES || 'sairam2026,adminsairam')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
   const [adminTab, setAdminTab] = useState('tenants'); // 'tenants' | 'providers' | 'simulator' | 'builder' | 'fleet' | 'analytics'
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -90,7 +97,7 @@ export default function OwnerAdminView({ onImpersonateTenant, onNavigate }) {
 
   const handleUnlock = (e) => {
     e.preventDefault();
-    if (passcode.trim() === 'sairam2026' || passcode.trim() === 'adminsairam' || passcode.trim().length >= 4) {
+    if (ADMIN_PASSCODES.includes(passcode.trim())) {
       sessionStorage.setItem('outpero_secret_admin_session', 'true');
       setIsAuthenticated(true);
       setAuthError('');

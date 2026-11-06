@@ -86,7 +86,7 @@ export default function DevelopersView() {
   -d '{
     "phone": "+919849012345",
     "employee_id": "emp-1",
-    "first_name": "Sairam",
+    "first_name": "Ramesh",
     "metadata": {
       "lead_source": "Meta Ads",
       "project": "Aura Luxury Villas Gachibowli"
@@ -108,7 +108,7 @@ async function dispatchCall() {
   const { data } = await client.post('/calls/dispatch', {
     phone: '+919849012345',
     employee_id: 'emp-1',
-    first_name: 'Sairam',
+    first_name: 'Ramesh',
     metadata: {
       lead_source: 'Website Form',
       preferred_lang: 'te'
@@ -128,7 +128,7 @@ BASE_URL = "https://api.sarvam.ai/v1"
 payload = {
     "phone": "+919849012345",
     "employee_id": "emp-1",
-    "first_name": "Sairam",
+    "first_name": "Ramesh",
     "metadata": {
         "lead_source": "Google Search Ads",
         "budget": "₹3.5 Cr"

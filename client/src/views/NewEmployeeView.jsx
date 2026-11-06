@@ -1750,8 +1750,8 @@ export default function NewEmployeeView({
                           setEmployeePurpose(option.id);
                           setEmployeeGenerationError('');
                           if (option.id === 'support') {
-                            if (!businessName || businessName.trim().toLowerCase() === 'sairam jewellers') setBusinessName('');
-                            if (!employeeName || employeeName.trim().toLowerCase() === 'jagan') setEmployeeName('');
+                            if (!businessName || businessName.trim().toLowerCase() === 'your business') setBusinessName('');
+                            if (!employeeName || employeeName.trim().toLowerCase() === 'ai assistant') setEmployeeName('');
                             setEmployeeRole('Customer Support Specialist');
                             setQ2Selection('Escalate to a human');
                           }

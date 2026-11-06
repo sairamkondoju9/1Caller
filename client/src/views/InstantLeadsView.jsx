@@ -101,7 +101,7 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
               audioUrl: c.recording_url || c.audioUrl || null,
               transcript: Array.isArray(c.transcript)
                 ? c.transcript
-                : (typeof c.transcript === 'string' ? JSON.parse(c.transcript || '[]') : [])
+                : (() => { try { return JSON.parse(c.transcript || '[]'); } catch { return []; } })()
             }));
             setAllCalls(mapped);
           }
@@ -945,13 +945,13 @@ export default function InstantLeadsView({ onNavigate, employees = [] }) {
                 <div
                   key={idx}
                   className={`p-3 rounded-xl border ${
-                    turn.speaker === 'Jagan' || turn.speaker.toLowerCase().includes('assistant') || (primaryEmployee && turn.speaker === primaryEmployee.name)
+                    (turn.speaker || '').toLowerCase().includes('assistant') || (primaryEmployee && turn.speaker === primaryEmployee.name)
                       ? 'bg-[#f6f7fb] border-[#e2e4ed] text-[#0f0e17]'
                       : 'bg-[#eff6ff] border-[#bfdbfe] text-[#1e3a8a]'
                   }`}
                 >
                   <div className="text-[10px] font-mono font-bold uppercase mb-1">
-                    {turn.speaker === 'Jagan' ? (primaryEmployee?.name || 'AI Telecaller') : turn.speaker}
+                    {(turn.speaker || '').toLowerCase().includes('assistant') ? (primaryEmployee?.name || 'AI Telecaller') : turn.speaker}
                   </div>
                   <div className="leading-relaxed font-sans">{turn.text}</div>
                 </div>
