@@ -239,7 +239,7 @@ export default function SettingsView({ onTriggerWelcomeCredits }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#3a3f5c]">Support / Admin Email</label>
+                <label className="text-xs font-semibold text-[#3a3f5c]">Support Email</label>
                 <input
                   type="email"
                   value={settings.supportEmail}

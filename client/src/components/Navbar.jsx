@@ -11,9 +11,7 @@ import {
   Settings as SettingsIcon,
   CreditCard,
   ChevronDown,
-  User,
-  ShieldCheck
-} from 'lucide-react';
+  User} from 'lucide-react';
 
 export default function Navbar({
   stats,
@@ -26,8 +24,7 @@ export default function Navbar({
   onNavigate,
   onToggleMobileMenu
 }) {
-  const isOwner = currentUser?.role === 'owner';
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
   // Close dropdown on click outside
@@ -195,10 +192,8 @@ export default function Navbar({
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-center gap-1.5">
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                    isOwner ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  }`}>
-                    {isOwner ? 'Owner / Admin' : 'Client Account'}
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Workspace
                   </span>
                   <span className="text-[10px] text-zinc-400 font-mono">
                     ID: {(currentUser?.id || '').slice(0, 10)}
@@ -233,18 +228,7 @@ export default function Navbar({
                   <span>Workspace Settings</span>
                 </button>
 
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      if (onNavigate) onNavigate('owner-admin');
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-amber-800 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer font-semibold"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-amber-600" />
-                    <span>Master Control Plane</span>
-                  </button>
-                )}
+                
               </div>
 
               {/* Sign Out Button */}
