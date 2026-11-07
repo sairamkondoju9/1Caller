@@ -726,7 +726,7 @@ app.post('/api/auth/email/verify-code', async (req, res) => {
     }
 
     const userName = cleanEmail.split('@')[0];
-    const ownerEmails = new Set((process.env.OWNER_EMAILS || 'sairamkondoju9@gmail.com,owner@outpero.com').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
+    const ownerEmails = new Set((process.env.OWNER_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
     const adminEmails = new Set((process.env.ADMIN_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
     const role = ownerEmails.has(cleanEmail) ? 'owner' : adminEmails.has(cleanEmail) ? 'admin' : 'client';
 
@@ -865,7 +865,7 @@ app.get('/api/auth/me', async (req, res) => {
     if (!user) {
       const email = decoded.email || 'user@outpero.com';
       const name = email.split('@')[0];
-      const ownerEmails = new Set((process.env.OWNER_EMAILS || 'sairamkondoju9@gmail.com,owner@outpero.com').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
+      const ownerEmails = new Set((process.env.OWNER_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
       const adminEmails = new Set((process.env.ADMIN_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean));
       const role = ownerEmails.has(email.toLowerCase()) ? 'owner' : adminEmails.has(email.toLowerCase()) ? 'admin' : (decoded.role || 'client');
       user = {
