@@ -18,7 +18,7 @@ services:
     rootDir: .
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
