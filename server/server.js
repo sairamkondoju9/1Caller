@@ -146,7 +146,7 @@ function invalidateTenantCache(tenantId) {
   }
 }
 
-wss.on('connection', (ws, request) => {
+wss.on('connection', async (ws, request) => {
   const connectionUrl = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   const token = connectionUrl.searchParams.get('token');
   const user = verifyJwtResilient(token);
@@ -155,54 +155,74 @@ wss.on('connection', (ws, request) => {
     return;
   }
 
-  const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const employeeId = connectionUrl.searchParams.get('employeeId');
-  const employee = employeeId
-    ? db.prepare('SELECT * FROM employees WHERE id = ? AND tenant_id = ?').get(employeeId, user.tenant_id)
-    : db.prepare('SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(user.tenant_id);
-  if (!employee) {
-    ws.close(1008, 'No employee available in this workspace');
-    return;
-  }
-
-  const session = new AudioSession(sessionId, employee, ws);
-  activeSessions.set(sessionId, session);
-
-  ws.send(JSON.stringify({
-    event: 'session.ready',
-    sessionId: sessionId,
-    employee: employee,
-    p50_slo_ms: 420
-  }));
-
-  ws.on('message', async (message) => {
-    try {
-      const data = JSON.parse(message.toString());
-
-      if (data.action === 'user_speech' || data.action === 'user_turn') {
-        const result = await session.handleUserInput(data.text);
-        session.emitEvent('turn.completed', {
-          turn: {
-            text: result.text,
-            engine: result.waterfall.ttsEngine,
-            waterfall: result.waterfall
-          }
-        });
-      } else if (data.action === 'barge_in') {
-        session.triggerBargeIn();
-      } else if (data.action === 'change_language') {
-        session.language = data.language;
-      } else if (data.action === 'change_engine') {
-        session.preferredEngine = data.engine;
-      }
-    } catch (err) {
-      console.error('[WS Error]', err);
+  try {
+    const employeeId = connectionUrl.searchParams.get('employeeId');
+    let employee;
+    if (turso) {
+      await ensureTursoSchema(turso);
+      const result = employeeId
+        ? await turso.execute({
+            sql: 'SELECT * FROM employees WHERE id = ? AND tenant_id = ?',
+            args: [employeeId, user.tenant_id]
+          })
+        : await turso.execute({
+            sql: 'SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1',
+            args: [user.tenant_id]
+          });
+      employee = result.rows[0];
+    } else {
+      employee = employeeId
+        ? db.prepare('SELECT * FROM employees WHERE id = ? AND tenant_id = ?').get(employeeId, user.tenant_id)
+        : db.prepare('SELECT * FROM employees WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(user.tenant_id);
     }
-  });
+    if (!employee) {
+      ws.close(1008, 'No employee available in this workspace');
+      return;
+    }
 
-  ws.on('close', () => {
-    activeSessions.delete(sessionId);
-  });
+    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const session = new AudioSession(sessionId, employee, ws);
+    activeSessions.set(sessionId, session);
+
+    ws.send(JSON.stringify({
+      event: 'session.ready',
+      sessionId: sessionId,
+      employee: employee,
+      p50_slo_ms: 420
+    }));
+
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+
+        if (data.action === 'user_speech' || data.action === 'user_turn') {
+          const result = await session.handleUserInput(data.text);
+          session.emitEvent('turn.completed', {
+            turn: {
+              text: result.text,
+              engine: result.waterfall.ttsEngine,
+              waterfall: result.waterfall
+            }
+          });
+        } else if (data.action === 'barge_in') {
+          session.triggerBargeIn();
+        } else if (data.action === 'change_language') {
+          session.language = data.language;
+        } else if (data.action === 'change_engine') {
+          session.preferredEngine = data.engine;
+        }
+      } catch (err) {
+        console.error('[WS Error]', err);
+      }
+    });
+
+    ws.on('close', () => {
+      activeSessions.delete(sessionId);
+    });
+  } catch (error) {
+    console.error('[Audio Gateway] Failed to initialize session:', error.message);
+    if (ws.readyState === 1) ws.close(1011, 'Voice session initialization failed');
+  }
 });
 
 // ==========================================
