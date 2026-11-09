@@ -1,0 +1,114 @@
+# ==============================================================================
+# Render Blueprint — Sarvam Voice Engine (REST API + WebSocket /ws gateway)
+#
+# Deploy autonomously:
+#   1. Push this file to your connected GitHub/GitLab repo.
+#   2. In Render → New → Blueprint, select the repo.
+#   3. Render reads render.yaml and creates the service automatically.
+#   4. Fill in secret env vars marked `sync: false` in the Render dashboard.
+#
+# WebSocket path: wss://<your-render-domain>/ws
+# Razorpay webhook URL: https://<your-render-domain>/api/billing/webhook
+# ==============================================================================
+
+services:
+  - type: web
+    name: sarvam-voice
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # --- Core ---
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        sync: false
+        generateValue: true
+      - key: OWNER_EMAILS
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: TEST_LOGIN_CREDENTIALS
+        sync: false
+
+      # --- Database (Turso / libSQL) ---
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+
+      # --- Payments (Razorpay) ---
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+      # --- LLM Providers ---
+      - key: GROQ_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+
+      # --- Voice / Speech ---
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: CARTESIA_API_KEY
+        sync: false
+      - key: SARVAM_TELEPHONY_API_KEY
+        sync: false
+      - key: SARVAM_PRIMARY_CLI
+        sync: false
+      - key: SARVAM_ORG_ID
+        sync: false
+      - key: SARVAM_WORKSPACE_ID
+        sync: false
+      - key: SARVAM_APP_ID
+        sync: false
+      - key: SARVAM_CONNECTION_ID
+        sync: false
+
+      # --- Telecom SIP Trunks ---
+      - key: EXOTEL_ACCOUNT_SID
+        sync: false
+      - key: EXOTEL_API_KEY
+        sync: false
+      - key: EXOTEL_API_TOKEN
+        sync: false
+      - key: PLIVO_AUTH_ID
+        sync: false
+      - key: PLIVO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+
+      # --- WhatsApp Cloud API ---
+      - key: WHATSAPP_API_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+
+      # --- Email OTP ---
+      - key: RESEND_API_KEY
+        sync: false
+      - key: AUTH_EMAIL_FROM
+        sync: false
+
+      # --- Google OAuth ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
